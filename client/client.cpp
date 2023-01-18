@@ -32,25 +32,19 @@ int main(int argc, char *argv[])
 	serv_addr.sin_addr.s_addr = INADDR_ANY;
 	bzero(&(serv_addr.sin_zero), 8);     
     
-	if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) 
-		printf("ERROR on binding");
-	
-	listen(sockfd, 5);
-	
-	clilen = sizeof(struct sockaddr_in);
-	if ((newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen)) == -1) 
-		printf("ERROR on accept");
+	if (connect(sockfd,(struct sockaddr *) &serv_addr,sizeof(serv_addr)) < 0) 
+		printf("ERROR connecting\n");
 	
 	bzero(buffer, 256);
 	
 	/* read from the socket */
-	n = read(newsockfd, buffer, 256);
+	n = read(sockfd, buffer, 256);
 	if (n < 0) 
 		printf("ERROR reading from socket");
 	printf("Here is the message: %s\n", buffer);
 	
 	/* write in the socket */ 
-	n = write(newsockfd,"I got your message", 18);
+	n = write(sockfd,"I got your message", 18);
 	if (n < 0) 
 		printf("ERROR writing to socket");
 
