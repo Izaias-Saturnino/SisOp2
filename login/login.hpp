@@ -4,6 +4,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <vector>
+#include <iostream>
 
 #define MAX_SESSIONS 2
 
@@ -13,18 +14,22 @@ struct usuario{
     string nome;
     bool sessaoAtiva1;
     bool sessaoAtiva2;
-    struct sockaddr_in servAddr1;
-    struct sockaddr_in servAddr2;
+    int socketClient1;
+    int socketClient2;
 };
 typedef struct usuario USUARIO;
 
+#define TAM_LISTA 200
+
 class LoginManager{
-    private:
-        void criarNovoUsuario(string nome);
-        void sessoesAtivas(USUARIO login);
-        void verificaQuantidadeUsuarios(string nome);
     public:
         LoginManager();
-        void login();
+        bool login(int socketCli, char user[]);
+        string getUser(string user);
         vector<USUARIO> listaDeUsuarios;
+        void printListaUsuario();
+    private:
+        void criarNovoUsuario(string nome,int socketCli);
+        bool sessoesAtivas(USUARIO login);
+        bool verificaQuantidadeUsuarios(string nome,int socketCli);
 };

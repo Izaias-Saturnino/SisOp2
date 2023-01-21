@@ -1,14 +1,7 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <string.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <pthread.h>
-#include <netdb.h> 
-#include <iostream>
 #include "./server.hpp"
+#include "../login/login.hpp"
+
+#define PORT 4000
 
 int main(int argc, char *argv[])
 {
@@ -17,6 +10,8 @@ int main(int argc, char *argv[])
     struct hostent *server;
 	pthread_t clientThread;
     socklen_t clilen;
+    char user[256];
+    bool usuarioValido;
 
     verificaRecebimentoIP(argc, argv);
 
@@ -40,18 +35,29 @@ int main(int argc, char *argv[])
 	{	
         while(true)
         {    
-		    listen(sockfd, 5);// listen to the clients
+            /*listen to clients*/
+		    listen(sockfd, 5);
             clilen = sizeof(struct sockaddr_in);
             if ((newSockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen)) == -1) 
                 printf("ERROR on accept");
             //memset(&package, 0, sizeof(package));
             //thread_mtx.lock();
-            std::cout << sockfd << std::endl;
-            pthread_create(&clientThread, NULL, Thread, &newSockfd);        //CUIDADOO : newSocket e não socket
-                                              //ponteiro para função, ponteiro para parametro        
+
+            /*inicio login*/
+
+            LoginManager *loginManager = new LoginManager();
+            readSocket(user,newSockfd);
+            usuarioValido = loginManager->login(newSockfd,user); 
+
+            if(usuarioValido)
+                pthread_create(&clientThread, NULL, readAndWriteSocket, &newSockfd);  //CUIDADO: newSocket e não socket
+            else{
+                //logout
+            }
         }
     }
 
+    close(newSockfd);
     close(sockfd);
 
     return 0;
@@ -69,47 +75,32 @@ void imprimeServerError(void){
     exit(0);
 }
 
-void obtemMensagem(char buffer[]){
-    printf("Enter the message: ");
-    bzero(buffer, 256);
-    fgets(buffer, 256, stdin);
-    printf("%s\n",buffer);
-}
-
 void writeSocket(char buffer[],int sockfd){
     int n;
-    /* write in the socket */
-    std::cout << sockfd << std::endl;
-    std::cout << buffer << std::endl;
-	n = write(sockfd, buffer, strlen(buffer));
-    if (n < 0) 
-		printf("ERROR writing to socket\n");
 
-    std::cout<<"lele"<<std::endl;
-    bzero(buffer,256);
-    printf("%s\n",buffer);
+	/* write in the socket */ 
+	n = write(sockfd,"I got your message", 18);
+	if (n < 0) 
+		printf("ERROR writing to socket");
 }
 
-void readSocket(char buffer[], int sockfd){
+void readSocket(char array[], int sockfd){
     int n;
-    /* read from the socket */
-    n = read(sockfd, buffer, 256);
-    if (n < 0) 
-		printf("ERROR reading from socket\n");
 
-    printf("%s\n",buffer);
+	/* read from the socket */
+	n = read(sockfd, array, 256); 
+	if (n < 0) 
+		printf("ERROR reading from socket");
 }
 
-void *Thread(void *arg) {
+void *readAndWriteSocket(void *arg) {
     int sockfd= *(int *) arg;
-    char buffer[256]="lele";
-    int n;
+    char buffer[256]; 
 
-    //obtemMensagem(buffer);
-    std::cout << sockfd << std::endl;
     writeSocket(buffer,sockfd);
     
     readSocket(buffer,sockfd);
-
+    
+    //printf("Here is the message: %s\n", buffer);
     return 0;
 }

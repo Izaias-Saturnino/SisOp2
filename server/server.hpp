@@ -9,16 +9,12 @@
 #include <netdb.h> 
 #include <iostream>
 
-#define PORT 4000
-
 void verificaRecebimentoIP(int argc,char *argv[]);
 
 void imprimeServerError(void);
-
-void obtemMensagem(char buffer[]);
 
 void writeSocket(char buffer[], int sockfd);
 
 void readSocket(char buffer[], int sockfd);
 
-void *Thread(void *arg);
+void *readAndWriteSocket(void *arg);
