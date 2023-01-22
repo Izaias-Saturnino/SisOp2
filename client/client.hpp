@@ -18,4 +18,6 @@ void writeSocket(int sockfd, char user[]);
 
 void readSocket(char buffer[], int sockfd);
 
-void obtemMensagem(char buffer[],char user[], int sockfd);
+void obtemUsuaio(char user[]);
+
+void sendMessage(string message, int seqn, int messageType,int fragmentos, string username, PACKET pkt);

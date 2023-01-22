@@ -15,6 +15,6 @@ void imprimeServerError(void);
 
 void writeSocket(char buffer[], int sockfd);
 
-void readSocket(char buffer[], int sockfd);
+void readSocket(PACKET pkt, int sockfd);
 
 void *readAndWriteSocket(void *arg);

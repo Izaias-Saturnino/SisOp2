@@ -9,10 +9,6 @@ LoginManager::LoginManager(){
 void LoginManager::printListaUsuario(){
     vector<USUARIO>::iterator it;
 
-    /*for each(USUARIO us in this->listaDeUsuarios){
-        cout<< us.nome<<endl;
-	}*/
-
     for(it = this->listaDeUsuarios.begin(); it != this->listaDeUsuarios.end(); it++){
         cout<< it->nome<<endl;
 	}
@@ -24,7 +20,7 @@ void LoginManager::criarNovoUsuario(string nome,int socketCli){
     conta.sessaoAtiva1 = true;
     conta.sessaoAtiva2 = false;
     conta.socketClient1 = socketCli;
-    //TO DO : serverAdress2  ??
+    conta.socketClient2 = -1;  // valor invalido
     this->listaDeUsuarios.push_back(conta);
     this->printListaUsuario();
 }
@@ -78,8 +74,6 @@ bool LoginManager::verificaQuantidadeUsuarios(string nome,int socketCli){
 
 bool LoginManager::login(int socketCli, char user[]){
     bool usuarioValido;
-
-    //trocar isso por receber um pacote com username
 
     usuarioValido = this->verificaQuantidadeUsuarios(user,socketCli);
     

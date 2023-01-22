@@ -1,15 +1,19 @@
 #include "./client.hpp" 
+#include "../packet.hpp"
 
 #define PORT 4000
 
 using namespace std;
 
+bool Logout = false;
+
 int main(int argc, char *argv[])
 {
 	int sockfd;
 	socklen_t clilen;
-	char buffer[256], user[256];
+	char buffer[256];
 	struct sockaddr_in serv_addr, cli_addr;
+	PACKET pkt;
 	
 	if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1) 
         printf("ERROR opening socket");
@@ -24,25 +28,24 @@ int main(int argc, char *argv[])
 	
 	bzero(buffer, 256);
 
-	obtemMensagem(buffer,user,sockfd);
+	obtemUsuario(pkt);
 
-	close(sockfd);
+	sendMessage("",1,1,1,pkt.user,pkt); //login menssage
+
+	readSocket(buffer,sockfd);
+
 	return 0; 
 }
 
-void obtemMensagem(char buffer[],char user[],int sockfd){
-
+void obtemUsuario(PACKET pkt){   // TO DO: pegar nome do usuario do arg v
 	cout<<"Por favor insira seu login:"<<endl; //cuidar com espaços
-    cin>>user;
-
-	writeSocket(sockfd,user);
-	readSocket(buffer,sockfd);
+    cin>>pkt.user;
 }
 
-void writeSocket(int sockfd, char user[]){
+void writeSocket(int sockfd, PACKET pkt){
     int n;
 
-	n = write(sockfd, user, strlen(user));
+	n = write(sockfd, &pkt, sizeof(pkt));
     if (n < 0) 
 		printf("ERROR writing login to socket\n");
 }
@@ -55,4 +58,16 @@ void readSocket(char buffer[], int sockfd){
 		printf("ERROR reading from socket\n");
 
     printf("%s\n",buffer);
+}
+
+void sendMessage(string message, int seqn, int messageType,int fragmentos, string username, PACKET pkt, int sockfd)
+{
+	pkt.type = messageType;
+	pkt.seqn = seqn;
+	pkt.total_size = fragmentos;
+	pkt.length = strlen(pkt._payload);
+	strcpy(pkt.user, username.c_str());
+	strcpy(pkt._payload, message.c_str());
+
+	write(sockfd, &pkt, sizeof(pkt));
 }

@@ -1,7 +1,10 @@
 #include "./server.hpp"
 #include "../login/login.hpp"
+#include "../packet.hpp"
 
 #define PORT 4000
+
+LoginManager *loginManager = new LoginManager();
 
 int main(int argc, char *argv[])
 {
@@ -12,6 +15,7 @@ int main(int argc, char *argv[])
     socklen_t clilen;
     char user[256];
     bool usuarioValido;
+    PACKET pkt;
 
     verificaRecebimentoIP(argc, argv);
 
@@ -40,17 +44,13 @@ int main(int argc, char *argv[])
             clilen = sizeof(struct sockaddr_in);
             if ((newSockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen)) == -1) 
                 printf("ERROR on accept");
-            //memset(&package, 0, sizeof(package));
-            //thread_mtx.lock();
 
             /*inicio login*/
-
-            LoginManager *loginManager = new LoginManager();
-            readSocket(user,newSockfd);
-            usuarioValido = loginManager->login(newSockfd,user); 
+            readSocket(pkt,newSockfd);
+            usuarioValido = loginManager->login(newSockfd,pkt.user); 
 
             if(usuarioValido)
-                pthread_create(&clientThread, NULL, readAndWriteSocket, &newSockfd);  //CUIDADO: newSocket e não socket
+                pthread_create(&clientThread, NULL, ThreadClient, &newSockfd);  //CUIDADO: newSocket e não socket
             else{
                 //logout
             }
@@ -84,23 +84,20 @@ void writeSocket(char buffer[],int sockfd){
 		printf("ERROR writing to socket");
 }
 
-void readSocket(char array[], int sockfd){
+void readSocket(PACKET pkt, int sockfd){
     int n;
 
 	/* read from the socket */
-	n = read(sockfd, array, 256); 
+	n = read(sockfd, &pkt, sizeof(pkt)); 
 	if (n < 0) 
 		printf("ERROR reading from socket");
 }
 
-void *readAndWriteSocket(void *arg) {
+void *ThreadClient(void *arg) {
     int sockfd= *(int *) arg;
     char buffer[256]; 
 
     writeSocket(buffer,sockfd);
     
-    readSocket(buffer,sockfd);
-    
-    //printf("Here is the message: %s\n", buffer);
     return 0;
 }
