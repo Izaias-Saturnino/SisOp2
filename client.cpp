@@ -75,6 +75,7 @@ handle_client_update(){
 }
 
 handle_first_sync(){
+    //cria o diretório sync_dir se necessário
     //recebe vários arquivos do servidor e espera pela mensagem de fim de first_sync
 }
 
