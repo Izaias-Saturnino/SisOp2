@@ -22,6 +22,7 @@ int main(){
             create_connection_handler(); // thread que lida com a conexão separadamente chamando o handle_connection()
         }
     }
+    return 0;
 }
 
 bool accept_request(){

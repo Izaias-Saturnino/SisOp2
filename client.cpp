@@ -20,9 +20,10 @@ int main(){
         send_request();
 
         if(exit){
-
+            break;
         }
     }
+    return 0;
 }
 
 handle_updates(){
@@ -31,13 +32,15 @@ handle_updates(){
     if(first_sync){
         handle_first_sync();
     }
-    bool server_update = check_for_server_update();
-    if(server_update){
-        handle_server_update();
-    }
-    bool client_update = check_for_client_update();
-    if(client_update){
-        handle_client_update();
+    while(true){
+        bool server_update = check_for_server_update();
+        if(server_update){
+            handle_server_update();
+        }
+        bool client_update = check_for_client_update();
+        if(client_update){
+            handle_client_update();
+        }
     }
 }
 
@@ -69,10 +72,14 @@ handle_first_sync(){
     //receber vários arquivos do servidor e esperar pela mensagem de fim de first_sync
 }
 
+get_operation(){
+    //ler operação da entrada
+}
+
 send_request(){
     string input = read_input();
 
-    string type = get_operation();
+    string type = get_operation(input);
 
     //sempre esperar pela mensagem de confirmação do servidor
     switch(type){
