@@ -4,59 +4,110 @@
 #include <unistd.h>
 #include <cstring>
 
-int main() {
-    int sockfd, new_sockfd;
-    socklen_t clilen;
-    struct sockaddr_un serv_addr, cli_addr;
-
-    // Create a socket
-    sockfd = socket(AF_UNIX, SOCK_STREAM, 0);
-    if (sockfd < 0) {
-        std::cerr << "Error opening socket" << std::endl;
+int main(){
+    bool connection_is_open = open_connection();
+    if(!connection_is_open){
         return 1;
     }
 
-    // Bind the socket to a local address
-    memset(&serv_addr, 0, sizeof(serv_addr));
-    serv_addr.sun_family = AF_UNIX;
-    strcpy(serv_addr.sun_path, "/tmp/dropbox.sock");
-    if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) {
-        std::cerr << "Error binding socket" << std::endl;
-        return 1;
+    listen_for_clients();
+
+    while(true){
+        bool request_accepted = accept_request();
+        if(!request_accepted){
+            return 1; // não sei se isso é a melhor maneira de tratar esse erro
+        }
+        bool read_from_socket = read_request();
+        if(request_accepted){
+            create_connection_handler(); // thread que lida com a conexão separadamente chamando o handle_connection()
+        }
+    }
+}
+
+bool accept_request(){
+    //TO DO
+}
+
+bool read_request(){
+    //TO DO
+}
+
+handle_first_sync(){
+    bool request_from_new_user = ...;
+    bool new_device = ...;
+
+    if(request_from_new_user){
+        create_user_folder();
+    }
+    else if(new_device){
+        send_all_files_to_client();
+    }
+}
+
+handle_sync(){
+    bool server_client_are_consistent = ...;
+
+    if(!server_client_are_consistent){
+        bool server_has_new_files = ...;
+
+        if(server_has_new_files){
+            send_files_to_client();
+        }
+    }
+}
+
+bool handle_login(){
+    //TO DO
+}
+
+bool read_from_socket(){
+    //se não tiver nada, só retornar false
+    //se tiver algo, ler o socket até ter todos os dados necessários para tratar a comunicação
+    //quando terminar de obter os dados, gravar os dados em um pacote e retornar true
+    //se tiver erro nos dados, a ponto de não conseguir tratar, mandar uma mensagem de erro ao cliente (se possível) e retornar false
+}
+
+handle_communication(){
+    bool read_successful = read_from_socket();
+    if(read_successful){
+        //aqui fica todo o código que cuida das requisições de comunicação feitas pelo cliente ao servidor, menos as requisições de login
+        string type = ...;
+        switch(type){
+            case "download_file":
+                //TO DO
+                break;
+            case "delete_file":
+                delete_file(file_path);
+                break;
+            case "upload_file":
+                //TO DO
+                break;
+            case "list_files_from_server":
+                //TO DO
+                break;
+            case "exit_connection":
+                //TO DO
+                break;
+            default:
+                //mandar mensagem de erro
+                break;
+        }
+    }
+}
+
+handle_connection(){
+    bool login_successful = handle_login();
+    if(!login_successful){
+        // pedir para o usuário tentar novamente
     }
 
-    // Listen for incoming connections
-    listen(sockfd, 5);
-    clilen = sizeof(cli_addr);
-
-    while (true) {
-        // Accept a new connection
-        new_sockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
-        if (new_sockfd < 0) {
-            std::cerr << "Error accepting connection" << std::endl;
-            return 1;
-        }
-
-        // Handle the connection
-        while (true) {
-            char buffer[1024];
-            int n = read(new_sockfd, buffer, 1023);
-            if (n < 0) {
-                std::cerr << "Error reading from socket" << std::endl;
-                break;
-            } else if (n == 0) {
-                // Connection closed
-                break;
-            } else {
-                buffer[n] = '\0';
-                // Handle the received data (e.g. store it in the file system)
-            }
-        }
-
-        // Close the connection
-        close(new_sockfd);
+    bool first_sync = ...;
+    if(first_sync){
+        handle_first_sync();
     }
 
-    close(sockfd);
-    return 0;
+    while(true){
+        handle_communication(); // não se esquecer de mandar mensagens de confirmação para o outro lado sempre que necessário
+        handle_sync();
+    }
 }
