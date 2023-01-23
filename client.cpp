@@ -15,9 +15,15 @@ int main(){
         std::cerr << "Login error" << std::endl;
         return 1;
     }
-    sync(); // cria um thread para lidar com atualizações enviadas pelo servidor e cuida dessas atualizações via handle_updates()
+    bool has_sync_dir = ...;
+    bool sync_online = false;
+    if(has_sync_dir){
+        sync();
+        sync_online = true;
+    }
+    // cria um thread para lidar com atualizações enviadas pelo servidor e cuida dessas atualizações via handle_updates()
     while(true){
-        send_request();
+        handle_request();
 
         if(exit){
             break;
@@ -69,31 +75,42 @@ handle_client_update(){
 }
 
 handle_first_sync(){
-    //receber vários arquivos do servidor e esperar pela mensagem de fim de first_sync
+    //recebe vários arquivos do servidor e espera pela mensagem de fim de first_sync
 }
 
 get_operation(){
     //ler operação da entrada
 }
 
-send_request(){
+handle_request(){
     string input = read_input();
 
     string type = get_operation(input);
 
     //sempre esperar pela mensagem de confirmação do servidor
     switch(type){
+        case "upload_file":
+            //send upload request with file
+            break;
         case "download_file":
             //send download request
             break;
         case "delete_file":
             //send delete request
             break;
-        case "upload_file":
-            //send upload request with file
-            break;
         case "list_files_from_server":
             //send list_files request
+            break;
+        case "list_files_from_client":
+            //show client files list
+            break;
+        case "get_sync_dir":
+            if(!sync_online){
+                sync();
+            }
+            else{
+                //mensagem de erro
+            }
             break;
         case "exit_connection":
             //send exit connection request
