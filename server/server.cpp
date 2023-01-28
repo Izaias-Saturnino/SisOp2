@@ -1,6 +1,5 @@
 #include "./server.hpp"
 #include "../login/login.hpp"
-#include "../packet.hpp"
 
 #define PORT 4000
 
@@ -84,11 +83,11 @@ void writeSocket(char buffer[],int sockfd){
 		printf("ERROR writing to socket");
 }
 
-void readSocket(PACKET pkt, int sockfd){
+void readSocket(PACKET pkt, int sock){
     int n;
 
 	/* read from the socket */
-	n = read(sockfd, &pkt, sizeof(pkt)); 
+	n = read(sock, &pkt, sizeof(pkt)); 
 	if (n < 0) 
 		printf("ERROR reading from socket");
 }

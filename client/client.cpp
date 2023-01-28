@@ -1,7 +1,6 @@
 #include "./client.hpp" 
-#include "../packet.hpp"
 
-#define PORT 4000
+//#define PORT 4000
 
 using namespace std;
 
@@ -9,11 +8,14 @@ bool Logout = false;
 
 int main(int argc, char *argv[])
 {
-	int sockfd;
+	int sockfd,PORT = atoi(argv[3]);
 	socklen_t clilen;
-	char buffer[256];
+	char buffer[256],username[256];
 	struct sockaddr_in serv_addr, cli_addr;
 	PACKET pkt;
+	string message;
+
+	strcpy(username, argv[1]);
 	
 	if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1) 
         printf("ERROR opening socket");
@@ -28,18 +30,18 @@ int main(int argc, char *argv[])
 	
 	bzero(buffer, 256);
 
-	obtemUsuario(pkt);
-
-	sendMessage("",1,1,1,pkt.user,pkt); //login menssage
+	sendMessage("",1,1,1,username,pkt,sockfd); //login message
 
 	readSocket(buffer,sockfd);
 
-	return 0; 
-}
+	cout<< "type exit to end your session \n"<<endl;
+	while(message != "exit")
+	{
+		cin>> message;
+	}
 
-void obtemUsuario(PACKET pkt){   // TO DO: pegar nome do usuario do arg v
-	cout<<"Por favor insira seu login:"<<endl; //cuidar com espaços
-    cin>>pkt.user;
+	sendMessage("",1,2,1,username,pkt,sockfd); //logout message
+	return 0; 
 }
 
 void writeSocket(int sockfd, PACKET pkt){
@@ -60,13 +62,13 @@ void readSocket(char buffer[], int sockfd){
     printf("%s\n",buffer);
 }
 
-void sendMessage(string message, int seqn, int messageType,int fragmentos, string username, PACKET pkt, int sockfd)
+void sendMessage(string message, int seqn, int messageType,int fragmentos, char username[], PACKET pkt, int sockfd)
 {
 	pkt.type = messageType;
 	pkt.seqn = seqn;
 	pkt.total_size = fragmentos;
 	pkt.length = strlen(pkt._payload);
-	strcpy(pkt.user, username.c_str());
+	strcpy(pkt.user, username);
 	strcpy(pkt._payload, message.c_str());
 
 	write(sockfd, &pkt, sizeof(pkt));
