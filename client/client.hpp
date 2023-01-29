@@ -13,12 +13,8 @@
 #include <cstdlib>
 #include <signal.h>
 #include <ctime>
-#include "../packet.hpp"
+#include "../common/common.hpp"
 
 using namespace std;
 
-void writeSocket(int sockfd, char user[]);
-
-void readSocket(char buffer[], int sockfd);
-
-void sendMessage(string message, int seqn, int messageType,int fragmentos, char username[], PACKET pkt, int sockfd);
+void verificaRecebimentoParametros(int argc);

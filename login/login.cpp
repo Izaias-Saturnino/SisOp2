@@ -14,9 +14,10 @@ void LoginManager::printListaUsuario(){
 	}
 }
 
-void LoginManager::criarNovoUsuario(string nome,int socketCli){
+void LoginManager::criarNovoUsuario(char nome[],int socketCli){
     USUARIO conta;
-    conta.nome = nome;
+    cout<< "dentro do cria novo: " << nome << endl;
+    strcpy(conta.nome,nome);
     conta.sessaoAtiva1 = true;
     conta.sessaoAtiva2 = false;
     conta.socketClient1 = socketCli;
@@ -25,48 +26,57 @@ void LoginManager::criarNovoUsuario(string nome,int socketCli){
     this->printListaUsuario();
 }
 
-bool LoginManager::sessoesAtivas(USUARIO login){
-    bool usuarioValido = true;
-
-    if(login.sessaoAtiva1 == true)
-    {
-        if(login.sessaoAtiva2 == true){
-            cout<<"Excedido o número de sessoes possiveis \n"<<endl;
-            usuarioValido = false;
-        }
-        else{
-            login.sessaoAtiva2 = true;
-            cout<<"Segunda conta = true \n"<<endl;
-        }
-    }
-    else{
-        login.sessaoAtiva1 = true;
-        cout<<"Primeira conta = true \n"<<endl;
-    }
-
-    return usuarioValido;
-}
-
-bool LoginManager::verificaQuantidadeUsuarios(string nome,int socketCli){
+void LoginManager::Logout(char user[],int socket){
     vector<USUARIO>::iterator it;
-    bool achou = false, usuarioValido = true;
-    USUARIO login;
 
     for(it = this->listaDeUsuarios.begin(); it != this->listaDeUsuarios.end(); it++){
-        if(nome == (*it).nome){
-            achou = true;
-            login = (*it);
+        if(strcmp(user,(*it).nome) == 0 ){         
+            if((*it).socketClient1 == socket)
+            {
+                (*it).sessaoAtiva1 = false;
+            }
+            else{
+                (*it).sessaoAtiva2 = false;
+            }
+            
+            if((*it).sessaoAtiva1 == false && (*it).sessaoAtiva2 == false) //sem conexão -> remove da lista
+            {
+                this->listaDeUsuarios.erase(it);
+            }
         }
-        cout<< it->nome<<endl;
+    }
+}
+
+bool LoginManager::verificaQuantidadeUsuarios(char nome[],int socketCli){
+    vector<USUARIO>::iterator it;
+    bool achou = false, usuarioValido = true;
+
+    for(it = this->listaDeUsuarios.begin(); it != this->listaDeUsuarios.end(); it++){
+        if(strcmp(nome,(*it).nome) == 0 ){
+            achou = true;
+            if((*it).sessaoAtiva1 == true)
+            {
+                if((*it).sessaoAtiva2 == true){
+                    cout<<"Excedido o número de sessoes possiveis \n"<<endl;
+                    usuarioValido = false;
+                }
+                else{
+                    cout<<(*it).sessaoAtiva2<<endl;
+                    (*it).sessaoAtiva2 = true;
+                    cout<<"Segunda conta = true \n"<<endl;
+                }
+            }
+            else{
+                (*it).sessaoAtiva1 = true;
+                cout<<"Primeira conta = true \n"<<endl;
+            }
+        }
+        cout<< (*it).nome<<endl;
 	}
 
     if(achou != true){
         cout<<"Usuário não encontrado! Criando um novo usuario...\n"<<endl;
-        cout<< nome<< endl;
         this->criarNovoUsuario(nome,socketCli);
-    }
-    else{
-        usuarioValido = this->sessoesAtivas(login);
     }
 
     return usuarioValido;

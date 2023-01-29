@@ -8,14 +8,10 @@
 #include <pthread.h>
 #include <netdb.h> 
 #include <iostream>
-#include "../packet.hpp"
+#include "../login/login.hpp"
 
 void verificaRecebimentoIP(int argc,char *argv[]);
 
 void imprimeServerError(void);
-
-void writeSocket(char buffer[], int sockfd);
-
-void readSocket(PACKET pkt, int sock);
 
 void *ThreadClient(void *arg);

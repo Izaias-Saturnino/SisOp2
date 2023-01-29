@@ -5,19 +5,9 @@
 #include <netinet/in.h>
 #include <vector>
 #include <iostream>
+#include "../common/common.hpp"
 
 #define MAX_SESSIONS 2
-
-using namespace std;
-
-struct usuario{
-    string nome;
-    bool sessaoAtiva1;
-    bool sessaoAtiva2;
-    int socketClient1;
-    int socketClient2;
-};
-typedef struct usuario USUARIO;
 
 #define TAM_LISTA 200
 
@@ -25,11 +15,10 @@ class LoginManager{
     public:
         LoginManager();
         bool login(int socketCli, char user[]);
-        string getUser(string user);
         vector<USUARIO> listaDeUsuarios;
         void printListaUsuario();
+        void Logout(char user[], int socket);
     private:
-        void criarNovoUsuario(string nome,int socketCli);
-        bool sessoesAtivas(USUARIO login);
-        bool verificaQuantidadeUsuarios(string nome,int socketCli);
+        void criarNovoUsuario(char nome[],int socketCli);
+        bool verificaQuantidadeUsuarios(char nome[],int socketCli);
 };

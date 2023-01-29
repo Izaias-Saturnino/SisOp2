@@ -1,9 +1,6 @@
 #include "./server.hpp"
-#include "../login/login.hpp"
 
 #define PORT 4000
-
-LoginManager *loginManager = new LoginManager();
 
 int main(int argc, char *argv[])
 {
@@ -14,7 +11,8 @@ int main(int argc, char *argv[])
     socklen_t clilen;
     char user[256];
     bool usuarioValido;
-    PACKET pkt;
+    PACKET pkt, pktResponse;
+    LoginManager *loginManager = new LoginManager();
 
     verificaRecebimentoIP(argc, argv);
 
@@ -33,25 +31,36 @@ int main(int argc, char *argv[])
     bzero(&(serv_addr.sin_zero), 8);     
      
 	if (bind(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
-		printf("ERROR on binding\n");
+    {
+        printf("ERROR on binding\n");
+        exit(0);
+    }	
 	else
 	{	
         while(true)
         {    
+            
             /*listen to clients*/
 		    listen(sockfd, 5);
             clilen = sizeof(struct sockaddr_in);
+
             if ((newSockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen)) == -1) 
                 printf("ERROR on accept");
 
-            /*inicio login*/
-            readSocket(pkt,newSockfd);
-            usuarioValido = loginManager->login(newSockfd,pkt.user); 
-
-            if(usuarioValido)
-                pthread_create(&clientThread, NULL, ThreadClient, &newSockfd);  //CUIDADO: newSocket e não socket
             else{
-                //logout
+                /*inicio login*/
+                readSocket(&pkt,newSockfd);
+                strcpy(user,pkt.user);
+                usuarioValido = loginManager->login(newSockfd,user); 
+
+                if(usuarioValido)
+                {
+                    sendMessage("OK",1,4,1,user,newSockfd); //Mensagem de usuario Valido
+                    pthread_create(&clientThread, NULL, ThreadClient, &newSockfd);  //CUIDADO: newSocket e não socket
+                }  
+                else{
+                    sendMessage("Excedido numero de sessoes",1,3,1,user,newSockfd); //Mensagem de usuario invalido
+                }
             }
         }
     }
@@ -74,29 +83,8 @@ void imprimeServerError(void){
     exit(0);
 }
 
-void writeSocket(char buffer[],int sockfd){
-    int n;
-
-	/* write in the socket */ 
-	n = write(sockfd,"I got your message", 18);
-	if (n < 0) 
-		printf("ERROR writing to socket");
-}
-
-void readSocket(PACKET pkt, int sock){
-    int n;
-
-	/* read from the socket */
-	n = read(sock, &pkt, sizeof(pkt)); 
-	if (n < 0) 
-		printf("ERROR reading from socket");
-}
-
 void *ThreadClient(void *arg) {
     int sockfd= *(int *) arg;
-    char buffer[256]; 
-
-    writeSocket(buffer,sockfd);
     
     return 0;
 }
