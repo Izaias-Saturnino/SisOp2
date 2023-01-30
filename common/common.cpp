@@ -1,6 +1,8 @@
 #include "./common.hpp"
 #include <mutex>
 
+mutex pkt_mtx;
+
 using namespace std;
 
 void readSocket(PACKET *pkt, int sock){
@@ -23,14 +25,15 @@ void readSocket(PACKET *pkt, int sock){
 void sendMessage(string message, int seqn, int messageType,int fragmentos, char username[], int sockfd)
 {
 	PACKET pkt;
-	//pkt_mtx.lock();
+	
+	pkt_mtx.lock();
 	pkt.type = messageType;
 	pkt.seqn = seqn;
 	pkt.total_size = fragmentos;
 	strcpy(pkt.user, username);
 	strcpy(pkt._payload, message.c_str());
 	pkt.length = strlen(pkt._payload);
-	//pkt_mtx.unlock();
+	pkt_mtx.unlock();
 
 	int n = write(sockfd, &pkt, sizeof(pkt));
 	if (n < 0)

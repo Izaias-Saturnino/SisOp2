@@ -95,9 +95,8 @@ void *ThreadClient(void *arg) {
 
     if(pkt.type ==2)
     {
-        cout<<"thread type:"<< pkt.type<<endl; 
         loginManager->Logout(user,sockfd,resposta);
-        cout<<"resposta na thread:"<<resposta<<endl;
+
         sendMessage(resposta,1,5,1,user,sockfd); //resposta logout
     }
     return 0;

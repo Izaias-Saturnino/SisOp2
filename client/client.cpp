@@ -1,8 +1,6 @@
 #include "./client.hpp" 
 #include <mutex>
 
-mutex pkt_mtx;
-
 int main(int argc, char *argv[])
 {
 	int sockfd,PORT,newSocket;
