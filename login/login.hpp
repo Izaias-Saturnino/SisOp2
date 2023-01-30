@@ -17,7 +17,7 @@ class LoginManager{
         bool login(int socketCli, char user[]);
         vector<USUARIO> listaDeUsuarios;
         void printListaUsuario();
-        void Logout(char user[], int socket);
+        void Logout(char user[], int socket,char resposta[]);
     private:
         void criarNovoUsuario(char nome[],int socketCli);
         bool verificaQuantidadeUsuarios(char nome[],int socketCli);

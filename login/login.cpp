@@ -26,25 +26,34 @@ void LoginManager::criarNovoUsuario(char nome[],int socketCli){
     this->printListaUsuario();
 }
 
-void LoginManager::Logout(char user[],int socket){
+void LoginManager::Logout(char user[],int socket, char resposta[]){
     vector<USUARIO>::iterator it;
-
+    
     for(it = this->listaDeUsuarios.begin(); it != this->listaDeUsuarios.end(); it++){
+        cout<<"enter"<<socket<<endl;
+        cout<<"sessoes ativas: "<< (*it).socketClient1<<" e "<<(*it).socketClient2<<endl;
         if(strcmp(user,(*it).nome) == 0 ){         
             if((*it).socketClient1 == socket)
             {
+                cout<<"sessao1"<<endl;
                 (*it).sessaoAtiva1 = false;
+                strcpy(resposta,"Sessao 1 desconectada");
             }
             else{
+                cout<<"sessao2"<<endl;
                 (*it).sessaoAtiva2 = false;
+                strcpy(resposta,"Sessao 2 desconectada");
             }
-            
-            if((*it).sessaoAtiva1 == false && (*it).sessaoAtiva2 == false) //sem conexão -> remove da lista
-            {
-                this->listaDeUsuarios.erase(it);
-            }
+            break;
         }
     }
+    if((*it).sessaoAtiva1 == false && ((*it).sessaoAtiva2 == false)) //sem conexão -> remove da lista
+    {
+        cout<<"ambos"<<endl;
+        this->listaDeUsuarios.erase(it);
+        strcpy(resposta,"Usuario desconectado");
+    }
+    cout<<"resposta dentro logout:"<< resposta<<endl;
 }
 
 bool LoginManager::verificaQuantidadeUsuarios(char nome[],int socketCli){
@@ -63,15 +72,25 @@ bool LoginManager::verificaQuantidadeUsuarios(char nome[],int socketCli){
                 else{
                     cout<<(*it).sessaoAtiva2<<endl;
                     (*it).sessaoAtiva2 = true;
-                    cout<<"Segunda conta = true \n"<<endl;
+                    (*it).socketClient2 = socketCli;
+                    cout<<"sessao2:"<< (*it).sessaoAtiva2<< endl;
+                    cout<<"Segunda conta = true \n"<<(*it).socketClient2<<endl;
                 }
             }
             else{
-                (*it).sessaoAtiva1 = true;
-                cout<<"Primeira conta = true \n"<<endl;
+                 if((*it).sessaoAtiva2 == true){ //reativa sessão 1
+                    cout<<(*it).sessaoAtiva1<<endl;
+                    (*it).sessaoAtiva1 = true;
+                    (*it).socketClient1 = socketCli;
+                    cout<<"sessao1:"<< (*it).sessaoAtiva2<< endl;
+                    cout<<"Segunda conta = true \n"<<(*it).socketClient1<<endl;
+                 }
+                 else{
+                    (*it).sessaoAtiva1 = true;
+                    cout<<"Primeira conta = true \n"<<endl;
+                 }
             }
         }
-        cout<< (*it).nome<<endl;
 	}
 
     if(achou != true){

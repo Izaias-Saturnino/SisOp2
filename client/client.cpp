@@ -35,12 +35,11 @@ int main(int argc, char *argv[])
 		printf("ERROR connecting\n");
 		exit(0);
 	}
-	cout<< "Connected "<<endl;	
 
 	bzero(buffer, 256);
-	cout<<"antes do sendMessage: "<<username<<endl;
+
 	sendMessage("",1,1,1,username,sockfd); //login message
-	cout<<"send message"<<endl;	
+
 	readSocket(&receivedPkt,sockfd);
 
 	if(strcmp(receivedPkt._payload,"OK") == 0)
@@ -50,7 +49,12 @@ int main(int argc, char *argv[])
 		{
 			cin>> message;
 		}
+
 		sendMessage("",1,2,1,username,sockfd); //logout message
+		
+		readSocket(&receivedPkt,sockfd);
+
+		cout<<receivedPkt._payload <<endl;
 	}
 	else{
 		cout<<receivedPkt._payload <<endl;

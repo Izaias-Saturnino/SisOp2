@@ -3,8 +3,6 @@
 
 using namespace std;
 
-mutex write_mtx;
-
 void readSocket(PACKET *pkt, int sock){
     int n = 0;
 	bool erro = false;
@@ -13,7 +11,7 @@ void readSocket(PACKET *pkt, int sock){
     {
     	/* read from the socket */
 		n = read(sock, pkt, sizeof(*pkt)); 
-		cout<<"n:"<< n <<endl;
+
 		if (n < 0) 
 		{
 			cout<<"ERROR reading from socket"<<endl;

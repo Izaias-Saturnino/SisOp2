@@ -2,6 +2,8 @@
 
 #define PORT 4000
 
+LoginManager *loginManager = new LoginManager();
+
 int main(int argc, char *argv[])
 {
     int sockfd,newSockfd;
@@ -11,9 +13,8 @@ int main(int argc, char *argv[])
     socklen_t clilen;
     char user[256];
     bool usuarioValido;
-    PACKET pkt, pktResponse;
-    LoginManager *loginManager = new LoginManager();
-
+    PACKET pkt;
+    
     verificaRecebimentoIP(argc, argv);
 
     server = gethostbyname(argv[1]);
@@ -85,6 +86,19 @@ void imprimeServerError(void){
 
 void *ThreadClient(void *arg) {
     int sockfd= *(int *) arg;
+    PACKET pkt;
+    char resposta[40];
+    char user[256];
     
+    readSocket(&pkt,sockfd);
+    strcpy(user,pkt.user);
+
+    if(pkt.type ==2)
+    {
+        cout<<"thread type:"<< pkt.type<<endl; 
+        loginManager->Logout(user,sockfd,resposta);
+        cout<<"resposta na thread:"<<resposta<<endl;
+        sendMessage(resposta,1,5,1,user,sockfd); //resposta logout
+    }
     return 0;
 }
