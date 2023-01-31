@@ -3,19 +3,15 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <pthread.h>
-#include<fcntl.h> 
+#include <fcntl.h> 
 
 #define EVENT_SIZE (sizeof(struct inotify_event))
 #define EVENT_BUF_LEN (1024 * (EVENT_SIZE + 16))
 
 
-int inotify_fd,watch_dir;
-
-
-
-
-void *folderchecker(void *arg)
+void *folderchecker()
 {
+    int inotify_fd,watch_dir;
     inotify_fd = inotify_init();
 
 
@@ -60,13 +56,4 @@ void *folderchecker(void *arg)
             i += EVENT_SIZE + event->len;
         }
     }
-}
-
-int main(int argc, char *argv[])
-{
-    pthread_t thr1;
-    int n1 = 1;
-    pthread_create(&thr1, NULL, folderchecker, (void *)&n1);
-    pthread_exit(0);
-
 }
