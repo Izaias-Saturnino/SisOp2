@@ -1,18 +1,26 @@
 #include <stdio.h>
+#include <iostream>
 #include <sys/inotify.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <pthread.h>
-#include <fcntl.h> 
+#include<fcntl.h> 
+#include<string> 
 
 #define EVENT_SIZE (sizeof(struct inotify_event))
 #define EVENT_BUF_LEN (1024 * (EVENT_SIZE + 16))
 
-extern int operation;
-extern std::string filename;
-void *folderchecker()
+
+int inotify_fd,watch_dir;
+
+std::string name="";
+std::string command ="";
+pthread_mutex_t m = PTHREAD_MUTEX_INITIALIZER; 
+
+int action =0;
+
+void *folderchecker(void *arg)
 {
-    int inotify_fd,watch_dir;
     inotify_fd = inotify_init();
 
 
@@ -36,30 +44,35 @@ void *folderchecker()
         length = read(inotify_fd, buffer, EVENT_BUF_LEN);
         while (i < length)
         {
+            pthread_mutex_lock(&m);
             struct inotify_event *event = (struct inotify_event *)&buffer[i];
             if (event->len)
             {
                 if (event->mask & IN_CREATE)
                 {
-                   printf("Message: %s ,created\n", event->name);
-                   operation =0;
-                   filename=event->name
+                   name = event->name;
+                   action =1;
                 }
                 else if (event->mask & IN_DELETE)
                 {
-                   printf("Message: %s ,deleted\n", event->name);
-                   operation =1;
-                   filename=event->name
+                   name = event->name;
+                   action =2;
 
                 }
                 else if (event->mask & IN_MODIFY)
                 {
-                   printf("Message: %s ,modified\n", event->name);
-                   operation =2;
-                   filename=event->name
+                    name = event->name;
+                    action =3;
+
                 }
             }
             i += EVENT_SIZE + event->len;
+            pthread_mutex_unlock(&m);
         }
     }
+}
+
+void *input(void *arg)
+{
+    std::cin >> command;
 }
