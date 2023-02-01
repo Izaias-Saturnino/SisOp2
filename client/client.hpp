@@ -13,6 +13,7 @@
 #include <cstdlib>
 #include <signal.h>
 #include <ctime>
+#include "../filewatcher.cpp"
 #include "../common/common.hpp"
 
 using namespace std;

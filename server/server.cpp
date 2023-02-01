@@ -38,6 +38,7 @@ int main(int argc, char *argv[])
     }	
 	else
 	{	
+        cout<< "running";
         while(true)
         {    
             
