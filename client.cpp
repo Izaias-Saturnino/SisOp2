@@ -11,7 +11,7 @@ bool sync_online = false;
 bool exit_program = false;
 
 //move to socket manager
-bool init_connection(){
+bool init_client_connection(){
     //TO DO
 }
 
@@ -147,7 +147,7 @@ void handle_updates(){
 }
 
 int main(){
-    bool connection_successful = init_connection();
+    bool connection_successful = init_client_connection();
     if(!connection_successful){
         std::cerr << "Connection error" << std::endl;
         return 1;

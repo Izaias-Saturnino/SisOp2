@@ -4,42 +4,67 @@
 #include <unistd.h>
 #include <string>
 #include <vector>
+#include <thread>
 
 using namespace std;
 
+thread_local string username;
+thread_local string file_relative_path;
+
 //move to socket manager
 bool open_server(){
-    //TO DO
+    //tenta abrir o servidor
+    //retorna true se consegue
+    //retorna false se não consegue
 }
 
 //move to socket manager
 bool listen_for_clients(){
-    //TO DO
+    //tenta fazer o servidor começar a ouvir conexões de clientes
+    //retorna true se consegue
+    //retorna false se não consegue
 }
 
 //move to socket manager
 bool accept_connection(){
-    //TO DO
+    //tenta aceitar a conexão do cliente
+    //retorna true se consegue
+    //retorna false se não consegue
 }
 
-void create_connection_handler(){
+bool create_connection_handler(){
     // cria thread que lida com a conexão separadamente chamando o handle_connection()
+}
+
+//move to socket manager
+bool exit_connection(){
+    //tenta fechar a conexão com o cliente
+    //retorna true se consegue
+    //retorna false se não consegue
 }
 
 int main(){
     bool server_is_up = open_server();
     if(!server_is_up){
+        std::cerr << "Could not open server" << std::endl;
         return 1;
     }
 
-    listen_for_clients();
+    bool server_is_listening = listen_for_clients();
+    if(!server_is_listening){
+        std::cerr << "Could not listen to connections" << std::endl;
+        return 1;
+    }
 
     while(true){
         bool connection_accepted = accept_connection();
-        if(!connection_accepted){
-            return 1; // não sei se isso é a melhor maneira de tratar esse erro
+        if(connection_accepted){
+            bool connection_handler_created = create_connection_handler();
+            if(!connection_handler_created){
+                std::cerr << "Could create thread to handle connection" << std::endl;
+                //código complicado para lidar com esse erro que não está no escopo desse trabalho deveria ser introduzido aqui
+            }
         }
-        create_connection_handler();
     }
     return 0;
 }
@@ -52,33 +77,39 @@ bool read_from_socket(){
     //se tiver erro nos dados, a ponto de não conseguir tratar, mandar uma mensagem de erro ao cliente (se possível) e retornar false
 }
 
-string get_message_type(){
-    //lê a mensagem e retorna o tipo dela
+string get_request_type(){
+    //lê a request e retorna o tipo dela
 }
 
 void send_message(vector<string> args){
     string message_type = args[0];
 
-    if(message_type == "success"){
-        //send upload request with file
-    }
-    else if(message_type == "file"){
-        //send download request
+    if(message_type == "file"){
+        //send download answer
     }
     else if(message_type == "list_files_from_server"){
-        //send delete request
+        //send delete answer
     }
     else if(message_type == "could_not_read_request"){
-        //send list_files request
+        //send mensagem de erro de comando não entendido
     }
     else if(message_type == "first_sync_end"){
-        //show client files list
+        //mandar mensagem de fim de sincronização inicial
+    }
+    else if(message_type == "login_error"){
+        //mandar mensagem de erro de login
+    }
+    else if(message_type == "undefined_error"){
+        //mandar mensagem de comando não entendido
     }
     else{
-        //mandar mensagem de erro
+        std::cerr << "Message answer type not defined" << std::endl;
     }
 }
 
+
+// define todas as variaveis relevantes apos a leitura com sucesso da requisicao
+// essas variaveis são: username, tipo de request, remetente, etc...
 string read_request(){
     string type;
 
@@ -87,7 +118,7 @@ string read_request(){
     if(!read_successful){
         type = "could_not_read_request";
     }else{
-        type = get_message_type();
+        type = get_request_type();
     }
 
     return type;
@@ -99,92 +130,113 @@ bool handle_login(){
     vector<string> args;
 
     if(request_type != "login"){
-        args.push_back("error");
-        send_message(args);
-    }
-    else{
-        username = ...;
-        //password = ...;
-        args.push_back("success");
+        args.push_back("login_error");
         send_message(args);
     }
 }
 
+//move to dir manager
+bool create_user_folder(){
+    //cria um diretório para o usuário
+}
+
+vector<string> get_removed_files_list(){
+    //verifica os arquivos que estão no diretório do cliente, mas não no servidor e coloca o  nome deles na lista
+}
+
+vector<string> get_new_files_list(){
+    //verifica os arquivos que estão no servidor, mas faltam para o cliente e coloca o nome deles na lista
+}
+
+void send_file_to_clients(string file_relative_path){
+    //cria uma mensagem a partir do arquivo e envia ao cliente
+}
+
+void send_files_to_clients(vector<string> files_to_send){
+
+}
+
+void send_all_files_to_client(){
+    //pega a lista de arquivos do servidor
+    //envia todos os arquivos via send_files_to_clients()
+}
+
+void remove_files_on_clients(vector<string> files_to_remove){
+    //envia uma mensagem do tipo remove para o cliente com uma lista de arquivos para remover
+}
+
 void handle_first_sync(){
-    bool request_from_new_user = ...;
-    //bool new_device = request_from_new_user || ...;
+    bool request_from_new_user = true || false;
+    bool new_device = request_from_new_user || true || false;
 
     if(request_from_new_user){
         create_user_folder();
     }
 
-    //versão melhorada do código para versões futuras
-
-    /*
     else if(new_device){
         send_all_files_to_client();
     }
 
-    bool server_client_are_consistent = ...;
+    bool server_client_are_consistent = true || false;
 
     if(!server_client_are_consistent){
-        vector<string> server_new_files = ...;
-        vector<string> server_removed_files = ...;
+        vector<string> removed_files_list = get_removed_files_list();
+        vector<string> new_files_list = get_new_files_list();
 
-        send_files_to_clients();
-        remove_files_on_clients();
+        remove_files_on_clients(removed_files_list);
+        send_files_to_clients(new_files_list);
     }
 
-    //essa versão melhorada não incluiria o código abaixo
-    */
+    vector<string> first_sync_end = {"first_sync_end"};
+    send_message(first_sync_end);
+}
 
-    remove_all_files_from_client();
-    send_all_files_to_client();
+//move to dir manager
+void delete_file(string file_relative_path){
+    //remove o aquivo do servidor
+}
 
-    send_message("first_sync_end");
+//move to dir manager
+void create_file_from_request(){
+    //cria um arquivo a partir do payload request
+}
+
+//move to dir manager
+string list_files_in_sync_dir(){
+    //cria uma lista com todos os arquivos atuais do servidor em formato de texto
 }
 
 void handle_request(){
     string request_type = read_request();
     //aqui fica todo o código que cuida das requisições de comunicação feitas pelo cliente ao servidor, menos as requisições de login
-    switch(request_type){
-        case "download_file":
-            vector<string> args = new vector<String>{file, file_path};
-            send_message(args);
-            break;
-        case "delete_file":
-            delete_file(file_path);
+    if(request_type == "download_file"){
+        vector<string> args = {"file", file_relative_path};
+        send_message(args);
+    }
+    else if(request_type == "delete_file"){
+        delete_file(file_relative_path);
 
-            vector<string> args = new vector<String>{"success"};
-            send_message(args);
+        vector file = {file_relative_path};
+        remove_files_on_clients(file);
+    }
+    else if(request_type == "upload_file"){
+        create_file_from_request();
 
-            remove_file_on_clients();
-            break;
-        case "upload_file":
-            create_file_from_request();
+        send_file_to_clients(file_relative_path);
+    }
+    else if(request_type == "list_files_from_server"){
+        string list = list_files_in_sync_dir();
 
-            vector<string> args = new vector<String>{"success"};
-            send_message(args);
-
-            send_file_to_clients();
-            break;
-        case "list_files_from_server":
-            string list = list_files_in_sync_dir();
-
-            vector<string> args = new vector<String>{"list_files_from_server", list};
-            send_message(args);
-            break;
-        case "exit_connection":
-            exit_connection();
-            break;
-        case "could_not_read_request":
-            vector<string> args = new vector<String>{"could_not_read_request"};
-            send_message(args);
-            break;
-        default:
-            vector<string> args = new vector<String>{"error"};
-            send_message(args);
-            break;
+        vector<string> args = {"list_files_from_server", list};
+        send_message(args);
+    }
+    else if(request_type == "could_not_read_request"){
+        vector<string> args = {"could_not_read_request"};
+        send_message(args);
+    }
+    else{
+        vector<string> args = {"undefined_error"};
+        send_message(args);
     }
 }
 
@@ -194,48 +246,12 @@ void handle_connection(){
         return;
     }
 
-    //bool device_first_sync = ...;
-    //if(device_first_sync){
+    bool device_first_sync = true || false;
+    if(device_first_sync){
         handle_first_sync();
-    //}
+    }
 
     while(true){
-        handle_request(); // não se esquecer de mandar mensagens de confirmação para o outro lado sempre que necessário
+        handle_request();
     }
-}
-
-void remove_file_on_clients(){
-    //TO DO
-}
-
-void send_file_to_clients(){
-    //TO DO
-}
-
-void remove_all_files_on_client(){
-    //TO DO
-}
-
-void send_all_files_to_client(){
-    //TO DO
-}
-
-//move to dir manager
-void create_user_folder(){
-    //TO DO
-}
-
-//move to socket manager
-void exit_connection(){
-    //TO DO
-}
-
-//move to dir manager
-void create_file_from_request(){
-    //TO DO
-}
-
-//move to dir manager
-string list_files_in_sync_dir(){
-    //TO DO
 }
