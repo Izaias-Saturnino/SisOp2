@@ -48,7 +48,7 @@ int main(int argc, char *argv[])
 		// somente criar se comando get sync dir for ativado pthread_create(&thr1, NULL, folderchecker, (void *)&n1);
 		pthread_create(&thr2, NULL, input, (void *)&n2);
 		cout << "type exit to end your session \n" << endl;
-		while (command != "exit")
+		while (true)
 		{
 			if (action != 0)
 			{
@@ -58,7 +58,10 @@ int main(int argc, char *argv[])
 			if (command != "")
 			{
 				std::cout << command;
+				if(command=="exit"){
 				command = "";
+				break;
+				}
 				pthread_create(&thr2, NULL, input, (void *)&n2);
 			}
 		}
