@@ -12,7 +12,7 @@ bool exit_program = false;
 
 //move to socket manager
 bool init_client_connection(){
-    //TO DO
+    //inicia a conexão com o servidor
 }
 
 string read_input(){
@@ -20,7 +20,7 @@ string read_input(){
 }
 
 void send_login_request(string username){
-    //TO DO
+    //envia uma requisição de login
 }
 
 string read_request(){

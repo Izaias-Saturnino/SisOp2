@@ -10,6 +10,8 @@ using namespace std;
 
 thread_local string username;
 thread_local string file_relative_path;
+thread_local string server_path;
+thread_local string user_folder_path;
 
 //move to socket manager
 bool open_server(){
@@ -124,15 +126,37 @@ string read_request(){
     return type;
 }
 
+bool auth(string login_data){
+    //realiza o login
+    user_folder_path = server_path + "/" + username;
+    //por enquanto só aceita
+    return true;
+}
+
+string get_login_data(){
+    //pega os dados de login do payload da request de login
+}
+
 bool handle_login(){
     string request_type = read_request();
 
     vector<string> args;
 
+    bool login_successful;
+
     if(request_type != "login"){
         args.push_back("login_error");
         send_message(args);
+
+        login_successful = false;
     }
+    else{
+        string login_data = get_login_data();
+
+        login_successful = auth(login_data);
+    }
+
+    return login_successful;
 }
 
 //move to dir manager
