@@ -4,44 +4,87 @@
 #include <unistd.h>
 #include <string>
 #include <vector>
+#include <sstream>
+#include "./client.hpp" 
 
 using namespace std;
+
+//socket variables
+int sockfd;
+char buffer[256],username[256];
+PACKET receivedPkt;
 
 bool sync_online = false;
 bool exit_program = false;
 
+void verificaRecebimentoParametros(int argc){
+    if (argc < 3) {  
+        cout<<"Faltam parametros"<<endl;
+        exit(0);
+    }
+}
+
 //move to socket manager
-bool init_client_connection(){
-    //inicia a conexão com o servidor
+bool init_client_connection(int argc, char *argv[]){
+    bool connection_successful = true;
+
+    int PORT;
+	struct sockaddr_in serv_addr;
+	string servAddr;
+
+	strcpy(username, argv[1]);
+	PORT = atoi(argv[3]);
+	servAddr = string(argv[2]);
+	
+	if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1) 
+	{
+		printf("ERROR opening socket");
+		connection_successful = false;
+	}
+        
+	serv_addr.sin_family = AF_INET;
+	serv_addr.sin_port = htons(PORT);
+	inet_aton(servAddr.c_str(), &serv_addr.sin_addr);
+	bzero(&(serv_addr.sin_zero), 8);     
+
+	if (connect(sockfd,(struct sockaddr *) &serv_addr,sizeof(serv_addr)) < 0) 
+	{
+		printf("ERROR connecting\n");
+		connection_successful = false;
+	}
+
+    return connection_successful;
 }
 
+//read input and put it in a string
 string read_input(){
-    //read input and put it in a string
+    string input;
+    cin>> input;
+    return input;
 }
 
-void send_login_request(string username){
-    //envia uma requisição de login
+void send_login_request(){
+    bzero(buffer, 256);
+
+	sendMessage("",1,1,1,username,sockfd); //login message
 }
 
 string read_request(){
-    //string type = ...;
-
-    //inicia as variaveis que são recebidas da mensagem
+    readSocket(&receivedPkt,sockfd);
+    return receivedPkt._payload;
 }
 
 bool attempt_login(){
     bool successful = true;
 
     //pegar dados de login
-
-    string username = read_input();
     //string password = ...;
 
     //envia os dados em uma mensagem de login
-    send_login_request(username);
+    send_login_request();
 
-    string request_type = read_request();
-    if(request_type != "success"){
+    string request_answer = read_request();
+    if(request_answer != "OK"){
         successful = false;
     }
 
@@ -52,8 +95,17 @@ void create_update_handler(){
 
 }
 
-vector<string> get_args(string input){
-    //processar entrada e dividir em argumentos para o vetor
+vector<string> get_args(string const &str, const char delim){
+    vector<string> args;
+
+    stringstream ss(str);
+ 
+    string s;
+    while (getline(ss, s, delim)) {
+        args.push_back(s);
+    }
+
+    return args;
 }
 
 void send_request(vector<string> args){
@@ -100,7 +152,7 @@ void send_request(vector<string> args){
 void send_request(){
     string input = read_input();
 
-    vector<string> args = get_args(input);
+    vector<string> args = get_args(input, ' ');
 
     send_request(args);
 }
@@ -129,10 +181,7 @@ void handle_client_update(){
 void handle_updates(){
     //esperar pelo primeiro pacote do servidor e verificar se ele está pedindo um handle_first_sync()
 
-    //bool first_sync = ...;
-    //if(first_sync){
-        handle_first_sync();
-    //}
+    handle_first_sync();
 
     while(true){
         bool server_update = check_for_server_update();
@@ -146,23 +195,40 @@ void handle_updates(){
     }
 }
 
-int main(){
-    bool connection_successful = init_client_connection();
+void exit(){
+    //fechar a sessão
+    sendMessage("",1,2,1,username,sockfd); //logout message
+    //fechar a conexão
+    close(sockfd);
+    //terminar programa
+    exit(0);
+}
+
+int main(int argc, char *argv[]){
+    verificaRecebimentoParametros(argc);
+
+    bool connection_successful = init_client_connection(argc, argv);
     if(!connection_successful){
         std::cerr << "Connection error" << std::endl;
-        return 1;
+        exit(0);
     }
 
     bool login_successful = attempt_login();
-    while(!login_successful){
-        return 1;
+    if(!login_successful){
+        string message = "";
+        cout<< "type exit to end your session \n"<<endl;
+		while(message != "exit")
+		{
+			message = read_input();
+		}
+        exit();
     }
 
     while(true){
         send_request();
 
         if(exit_program){
-            break;
+            exit();
         }
     }
     return 0;
