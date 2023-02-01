@@ -2,30 +2,28 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <unistd.h>
-#include <cstring>
+#include <string>
+#include <vector>
 
-int main(){
-    bool connection_successful = init_connection();
-    if(!connection_successful){
-        std::cerr << "Connection error" << std::endl;
-        return 1;
-    }
+using namespace std;
 
-    bool login_successful = attempt_login();
-    while(!login_successful){
-        return 1;
-    }
+//move to socket manager
+bool init_connection(){
+    //TO DO
+}
 
-    create_update_handler(); // cria um thread para lidar com atualizações enviadas pelo servidor e cuida dessas atualizações via handle_updates()
-    
-    while(true){
-        send_request();
+string read_input(){
+    //read input and put it in a string
+}
 
-        if(exit){
-            break;
-        }
-    }
-    return 0;
+void send_login_request(string username){
+    //TO DO
+}
+
+string read_request(){
+    //string type = ...;
+
+    //inicia as variaveis que são recebidas da mensagem
 }
 
 bool attempt_login(){
@@ -47,7 +45,108 @@ bool attempt_login(){
     return successful;
 }
 
-handle_updates(){
+void create_update_handler(){
+
+}
+
+vector<string> get_args(string input){
+    //processar entrada e dividir em argumentos para o vetor
+}
+
+void send_request(vector<string> args){
+    string type = args[0];
+    //sempre esperar pela mensagem de confirmação do servidor
+    if(type == "upload_file"){
+        //send upload request with file
+    }
+    else if(type == "download_file"){
+        //send download request
+    }
+    else if(type == "delete_file"){
+        //send delete request
+    }
+    else if(type == "list_files_from_server"){
+        //send list_files request
+    }
+    else if(type == "list_files_from_client"){
+        //show client files list
+    }
+    else if(type == "get_sync_dir"){
+        if(!sync_online){
+            sync_online = true;
+            create_update_handler(); // cria um thread para lidar com atualizações enviadas pelo servidor e cuida dessas atualizações via handle_updates()
+        }
+        else{
+            //mensagem de erro
+        }
+    }
+    else if(type == "exit_connection"){
+        //exit connection
+    }
+    else if(type == "error"){
+        //exibir mensagem de erro
+        //pedir para o usuário digitar um comando válido
+    }
+    else{
+        //exibir mensagem de erro
+        //pedir para o usuário digitar um comando válido
+    }
+}
+
+void send_request(){
+    string input = read_input();
+
+    vector<string> args = get_args(input);
+
+    send_request(args);
+}
+
+int main(){
+    bool connection_successful = init_connection();
+    if(!connection_successful){
+        std::cerr << "Connection error" << std::endl;
+        return 1;
+    }
+
+    bool login_successful = attempt_login();
+    while(!login_successful){
+        return 1;
+    }
+
+    bool sync_online = false;
+
+    while(true){
+        send_request();
+
+        if(exit){
+            break;
+        }
+    }
+    return 0;
+}
+
+void handle_first_sync(){
+    //cria o diretório sync_dir se necessário
+    //recebe vários arquivos do servidor e espera pela mensagem de fim de first_sync
+}
+
+bool check_for_server_update(){
+    //lê do socket e retorna true se recebe algo
+}
+
+void handle_server_update(){
+    //ao receber a atualizacao atualiza o diretório local com o arquivo recebido
+}
+
+bool check_for_client_update(){
+    //verifica mudanças no diretório
+}
+
+void handle_client_update(){
+    //envia as mudanças para o servidor
+}
+
+void handle_updates(){
     //esperar pelo primeiro pacote do servidor e verificar se ele está pedindo um handle_first_sync()
 
     //bool first_sync = ...;
@@ -65,86 +164,6 @@ handle_updates(){
             handle_client_update();
         }
     }
-}
-
-bool check_for_server_update(){
-    //lê do socket e retorna true se recebe algo
-}
-
-handle_server_update(){
-    //ao receber atualiza o diretório local com o arquivo recebido
-}
-
-bool check_for_client_update(){
-    //verifica mudanças no diretório
-}
-
-handle_client_update(){
-    //envia as mudanças para o servidor
-}
-
-handle_first_sync(){
-    //cria o diretório sync_dir se necessário
-    //recebe vários arquivos do servidor e espera pela mensagem de fim de first_sync
-}
-
-send_login_request(string username){
-    //TO DO
-}
-
-send_request(){
-    string input = read_input();
-
-    List<string> args = get_args(input);
-
-    send_request(args);
-}
-
-send_request(List<string> args){
-    string type = args[0];
-    //sempre esperar pela mensagem de confirmação do servidor
-    switch(type){
-        case "upload_file":
-            //send upload request with file
-            break;
-        case "download_file":
-            //send download request
-            break;
-        case "delete_file":
-            //send delete request
-            break;
-        case "list_files_from_server":
-            //send list_files request
-            break;
-        case "list_files_from_client":
-            //show client files list
-            break;
-        case "get_sync_dir":
-            if(!sync_online){
-                sync();
-            }
-            else{
-                //mensagem de erro
-            }
-            break;
-        case "exit_connection":
-            //send exit connection request
-            //exit program
-            break;
-        case "error":
-            //exibir mensagem de erro
-            //pedir para o usuário digitar um comando válido
-            break;
-        default:
-            //exibir mensagem de erro
-            //pedir para o usuário digitar um comando válido
-            break;
-    }
-}
-
-//move to socket manager
-bool init_connection(){
-    //TO DO
 }
 
 get_operation(){
