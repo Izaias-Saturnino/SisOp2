@@ -6,6 +6,10 @@
 #include <vector>
 #include <thread>
 #include <exception>
+#include <cstdio>
+#include <sys/stat.h>
+#include <filesystem>
+namespace fs = std::filesystem;
 
 #include "./server.hpp"
 
@@ -13,19 +17,20 @@ using namespace std;
 
 #define PORT 4000
 
-int sockfd,newSockfd;
+int newSockfd;
 struct sockaddr_in cli_addr;
 pthread_t clientThread;
 socklen_t clilen;
 
 //client socket handler variables
 thread_local char user[256];
-thread_local int sockfd, newSockfd;
+thread_local int sockfd;
 thread_local PACKET pkt;
-thread_local string username;
-thread_local string file_relative_path;
-thread_local string server_path;
-thread_local string user_folder_path;
+thread_local string file_relative_path; //relative to user folder on server
+thread_local string server_path = "sync_dirs/"; //server sync_dir folder absolute path
+thread_local string user_folder_name;
+thread_local bool request_from_new_device;
+thread_local bool end_connection;
 
 LoginManager *loginManager = new LoginManager();
 
@@ -65,7 +70,6 @@ bool open_server(int argc, char *argv[]){
 
 //move to socket manager
 bool listen_for_clients(){
-    /*listen to clients*/
     listen(sockfd, 5);
     clilen = sizeof(struct sockaddr_in);
 }
@@ -75,8 +79,8 @@ bool accept_connection(){
     return (newSockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen)) != -1;
 }
 
+// cria thread que lida com a conexão separadamente chamando o handle_connection()
 bool create_connection_handler(){
-    // cria thread que lida com a conexão separadamente chamando o handle_connection()
     bool connection_handler_created = true;
     try{
         pthread_create(&clientThread, NULL, handle_connection, &newSockfd);
@@ -87,13 +91,7 @@ bool create_connection_handler(){
     return connection_handler_created;
 }
 
-//move to socket manager
-bool exit_connection(){
-    //tenta fechar a conexão com o cliente
-    //retorna true se consegue
-    //retorna false se não consegue
-}
-
+//fecha o servidor adequadamente
 void exit(){
     //fechar as conexões
     //fechar o servidor
@@ -128,15 +126,22 @@ int main(int argc, char *argv[]){
 }
 
 //move to socket manager
-bool read_request(){
-    //se não tiver nada, só retornar false
-    //se tiver algo, ler o socket até ter todos os dados necessários para tratar a comunicação
-    //quando terminar de obter os dados, gravar os dados em um pacote e retornar true
-    //se tiver erro nos dados, a ponto de não conseguir tratar, mandar uma mensagem de erro ao cliente (se possível) e retornar false
+void read_request(){
+    readSocket(&pkt,newSockfd);
 }
 
+//lê a request e retorna o tipo dela
 string get_request_type(){
-    //lê a request e retorna o tipo dela
+    string type;
+    switch(pkt.type){
+        case 1:
+            type = "some type";
+            break;
+        default:
+            type = "error";
+            break;
+    }
+    return type;
 }
 
 void send_message(vector<string> args){
@@ -151,9 +156,6 @@ void send_message(vector<string> args){
     else if(message_type == "could_not_read_request"){
         //send mensagem de erro de comando não entendido
     }
-    else if(message_type == "first_sync_end"){
-        //mandar mensagem de fim de sincronização inicial
-    }
     else if(message_type == "login"){
         //mandar mensagem de login (no payload da mensagem diz se deu erro ou não)
     }
@@ -165,21 +167,22 @@ void send_message(vector<string> args){
     }
 }
 
-// define todas as variáveis relevantes após a leitura com sucesso da requisição
-// essas variáveis são: username, tipo de request, remetente, request_from_new_device, request_from new user, etc...
-
+//realiza o login
 bool auth(){
-    //realiza o login
     bool auth_successful = loginManager->login(newSockfd,user);
-
     return auth_successful;
 }
 
+//pegar os dados de login do payload da request de login
 void get_login_data(){
-    //pega os dados de login do payload da request de login
+    //pegar os dados de login do payload da request de login
+    //essas variáveis são: user, request_from_new_device, request_from new user, etc.
+    //poderia adicionar password para mais segurança
     strcpy(user,pkt.user);
+    user_folder_name = user;
 }
 
+//lida com a request de login
 bool handle_login(){
     read_request();
     string request_type = get_request_type();
@@ -199,15 +202,36 @@ bool handle_login(){
 }
 
 //move to dir manager
-bool create_user_folder(){
-    //cria um diretório para o usuário
+bool create_folder(string folder_path){
+    bool folder_created = mkdir(folder_path.c_str(), 0777) == -1;
+    return folder_created;
 }
 
-vector<string> get_removed_files_list(){
-    //verifica os arquivos que estão no diretório do cliente, mas não no servidor e coloca o  nome deles na lista
+//move to dir manager
+//lista de arquivos só da primeira pasta (não é recursiva)
+vector<string> get_file_list(string path){
+    vector<string> list;
+    for (const auto & entry : fs::directory_iterator(path))
+        list.push_back(entry.path());
+    return list;
 }
 
-vector<string> get_new_files_list(){
+vector<string> get_client_file_list(){
+    //mandar mensagem ao cliente pedindo uma lista de arquivos
+}
+
+vector<string> get_server_file_list(){
+    string user_folder_path = server_path+user;
+    return get_file_list(user_folder_path);
+}
+
+//move to dir manager
+vector<string> get_removed_files_list(vector<string> server_file_list, vector<string> client_file_list){
+    //verifica os arquivos que estão no diretório do cliente, mas não no servidor e coloca o nome deles na lista
+}
+
+//move to dir manager
+vector<string> get_new_files_list(vector<string> server_file_list, vector<string> client_file_list){
     //verifica os arquivos que estão no servidor, mas faltam para o cliente e coloca o nome deles na lista
 }
 
@@ -216,24 +240,36 @@ void send_file_to_clients(string file_relative_path){
 }
 
 void send_files_to_clients(vector<string> files_to_send){
-
+    for(int i = 0; i < files_to_send.size(); i++){
+        send_file_to_clients(files_to_send[i]);
+    }
 }
 
 void send_all_files_to_client(){
-    //pega a lista de arquivos do servidor
-    //envia todos os arquivos via send_files_to_clients()
+    vector<string> server_file_list = get_server_file_list();
+    send_files_to_clients(server_file_list);
 }
 
 void remove_files_on_clients(vector<string> files_to_remove){
     //envia uma mensagem do tipo remove para o cliente com uma lista de arquivos para remover
 }
 
+bool check_if_user_exists(string user_folder_path){
+    struct stat sb;
+    return stat(user_folder_path.c_str(), &sb) == 0;
+}
+
 void handle_first_sync(){
-    bool request_from_new_user = true || false;
-    bool request_from_new_device = request_from_new_user || true || false;
+    string user_folder_path = server_path.c_str()+user_folder_name;
+
+    bool request_from_new_user = !check_if_user_exists(user_folder_path);
+    request_from_new_device = request_from_new_user || request_from_new_device;
 
     if(request_from_new_user){
-        create_user_folder();
+        bool created_user_folder = create_folder(user_folder_path);
+        if(!created_user_folder){
+            cerr << "Could not create user folder" << endl;
+        }
     }
 
     else if(request_from_new_device){
@@ -243,20 +279,24 @@ void handle_first_sync(){
     bool server_client_are_consistent = true || false;
 
     if(!server_client_are_consistent){
-        vector<string> removed_files_list = get_removed_files_list();
-        vector<string> new_files_list = get_new_files_list();
+
+        vector<string> client_file_list = get_client_file_list();
+        vector<string> server_file_list = get_server_file_list();
+        vector<string> removed_files_list = get_removed_files_list(server_file_list, client_file_list);
+        vector<string> new_files_list = get_new_files_list(server_file_list, client_file_list);
 
         remove_files_on_clients(removed_files_list);
         send_files_to_clients(new_files_list);
     }
-
-    vector<string> first_sync_end = {"first_sync_end"};
-    send_message(first_sync_end);
 }
 
 //move to dir manager
-void delete_file(string file_relative_path){
-    //remove o aquivo do servidor
+//remove o aquivo do servidor
+int delete_file(string file_path){
+    const char *c = file_path.c_str();
+    int result = remove(c);
+
+    return result;
 }
 
 //move to dir manager
@@ -264,21 +304,22 @@ void create_file_from_request(){
     //cria um arquivo a partir do payload request
 }
 
-//move to dir manager
-string list_files_in_sync_dir(){
-    //cria uma lista com todos os arquivos atuais do servidor em formato de texto
-}
-
 void handle_request(){
     read_request();
     string request_type = get_request_type();
     //aqui fica todo o código que cuida das requisições de comunicação feitas pelo cliente ao servidor, menos as requisições de login
     if(request_type == "download_file"){
+        //string file_relative_path_on_client = pkt.file_relative_path;
+        //string file_relative_path = server_path + user_folder_name + file_relative_path_on_client;
         vector<string> args = {"file", file_relative_path};
         send_message(args);
     }
     else if(request_type == "delete_file"){
-        delete_file(file_relative_path);
+        int result = delete_file(file_relative_path);
+
+        if(result != 0){
+            std::cerr << "ERROR in deleting file" << std::endl;
+        }
 
         vector file = {file_relative_path};
         remove_files_on_clients(file);
@@ -289,9 +330,16 @@ void handle_request(){
         send_file_to_clients(file_relative_path);
     }
     else if(request_type == "list_files_from_server"){
-        string list = list_files_in_sync_dir();
+        vector<string> list = get_server_file_list();
 
-        vector<string> args = {"list_files_from_server", list};
+        vector<string> comm = {"list_files_from_server"};
+
+        vector<string> args;
+
+        args.reserve(list.size() + comm.size());
+        args.insert(args.end(), comm.begin(), comm.end());
+        args.insert(args.end(), list.begin(), list.end());
+
         send_message(args);
     }
     else if(request_type == "could_not_read_request"){
@@ -301,6 +349,7 @@ void handle_request(){
     else if(request_type == "logout"){
         char resposta[40];
         loginManager->Logout(user,sockfd,resposta);
+        end_connection = true;
     }
     else{
         vector<string> args = {"undefined_error"};
@@ -322,7 +371,7 @@ void* handle_connection(void *arg){
     else{
         args.push_back("ERROR");
         send_message(args);
-        close(newSockfd);
+        close(sockfd);
         return 0;
     }
 
@@ -330,5 +379,8 @@ void* handle_connection(void *arg){
 
     while(true){
         handle_request();
+        if(end_connection){
+            break;
+        }
     }
 }

@@ -17,6 +17,9 @@ PACKET receivedPkt;
 bool sync_online = false;
 bool exit_program = false;
 
+//update handler variables
+pthread_t updateThread;
+
 void verificaRecebimentoParametros(int argc){
     if (argc < 3) {  
         cout<<"Faltam parametros"<<endl;
@@ -91,8 +94,16 @@ bool attempt_login(){
     return successful;
 }
 
-void create_update_handler(){
-
+//lida com as mensagens do servidor em uma thread separada
+bool create_update_handler(){
+    bool update_handler_created = true;
+    try{
+        pthread_create(&updateThread, NULL, handle_updates, &sockfd);
+    }
+    catch(exception &e){
+        update_handler_created = false;
+    }
+    return update_handler_created;
 }
 
 vector<string> get_args(string const &str, const char delim){
@@ -125,11 +136,11 @@ void send_request(vector<string> args){
     }
     else if(type == "list_files_from_client"){
         //show client files list
+        //get_file_list("sync_dir");
     }
     else if(type == "get_sync_dir"){
         if(!sync_online){
-            sync_online = true;
-            create_update_handler(); // cria um thread para lidar com atualizações enviadas pelo servidor e cuida dessas atualizações via handle_updates()
+            sync_online = create_update_handler(); // cria um thread para lidar com atualizações enviadas pelo servidor e cuida dessas atualizações via handle_updates()
         }
         else{
             //mensagem de erro
@@ -142,10 +153,12 @@ void send_request(vector<string> args){
     else if(type == "error"){
         //exibir mensagem de erro
         //pedir para o usuário digitar um comando válido
+        //tentar novamente
     }
     else{
         //exibir mensagem de erro
         //pedir para o usuário digitar um comando válido
+        //tentar novamente
     }
 }
 
@@ -159,7 +172,10 @@ void send_request(){
 
 void handle_first_sync(){
     //cria o diretório sync_dir se necessário
-    //recebe vários arquivos do servidor e espera pela mensagem de fim de first_sync
+    //bool created_user_folder = create_folder(sync_dir_path);
+    //if(!created_user_folder){
+    //    cerr << "Could not create user folder" << endl;
+    //}
 }
 
 bool check_for_server_update(){
@@ -178,7 +194,7 @@ void handle_client_update(){
     //envia as mudanças para o servidor
 }
 
-void handle_updates(){
+void* handle_updates(void* sockfd){
     //esperar pelo primeiro pacote do servidor e verificar se ele está pedindo um handle_first_sync()
 
     handle_first_sync();
