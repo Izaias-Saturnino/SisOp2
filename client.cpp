@@ -7,6 +7,9 @@
 
 using namespace std;
 
+bool sync_online = false;
+bool exit_program = false;
+
 //move to socket manager
 bool init_connection(){
     //TO DO
@@ -82,6 +85,7 @@ void send_request(vector<string> args){
     }
     else if(type == "exit_connection"){
         //exit connection
+        exit_program = true;
     }
     else if(type == "error"){
         //exibir mensagem de erro
@@ -99,30 +103,6 @@ void send_request(){
     vector<string> args = get_args(input);
 
     send_request(args);
-}
-
-int main(){
-    bool connection_successful = init_connection();
-    if(!connection_successful){
-        std::cerr << "Connection error" << std::endl;
-        return 1;
-    }
-
-    bool login_successful = attempt_login();
-    while(!login_successful){
-        return 1;
-    }
-
-    bool sync_online = false;
-
-    while(true){
-        send_request();
-
-        if(exit){
-            break;
-        }
-    }
-    return 0;
 }
 
 void handle_first_sync(){
@@ -166,6 +146,24 @@ void handle_updates(){
     }
 }
 
-get_operation(){
-    //ler operação da entrada
+int main(){
+    bool connection_successful = init_connection();
+    if(!connection_successful){
+        std::cerr << "Connection error" << std::endl;
+        return 1;
+    }
+
+    bool login_successful = attempt_login();
+    while(!login_successful){
+        return 1;
+    }
+
+    while(true){
+        send_request();
+
+        if(exit_program){
+            break;
+        }
+    }
+    return 0;
 }
