@@ -59,12 +59,12 @@ int main(int argc, char *argv[])
 			{
 				std::cout << command;
 				if(command=="exit"){
-				command = "";
 				break;
 				}
 				if(command=="list_client"){
 					print_file_list("./sync_dir");
 				}
+				command = "";
 				pthread_create(&thr2, NULL, input, (void *)&n2);
 			}
 		}

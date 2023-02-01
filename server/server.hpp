@@ -9,6 +9,7 @@
 #include <netdb.h> 
 #include <iostream>
 #include "../login/login.hpp"
+#include "../dir_manager.cpp"
 
 void verificaRecebimentoIP(int argc,char *argv[]);
 
