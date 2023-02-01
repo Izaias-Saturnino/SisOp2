@@ -8,7 +8,8 @@
 #define EVENT_SIZE (sizeof(struct inotify_event))
 #define EVENT_BUF_LEN (1024 * (EVENT_SIZE + 16))
 
-
+extern int operation;
+extern std::string filename;
 void *folderchecker()
 {
     int inotify_fd,watch_dir;
@@ -41,16 +42,21 @@ void *folderchecker()
                 if (event->mask & IN_CREATE)
                 {
                    printf("Message: %s ,created\n", event->name);
+                   operation =0;
+                   filename=event->name
                 }
                 else if (event->mask & IN_DELETE)
                 {
                    printf("Message: %s ,deleted\n", event->name);
+                   operation =1;
+                   filename=event->name
 
                 }
                 else if (event->mask & IN_MODIFY)
                 {
                    printf("Message: %s ,modified\n", event->name);
-
+                   operation =2;
+                   filename=event->name
                 }
             }
             i += EVENT_SIZE + event->len;
