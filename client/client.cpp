@@ -62,6 +62,9 @@ int main(int argc, char *argv[])
 				command = "";
 				break;
 				}
+				if(command=="list_client"){
+					print_file_list("./sync_dir");
+				}
 				pthread_create(&thr2, NULL, input, (void *)&n2);
 			}
 		}

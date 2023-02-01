@@ -14,7 +14,9 @@
 #include <signal.h>
 #include <ctime>
 #include "../filewatcher.cpp"
+#include "../dir_manager.cpp"
 #include "../common/common.hpp"
+
 
 using namespace std;
 
