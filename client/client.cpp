@@ -1,6 +1,6 @@
 #include "./client.hpp"
 #include <mutex>
-
+int upload_file_client(int sock, char username[]);
 int main(int argc, char *argv[])
 {
 	int sockfd, PORT, newSocket;
@@ -47,7 +47,8 @@ int main(int argc, char *argv[])
 		int n2 = 2;
 		// somente criar se comando get sync dir for ativado pthread_create(&thr1, NULL, folderchecker, (void *)&n1);
 		pthread_create(&thr2, NULL, input, (void *)&n2);
-		cout << "type exit to end your session \n" << endl;
+		cout << "type exit to end your session \n"
+			 << endl;
 		while (true)
 		{
 			if (action != 0)
@@ -57,20 +58,21 @@ int main(int argc, char *argv[])
 			}
 			if (command != "")
 			{
-				std::cout << command;
-				if(command=="exit"){
-				break;
+				if (command == "exit")
+				{
+					break;
 				}
-				if(command=="list_client"){
+				if (command == "list_client")
+				{
 					print_file_list("./sync_dir");
 				}
-				if(command=="update"){
-				   update_file_client(sockfd,username);
+				if (command == "upload")
+				{
+					upload_file_client(sockfd, username);
 
-				   sendMessage("",1,5,1,username,sock); //requisição para enviar arquivo
-	               
+					sendMessage("", 1, 5, 1, username, sockfd); // requisição para enviar arquivo
 				}
-								command = "";
+				command = "";
 				pthread_create(&thr2, NULL, input, (void *)&n2);
 			}
 		}
@@ -99,38 +101,31 @@ void verificaRecebimentoParametros(int argc)
 	}
 }
 
-void update_file_client(int sock, char username[])
+int upload_file_client(int sock, char username[])
 {
 	string file_path;
-	string buffer;
+	char *buffer;
 
-	cout <<"Informe o caminho do arquivo a ser enviado";
-	cin  >> file_path;
-	sendMessage(file_path,1,10,4,username,sock);
-
-	ifstream file(file_path);      
-    if (!file.is_open() ) {                 
-      cout <<" falha ao abrir" << endl;
-	//mensagem erro
-    }
-    else {
-      cout <<"Opened OK" << endl;
-	while (!feof(file)) // to read file
-    {
-		// function used to read the contents of file
-        fread(buffer, sizeof(buffer), 1, file);
-		sendMessage(buffer,1,11,4,username,sock)
-	   
-    }
-	fclose(file);
-    }
-
-}
-
-
-	        
-	
-
-
-
+	cout << "Informe o caminho do arquivo a ser enviado"<<"\n";
+	cin >> file_path;
+	ifstream file;
+	file.open(file_path);
+	if (!file.is_open())
+	{
+		cout << " falha ao abrir" << "\n" << endl;
+		return 0;
+		// mensagem erro
+	}
+	else
+	{	
+		sendMessage(file_path, 1, 10, 4, username, sock);
+		while (!file.eof()) // to read file
+		{
+			// function used to read the contents of file
+			file.read(buffer, sizeof(buffer));
+			sendMessage(buffer, 1, 11, 4, username, sock);
+		}
+		file.close();
+		return 1;
+	}
 }

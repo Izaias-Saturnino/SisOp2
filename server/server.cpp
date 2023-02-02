@@ -121,7 +121,7 @@ void *ThreadClient(void *arg)
     receivedFilePath = string(pkt._payload);
     receivedFilePath = receivedFilePath.substr(receivedFilePath.find_last_of("/")+1);
 
-    cout <<" leu nome do arquivo" << receivedFilePath<< endl;
+    cout << receivedFilePath<< "\n"<<endl;
     }
 
     }
