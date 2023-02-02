@@ -103,15 +103,41 @@ void *ThreadClient(void *arg)
     PACKET pkt;
     char resposta[40];
     char user[256];
-
-    readSocket(&pkt, sockfd);
-    strcpy(user, pkt.user);
+    while(true)
+    {
+        readSocket(&pkt, sockfd);
+        strcpy(user, pkt.user);
 
     if (pkt.type == 2)
     {
         loginManager->Logout(user, sockfd, resposta);
-
         sendMessage(resposta, 1, 5, 1, user, sockfd); // resposta logout
     }
+    if (pkt.type == 10)
+    {
+       
+        string receivedFilePath;
+
+    receivedFilePath = string(pkt._payload);
+    receivedFilePath = receivedFilePath.substr(receivedFilePath.find_last_of("/")+1);
+
+    cout <<" leu nome do arquivo" << receivedFilePath<< endl;
+    }
+
+    }
+   
     return 0;
+}
+
+void receive_file_client(int sock, char username[])
+{
+    string fileName;
+    PACKET receivedFilePathPacket;
+    string receivedFilePath;
+
+    receivedFilePath = string(receivedFilePathPacket._payload);
+    receivedFilePath.substr(receivedFilePath.find_last_of("/")+1);
+
+    
+
 }

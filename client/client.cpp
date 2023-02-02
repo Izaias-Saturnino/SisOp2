@@ -64,7 +64,13 @@ int main(int argc, char *argv[])
 				if(command=="list_client"){
 					print_file_list("./sync_dir");
 				}
-				command = "";
+				if(command=="update"){
+				   update_file_client(sockfd,username);
+
+				   sendMessage("",1,5,1,username,sock); //requisição para enviar arquivo
+	               
+				}
+								command = "";
 				pthread_create(&thr2, NULL, input, (void *)&n2);
 			}
 		}
@@ -91,4 +97,40 @@ void verificaRecebimentoParametros(int argc)
 		cout << "Faltam parametros" << endl;
 		exit(0);
 	}
+}
+
+void update_file_client(int sock, char username[])
+{
+	string file_path;
+	string buffer;
+
+	cout <<"Informe o caminho do arquivo a ser enviado";
+	cin  >> file_path;
+	sendMessage(file_path,1,10,4,username,sock);
+
+	ifstream file(file_path);      
+    if (!file.is_open() ) {                 
+      cout <<" falha ao abrir" << endl;
+	//mensagem erro
+    }
+    else {
+      cout <<"Opened OK" << endl;
+	while (!feof(file)) // to read file
+    {
+		// function used to read the contents of file
+        fread(buffer, sizeof(buffer), 1, file);
+		sendMessage(buffer,1,11,4,username,sock)
+	   
+    }
+	fclose(file);
+    }
+
+}
+
+
+	        
+	
+
+
+
 }
