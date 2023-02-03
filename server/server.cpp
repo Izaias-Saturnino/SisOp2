@@ -103,6 +103,8 @@ void *ThreadClient(void *arg)
     PACKET pkt;
     char resposta[40];
     char user[256];
+    string directory = "/sync_dir/";
+    fstream file_server;
     while (true)
     {
         readSocket(&pkt, sockfd);
@@ -115,14 +117,34 @@ void *ThreadClient(void *arg)
         }
         if (pkt.type == MENSAGEM_ENVIO_NOME_ARQUIVO)
         {
+
             string receivedFilePath;
+
             receivedFilePath = string(pkt._payload);
             receivedFilePath = receivedFilePath.substr(receivedFilePath.find_last_of("/") + 1);
+            directory = "./";
+            directory = directory + pkt.user + "/" + receivedFilePath;
+            file_server.open(directory, ios::out);
 
-            cout << receivedFilePath << "\n"
+
+            cout << directory << "\n"
                  << endl;
         }
-        if (pkt.type == MENSAGEM_PEDIDO_LISTA_ARQUIVOS_SERVIDOR)
+        if(pkt.type == MENSAGEM_ENVIO_PARTE_ARQUIVO|| pkt.type == MENSAGEM_ARQUIVO_LIDO)
+        {
+            string receivedFileLine = (pkt._payload);
+            if (pkt.type == MENSAGEM_ENVIO_PARTE_ARQUIVO)
+            {
+                file_server << receivedFileLine;
+            }
+            else
+            {
+                file_server.close();
+                break;
+            }
+
+        }
+         if (pkt.type == MENSAGEM_PEDIDO_LISTA_ARQUIVOS_SERVIDOR)
         {
             vector<string> infos = print_file_list("./" + string(user));
             for (int i = 0; i < infos.size(); i++)
