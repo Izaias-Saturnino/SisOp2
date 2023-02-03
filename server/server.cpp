@@ -108,21 +108,38 @@ void *ThreadClient(void *arg)
         readSocket(&pkt, sockfd);
         strcpy(user, pkt.user);
 
-    if (pkt.type == 2)
-    {
-        loginManager->Logout(user, sockfd, resposta);
-        sendMessage(resposta, 1, 5, 1, user, sockfd); // resposta logout
-    }
-    if (pkt.type == 10)
-    {
-       
-        string receivedFilePath;
+        if (pkt.type == 2)
+        {
+            loginManager->Logout(user, sockfd, resposta);
+            sendMessage(resposta, 1, 5, 1, user, sockfd); // resposta logout
+        }
+        if (pkt.type == 10)
+        {
+            
+            string receivedFilePath;
 
-    receivedFilePath = string(pkt._payload);
-    receivedFilePath = receivedFilePath.substr(receivedFilePath.find_last_of("/")+1);
+            receivedFilePath = string(pkt._payload);
+            receivedFilePath = receivedFilePath.substr(receivedFilePath.find_last_of("/")+1);
 
-    cout << receivedFilePath<< "\n"<<endl;
-    }
+            cout << receivedFilePath<< "\n"<<endl;
+        }
+        if (pkt.type == 30){
+            string toRemoveFilePath;
+
+            toRemoveFilePath = string(pkt._payload);
+            toRemoveFilePath = toRemoveFilePath.substr(toRemoveFilePath.find_last_of("/")+1);
+
+            cout << "toRemoveFilePath: " << toRemoveFilePath<< " new_line\n"<<endl;
+
+            string username = (string) user;
+
+            cout << "username: " << username<< " new_line\n"<<endl;
+
+            delete_file("./"+username+"/"+toRemoveFilePath);
+
+            //fazer depois
+            //sendMessage(toRemoveFilePath, 1, 31, 1, user, sockfd); // pedido de delete enviado para o cliente
+        }
 
     }
    
