@@ -103,7 +103,7 @@ void *ThreadClient(void *arg)
     PACKET pkt;
     char resposta[40];
     char user[256];
-    while(true)
+    while (true)
     {
         readSocket(&pkt, sockfd);
         strcpy(user, pkt.user);
@@ -115,34 +115,27 @@ void *ThreadClient(void *arg)
         }
         if (pkt.type == 10)
         {
-            
             string receivedFilePath;
-
             receivedFilePath = string(pkt._payload);
-            receivedFilePath = receivedFilePath.substr(receivedFilePath.find_last_of("/")+1);
+            receivedFilePath = receivedFilePath.substr(receivedFilePath.find_last_of("/") + 1);
 
-            cout << receivedFilePath<< "\n"<<endl;
+            cout << receivedFilePath << "\n"
+                 << endl;
         }
-        if (pkt.type == 30){
-            string toRemoveFilePath;
-
-            toRemoveFilePath = string(pkt._payload);
-            toRemoveFilePath = toRemoveFilePath.substr(toRemoveFilePath.find_last_of("/")+1);
-
-            cout << "toRemoveFilePath: " << toRemoveFilePath<< " new_line\n"<<endl;
-
-            string username = (string) user;
-
-            cout << "username: " << username<< " new_line\n"<<endl;
-
-            delete_file("./"+username+"/"+toRemoveFilePath);
-
-            //fazer depois
-            //sendMessage(toRemoveFilePath, 1, 31, 1, user, sockfd); // pedido de delete enviado para o cliente
+        if (pkt.type == 20)
+        {
+            vector<string> infos = print_file_list("./" + string(user));
+            for (int i = 0; i < infos.size(); i++)
+            {
+                sendMessage(infos.at(i), 1, 21, 1, user, sockfd);
+                if (i == infos.size() - 1)
+                {
+                    sendMessage(infos.at(i), 1, 22, 1, user, sockfd);
+                }
+            }
         }
-
     }
-   
+
     return 0;
 }
 
@@ -153,8 +146,5 @@ void receive_file_client(int sock, char username[])
     string receivedFilePath;
 
     receivedFilePath = string(receivedFilePathPacket._payload);
-    receivedFilePath.substr(receivedFilePath.find_last_of("/")+1);
-
-    
-
+    receivedFilePath.substr(receivedFilePath.find_last_of("/") + 1);
 }

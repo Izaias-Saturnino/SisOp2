@@ -15,6 +15,7 @@ int inotify_fd,watch_dir;
 
 std::string name="";
 std::string command ="";
+bool command_complete;
 pthread_mutex_t m = PTHREAD_MUTEX_INITIALIZER; 
 
 int action =0;
@@ -75,4 +76,5 @@ void *folderchecker(void *arg)
 void *input(void *arg)
 {
     std::cin >> command;
+    command_complete=true;
 }

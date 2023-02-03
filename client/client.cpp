@@ -10,7 +10,6 @@ int main(int argc, char *argv[])
 	PACKET receivedPkt;
 	string message, servAddr;
 	bool Logout = false;
-
 	verificaRecebimentoParametros(argc);
 
 	strcpy(username, argv[1]);
@@ -56,7 +55,7 @@ int main(int argc, char *argv[])
 				std::cout << action << " " << name << "\n";
 				action = 0;
 			}
-			if (command != "")
+			if (command_complete)
 			{
 				if (command == "exit")
 				{
@@ -66,6 +65,15 @@ int main(int argc, char *argv[])
 				{
 					print_file_list("./sync_dir");
 				}
+				if (command == "list_server")
+				{
+					sendMessage("", 1, 20, 1, username, sockfd);
+					readSocket(&receivedPkt, sockfd);
+					while(receivedPkt.type==21){
+						cout<<receivedPkt._payload;
+						readSocket(&receivedPkt, sockfd);
+					}
+				}
 				if (command == "upload")
 				{
 					upload_file_client(sockfd, username);
@@ -73,6 +81,7 @@ int main(int argc, char *argv[])
 					sendMessage("", 1, 5, 1, username, sockfd); // requisição para enviar arquivo
 				}
 				command = "";
+				command_complete=false;
 				pthread_create(&thr2, NULL, input, (void *)&n2);
 			}
 		}

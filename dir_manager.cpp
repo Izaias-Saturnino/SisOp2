@@ -29,7 +29,7 @@ vector<string> print_file_list(string path){
     vector <string> result;
     for (const auto & entry : fs::directory_iterator(path)){
         lstat(entry.path().c_str(), &fileInfo);
-        string fileInfoString="File:"+ entry.path().string()+"\n Created: "+ctime(&fileInfo.st_ctime)+"Modified: "+ ctime(&fileInfo.st_mtime)+"Last Access: "+ctime(&fileInfo.st_atime);
+        string fileInfoString="File:"+ entry.path().string()+"\nCreated: "+ctime(&fileInfo.st_ctime)+"Modified: "+ ctime(&fileInfo.st_mtime)+"Last Access: "+ctime(&fileInfo.st_atime);
         result.push_back(fileInfoString);
         cout << "File: " << entry.path() << "\n";
         cout << "Created: " << ctime(&fileInfo.st_ctime);
