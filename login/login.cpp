@@ -2,6 +2,9 @@
 
 using namespace std;
 
+mutex mtx_list; //evitar problemas com a lista de usuarios
+mutex mtx_sessoes; // evitar problemas com sessoes ativas
+
 LoginManager::LoginManager(){
 
 }
@@ -22,15 +25,19 @@ void LoginManager::criarNovoUsuario(char nome[],int socketCli){
     conta.sessaoAtiva2 = false;
     conta.socketClient1 = socketCli;
     conta.socketClient2 = -1;  // valor invalido
+
+    mtx_list.lock();
     this->listaDeUsuarios.push_back(conta);
     this->printListaUsuario();
+    mtx_list.unlock();
 }
 
 void LoginManager::Logout(char user[],int socket, char resposta[]){
     vector<USUARIO>::iterator it;
     
     for(it = this->listaDeUsuarios.begin(); it != this->listaDeUsuarios.end(); it++){
-        if(strcmp(user,(*it).nome) == 0 ){         
+        if(strcmp(user,(*it).nome) == 0 ){  
+            mtx_sessoes.lock();       
             if((*it).socketClient1 == socket)
             {
                 (*it).sessaoAtiva1 = false;
@@ -41,13 +48,17 @@ void LoginManager::Logout(char user[],int socket, char resposta[]){
                 strcpy(resposta,"Sessao 2 desconectada");
             }
             break;
+            mtx_sessoes.unlock();
         }
     }
     if((*it).sessaoAtiva1 == false && ((*it).sessaoAtiva2 == false)) //sem conexão -> remove da lista
     {
-        this->listaDeUsuarios.erase(it);
+        // mtx_list.lock();
+        // this->listaDeUsuarios.erase(it);
+        // mtx_list.unlock();
         strcpy(resposta,"Usuario desconectado");
     }
+    
 }
 
 bool LoginManager::verificaQuantidadeUsuarios(char nome[],int socketCli){
@@ -57,6 +68,7 @@ bool LoginManager::verificaQuantidadeUsuarios(char nome[],int socketCli){
     for(it = this->listaDeUsuarios.begin(); it != this->listaDeUsuarios.end(); it++){
         if(strcmp(nome,(*it).nome) == 0 ){
             achou = true;
+            mtx_sessoes.lock();
             if((*it).sessaoAtiva1 == true)
             {
                 if((*it).sessaoAtiva2 == true){
@@ -84,6 +96,7 @@ bool LoginManager::verificaQuantidadeUsuarios(char nome[],int socketCli){
                     cout<<"Primeira conta = true \n"<<endl;
                  }
             }
+            mtx_sessoes.unlock();
         }
 	}
 

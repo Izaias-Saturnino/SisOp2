@@ -1,7 +1,6 @@
 #include "./client.hpp"
-#include <mutex>
 
-int upload_file_client(int sock, char username[]);
+bool Logout = false;
 
 int main(int argc, char *argv[])
 {
@@ -9,9 +8,14 @@ int main(int argc, char *argv[])
 	socklen_t clilen;
 	char buffer[256], username[256];
 	struct sockaddr_in serv_addr, cli_addr;
+	struct sigaction sigIntHandler;
 	PACKET receivedPkt;
 	string message, servAddr;
-	bool Logout = false;
+
+	sigIntHandler.sa_handler = handle_ctrlc;
+	sigemptyset(&sigIntHandler.sa_mask);
+	sigIntHandler.sa_flags = 0;
+
 	verificaRecebimentoParametros(argc);
 
 	strcpy(username, argv[1]);
@@ -46,20 +50,23 @@ int main(int argc, char *argv[])
 		pthread_t thr1, thr2;
 		int n1 = 1;
 		int n2 = 2;
-		// somente criar se comando get sync dir for ativado pthread_create(&thr1, NULL, folderchecker, (void *)&n1);
+		//TO DO: somente criar se comando get sync dir for ativado pthread_create(&thr1, NULL, folderchecker, (void *)&n1); 
 		pthread_create(&thr2, NULL, input, (void *)&n2);
 		cout << "type exit to end your session \n"
 			 << endl;
 		while (true)
 		{
+			sigaction(SIGINT, &sigIntHandler, NULL);
+
+			// TO DO: Command é global? precisa de mutex?
 			if (action != 0)
 			{
 				std::cout << action << " " << name << "\n";
 				action = 0;
 			}
 			if (command_complete)
-			{
-				if (command == "exit")
+			{		
+				if (command == "exit" || Logout == true)
 				{
 					break;
 				}
@@ -93,11 +100,11 @@ int main(int argc, char *argv[])
 
 		readSocket(&receivedPkt, sockfd);
 
-		cout << receivedPkt._payload << endl;
+		cout << endl << receivedPkt._payload << endl;
 	}
 	else
 	{
-		cout << receivedPkt._payload << endl;
+		cout <<endl << receivedPkt._payload << endl;
 	}
 
 	close(sockfd);
@@ -140,4 +147,9 @@ int upload_file_client(int sock, char username[])
 		file.close();
 		return 1;
 	}
+}
+
+void handle_ctrlc(int s){
+	Logout = true;
+	cout<<"Caught signal"<<endl;
 }

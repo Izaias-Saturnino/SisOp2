@@ -1,6 +1,7 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
+#include "../common/common.hpp"
 
 std::vector<std::string> get_file_list(std::string username) {
     std::vector<std::string> file_list;
