@@ -24,16 +24,19 @@ vector<string> get_file_list(string path){
     return list;
 }
 //imprime arquivos e seu mac
-void print_file_list(string path){
+vector<string> print_file_list(string path){
     struct stat fileInfo;
+    vector <string> result;
     for (const auto & entry : fs::directory_iterator(path)){
         lstat(entry.path().c_str(), &fileInfo);
+        string fileInfoString="File:"+ entry.path().string()+"\n Created: "+ctime(&fileInfo.st_ctime)+"Modified: "+ ctime(&fileInfo.st_mtime)+"Last Access: "+ctime(&fileInfo.st_atime);
+        result.push_back(fileInfoString);
         cout << "File: " << entry.path() << "\n";
         cout << "Created: " << ctime(&fileInfo.st_ctime);
         cout << "Modified: " << ctime(&fileInfo.st_mtime);
         cout << "Last Access: " << ctime(&fileInfo.st_atime);
     }
-        
+    return result;
 }
 vector<string> remove_path(vector<string> folderA){
     vector<string> list;
