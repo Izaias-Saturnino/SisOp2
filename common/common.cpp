@@ -1,9 +1,9 @@
 #include "./common.hpp"
 #include <mutex>
 
-mutex pkt_mtx;
-
 using namespace std;
+
+mutex pkt_mtx;
 
 void readSocket(PACKET *pkt, int sock){
     int n = 0;

@@ -17,6 +17,12 @@
 
 using namespace std;
 
+#define MENSAGEM_LOGIN 1
+#define MENSAGEM_LOGOUT 2
+#define MENSAGEM_USUARIO_INVALIDO 3
+#define MENSAGEM_USUARIO_VALIDO 4
+#define MENSAGEM_RESPOSTA_LOGOUT 5
+
 typedef struct {
     uint16_t  type; //Tipo do pacote (p.ex. DATA | CMD)
     uint16_t seqn; //Número de sequência

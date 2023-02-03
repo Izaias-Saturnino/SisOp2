@@ -38,10 +38,8 @@ int main(int argc, char *argv[])
     }	
 	else
 	{	
-        cout<< "running";
         while(true)
-        {    
-            
+        {     
             /*listen to clients*/
 		    listen(sockfd, 5);
             clilen = sizeof(struct sockaddr_in);
@@ -57,11 +55,11 @@ int main(int argc, char *argv[])
 
                 if(usuarioValido)
                 {
-                    sendMessage("OK",1,4,1,user,newSockfd); //Mensagem de usuario Valido
+                    sendMessage("Usuario valido",1, MENSAGEM_USUARIO_VALIDO, 1,user,newSockfd); //Mensagem de usuario Valido
                     pthread_create(&clientThread, NULL, ThreadClient, &newSockfd);  //CUIDADO: newSocket e não socket
                 }  
                 else{
-                    sendMessage("Excedido numero de sessoes",1,3,1,user,newSockfd); //Mensagem de usuario invalido
+                    sendMessage("Excedido numero de sessoes",1,MENSAGEM_USUARIO_INVALIDO,1,user,newSockfd); //Mensagem de usuario invalido
                 }
             }
         }
@@ -98,7 +96,7 @@ void *ThreadClient(void *arg) {
     {
         loginManager->Logout(user,sockfd,resposta);
 
-        sendMessage(resposta,1,5,1,user,sockfd); //resposta logout
+        sendMessage(resposta,1,MENSAGEM_RESPOSTA_LOGOUT,1,user,sockfd); //resposta logout
     }
     return 0;
 }
