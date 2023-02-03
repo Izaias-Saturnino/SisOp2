@@ -35,7 +35,7 @@ int main(int argc, char *argv[])
 
 	bzero(buffer, 256);
 
-	sendMessage("", 1, 1, 1, username, sockfd); // login message
+	sendMessage("", 1, MENSAGEM_LOGIN, 1, username, sockfd); // login message
 
 	readSocket(&receivedPkt, sockfd);
 
@@ -86,7 +86,7 @@ int main(int argc, char *argv[])
 			}
 		}
 
-		sendMessage("", 1, 2, 1, username, sockfd); // logout message
+		sendMessage("", 1, MENSAGEM_LOGOUT, 1, username, sockfd); // logout message
 
 		readSocket(&receivedPkt, sockfd);
 
