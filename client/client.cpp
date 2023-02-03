@@ -1,6 +1,8 @@
 #include "./client.hpp"
 #include <mutex>
+
 int upload_file_client(int sock, char username[]);
+
 int main(int argc, char *argv[])
 {
 	int sockfd, PORT, newSocket;
@@ -39,7 +41,7 @@ int main(int argc, char *argv[])
 
 	readSocket(&receivedPkt, sockfd);
 
-	if (strcmp(receivedPkt._payload, "OK") == 0)
+	if (receivedPkt.type ==  MENSAGEM_USUARIO_VALIDO)
 	{
 		pthread_t thr1, thr2;
 		int n1 = 1;
@@ -67,9 +69,10 @@ int main(int argc, char *argv[])
 				}
 				if (command == "list_server")
 				{
-					sendMessage("", 1, 20, 1, username, sockfd);
+					sendMessage("", 1, MENSAGEM_PEDIDO_LISTA_ARQUIVOS_SERVIDOR, 1, username, sockfd);
 					readSocket(&receivedPkt, sockfd);
-					while(receivedPkt.type==21){
+
+					while(receivedPkt.type == MENSAGEM_ITEM_LISTA_DE_ARQUIVOS){
 						cout<<receivedPkt._payload;
 						readSocket(&receivedPkt, sockfd);
 					}
@@ -78,7 +81,7 @@ int main(int argc, char *argv[])
 				{
 					upload_file_client(sockfd, username);
 
-					sendMessage("", 1, 5, 1, username, sockfd); // requisição para enviar arquivo
+					sendMessage("", 1, 6, 1, username, sockfd); // requisição para enviar arquivo
 				}
 				command = "";
 				command_complete=false;
@@ -127,12 +130,12 @@ int upload_file_client(int sock, char username[])
 	}
 	else
 	{	
-		sendMessage(file_path, 1, 10, 4, username, sock);
+		sendMessage(file_path, 1, MENSAGEM_ENVIO_NOME_ARQUIVO, 4, username, sock); 
 		while (!file.eof()) // to read file
 		{
 			// function used to read the contents of file
 			file.read(buffer, sizeof(buffer));
-			sendMessage(buffer, 1, 11, 4, username, sock);
+			sendMessage(buffer, 1, MENSAGEM_ENVIO_PARTE_ARQUIVO, 4, username, sock);
 		}
 		file.close();
 		return 1;

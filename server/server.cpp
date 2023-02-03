@@ -108,12 +108,12 @@ void *ThreadClient(void *arg)
         readSocket(&pkt, sockfd);
         strcpy(user, pkt.user);
 
-        if (pkt.type == 2)
+        if (pkt.type == MENSAGEM_LOGOUT)
         {
             loginManager->Logout(user, sockfd, resposta);
             sendMessage(resposta, 1, MENSAGEM_RESPOSTA_LOGOUT, 1, user, sockfd); // resposta logout
         }
-        if (pkt.type == 10)
+        if (pkt.type == MENSAGEM_ENVIO_NOME_ARQUIVO)
         {
             string receivedFilePath;
             receivedFilePath = string(pkt._payload);
@@ -122,15 +122,15 @@ void *ThreadClient(void *arg)
             cout << receivedFilePath << "\n"
                  << endl;
         }
-        if (pkt.type == 20)
+        if (pkt.type == MENSAGEM_PEDIDO_LISTA_ARQUIVOS_SERVIDOR)
         {
             vector<string> infos = print_file_list("./" + string(user));
             for (int i = 0; i < infos.size(); i++)
             {
-                sendMessage(infos.at(i), 1, 21, 1, user, sockfd);
+                sendMessage(infos.at(i), 1, MENSAGEM_ITEM_LISTA_DE_ARQUIVOS , 1, user, sockfd);
                 if (i == infos.size() - 1)
                 {
-                    sendMessage(infos.at(i), 1, 22, 1, user, sockfd);
+                    sendMessage(infos.at(i), 1, MENSAGEM_ULTIMO_ITEM_LISTA_ARQUIVOS, 1, user, sockfd);
                 }
             }
         }
