@@ -9,6 +9,7 @@
 #include <pthread.h>
 #include <netdb.h> 
 #include <iostream>
+#include <fstream>
 #include "../login/login.hpp"
 #include "../dir_manager.cpp"
 

@@ -88,10 +88,8 @@ int main(int argc, char *argv[])
 				{
 					upload_file_client(sockfd, username);
 
-					sendMessage("", 1, 6, 1, username, sockfd); // requisição para enviar arquivo
 				}
 				command = "";
-				command_complete=false;
 				pthread_create(&thr2, NULL, input, (void *)&n2);
 			}
 		}
@@ -123,28 +121,38 @@ void verificaRecebimentoParametros(int argc)
 int upload_file_client(int sock, char username[])
 {
 	string file_path;
-	char *buffer;
+	std::string buffer;
 
-	cout << "Informe o caminho do arquivo a ser enviado"<<"\n";
+	cout << "Informe o caminho do arquivo a ser enviado"
+		 << "\n";
 	cin >> file_path;
 	ifstream file;
 	file.open(file_path);
 	if (!file.is_open())
 	{
-		cout << " falha ao abrir" << "\n" << endl;
+		cout << " falha ao abrir"
+			 << "\n"
+			 << endl;
 		return 0;
 		// mensagem erro
 	}
 	else
-	{	
-		sendMessage(file_path, 1, MENSAGEM_ENVIO_NOME_ARQUIVO, 4, username, sock); 
-		while (!file.eof()) // to read file
+	{
+		sendMessage(file_path, 1, MENSAGEM_ENVIO_NOME_ARQUIVO, 4, username, sock);
+
+		while (getline(file, buffer)) // to read file
 		{
 			// function used to read the contents of file
-			file.read(buffer, sizeof(buffer));
 			sendMessage(buffer, 1, MENSAGEM_ENVIO_PARTE_ARQUIVO, 4, username, sock);
+			cout << buffer << "\n"
+				 << endl;
+			buffer.clear();
 		}
 		file.close();
+		sendMessage(buffer, 1, MENSAGEM_ARQUIVO_LIDO, 4, username, sock);
+		cout << " arquivo lido"
+			 << "\n"
+			 << endl;
 		return 1;
 	}
 }
