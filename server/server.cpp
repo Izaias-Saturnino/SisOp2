@@ -124,7 +124,7 @@ void *ThreadClient(void *arg)
             sendMessage(resposta, 1, MENSAGEM_RESPOSTA_LOGOUT, 1, user, sockfd); // resposta logout
             break;
         }
-        if (pkt.type == MENSAGEM_ENVIO_NOME_ARQUIVO)
+        else if (pkt.type == MENSAGEM_ENVIO_NOME_ARQUIVO)
         {
 
             string receivedFilePath;
@@ -143,7 +143,7 @@ void *ThreadClient(void *arg)
             fragments.resize(size+1);
             received_fragments =0;
         }
-        if(pkt.type == MENSAGEM_ENVIO_PARTE_ARQUIVO || pkt.type == MENSAGEM_ARQUIVO_LIDO)
+        else if(pkt.type == MENSAGEM_ENVIO_PARTE_ARQUIVO || pkt.type == MENSAGEM_ARQUIVO_LIDO)
         {
             char buffer [256];
             vector<char> bufferconvert(256);
@@ -176,8 +176,7 @@ void *ThreadClient(void *arg)
             }
 
         }
-
-        if (pkt.type == MENSAGEM_PEDIDO_LISTA_ARQUIVOS_SERVIDOR)
+        else if (pkt.type == MENSAGEM_PEDIDO_LISTA_ARQUIVOS_SERVIDOR)
         {
             vector<string> infos = print_file_list("./" + string(user));
             for (int i = 0; i < infos.size(); i++)
@@ -189,8 +188,7 @@ void *ThreadClient(void *arg)
                 }
             }
         }
-
-        if (pkt.type == MENSAGEM_DELETAR_NO_SERVIDOR){
+        else if (pkt.type == MENSAGEM_DELETAR_NO_SERVIDOR){
             string toRemoveFilePath;
 
             toRemoveFilePath = string(pkt._payload);
@@ -213,8 +211,7 @@ void *ThreadClient(void *arg)
             //    sendMessage(path, 1, MENSAGEM_DELETAR_NOS_CLIENTES, 1, user, sync_dir_sockets[i]); // pedido de delete enviado para o cliente
             }
         }
-
-        if(pkt.type == GET_SYNC_DIR){
+        else if(pkt.type == GET_SYNC_DIR){
             //baixar todos os arquivos do syncdir do servidor
             
             //salvar o socket que pediu atualizações de sync dir
@@ -222,10 +219,13 @@ void *ThreadClient(void *arg)
 
             cout << "active sync dir confirmed" << endl;
         }
-        if (pkt.type == MENSAGEM_DOWNLOAD_NO_SERVIDOR){
+        else if (pkt.type == MENSAGEM_DOWNLOAD_NO_SERVIDOR){
             string directory = "./";
             directory = directory + pkt.user + "/" + string(pkt._payload);
             upload_file_server(sockfd,user,directory);
+        }
+        else{
+            cout << "message type not found" << endl;
         }
     }
     return 0;
