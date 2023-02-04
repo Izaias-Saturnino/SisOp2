@@ -1,5 +1,4 @@
 #include "./client.hpp"
-#include <cmath>
 bool Logout = false;
 
 int main(int argc, char *argv[])
@@ -103,6 +102,11 @@ int main(int argc, char *argv[])
 					//informar o servidor que estamos recebendo atualizações
 					sendMessage("", 1, GET_SYNC_DIR, 1, username, sockfd);
 				}
+				if (command.find("download ") != std::string::npos)
+				{
+					std::string path = command.substr(command.find("download ") + 9);
+					download_file_client(sockfd,username,path);
+				}
 				command = "";
 				pthread_create(&thr2, NULL, input, (void *)&n2);
 			}
@@ -173,7 +177,60 @@ int upload_file_client(int sock, char username[],std::string file_path)
 		return 1;
 	}
 }
+int download_file_client(int sock,char username[], std::string file_path)
+{	
+	PACKET pkt;
+	sendMessage((char *)file_path.c_str(), 1, MENSAGEM_DOWNLOAD_NO_SERVIDOR, 1, username, sock);
+	readSocket(&pkt, sock);
+	if(pkt.type==MENSAGEM_FALHA_ENVIO){
+		cout<<"Arquivo nao existe no servidor\n";
+		return 0;
+	}
+	string receivedFilePath;
+	receivedFilePath = string(pkt._payload);
+	receivedFilePath = receivedFilePath.substr(receivedFilePath.find_last_of("/") + 1);
+	string directory = "./sync_dir";
+	directory = directory + "/" + receivedFilePath;
+	cout << directory;
+	ofstream file_download;
+	file_download.open(directory, ios_base::binary);
+	int size = pkt.total_size;
+	int received_fragments = 0;
+	vector<vector<char>> fragments(size+1);
+	while (received_fragments != size)
+	{
+		memset(pkt._payload, 0, 256);
+		readSocket(&pkt, sock);
+		char buffer[256];
+		vector<char> bufferconvert(256);
 
+		memset(buffer, 0, 256);
+
+		memcpy(buffer, pkt._payload, 256);
+
+		printf("%d\n", received_fragments);
+		for (int i = 0; i < bufferconvert.size(); i++)
+		{
+			bufferconvert[i] = buffer[i];
+		}
+		if (pkt.type == MENSAGEM_ENVIO_PARTE_ARQUIVO)
+		{
+			received_fragments++;
+			fragments.at(pkt.seqn) = bufferconvert;
+		}
+	}
+	for (int i = 0; i < fragments.size(); i++)
+	{
+		for (int j = 0; j < fragments.at(i).size(); j++)
+		{
+			char *frag = &(fragments.at(i).at(j));
+			printf("%x ", (unsigned char)fragments.at(i).at(j));
+			file_download.write(frag, sizeof(char));
+		}
+	}
+	file_download.close();
+	return 1;
+}
 void handle_ctrlc(int s){
 	Logout = true;
 	cout<<"Caught signal"<<endl;
