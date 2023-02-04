@@ -18,6 +18,8 @@ class LoginManager{
         vector<USUARIO> listaDeUsuarios;
         void printListaUsuario();
         void Logout(char user[], int socket,char resposta[]);
+        void activate_sync_dir(char user[], int socket);
+        vector<int> get_active_sync_dir(char user[]);
     private:
         void criarNovoUsuario(char nome[],int socketCli);
         bool verificaQuantidadeUsuarios(char nome[],int socketCli);

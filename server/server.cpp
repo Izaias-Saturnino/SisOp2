@@ -103,7 +103,6 @@ void *ThreadClient(void *arg)
     PACKET pkt;
     char resposta[40];
     char user[256];
-    string directory = "/sync_dir/";
     ofstream file_server;
     int size=0;
     int received_fragments=0;
@@ -126,7 +125,7 @@ void *ThreadClient(void *arg)
 
             receivedFilePath = string(pkt._payload);
             receivedFilePath = receivedFilePath.substr(receivedFilePath.find_last_of("/") + 1);
-            directory = "./";
+            string directory = "./";
             directory = directory + pkt.user + "/" + receivedFilePath;
             file_server.open(directory, ios_base::binary);
             size = pkt.total_size;
@@ -190,13 +189,30 @@ void *ThreadClient(void *arg)
 
             toRemoveFilePath = string(pkt._payload);
             toRemoveFilePath = toRemoveFilePath.substr(toRemoveFilePath.find_last_of("/") + 1);
-            directory = "./";
-            directory = directory + pkt.user + "/" + toRemoveFilePath;
+            string file_path = "./";
+            file_path = file_path + pkt.user + "/" + toRemoveFilePath;
 
-            delete_file(directory);
+            delete_file(file_path);
 
-            //fazer depois
-            //sendMessage(toRemoveFilePath, 1, MENSAGEM_DELETAR_NOS_CLIENTES, 1, user, sockfd); // pedido de delete enviado para o cliente
+            vector<int> sync_dir_sockets = loginManager->get_active_sync_dir(user);
+
+            char* path;
+
+            memcpy(path, &(file_path), file_path.length());
+
+            cout << path << "\n"
+                 << endl;
+
+            for(int i = 0; i < sync_dir_sockets.size(); i++){
+            //    sendMessage(path, 1, MENSAGEM_DELETAR_NOS_CLIENTES, 1, user, sync_dir_sockets[i]); // pedido de delete enviado para o cliente
+            }
+        }
+
+        if(pkt.type == GET_SYNC_DIR){
+            //baixar todos os arquivos do syncdir do servidor
+            
+            //salvar o socket que pediu atualizações de sync dir
+            loginManager->activate_sync_dir(user, sockfd);
         }
     }
 
