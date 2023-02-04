@@ -14,6 +14,7 @@
 #include <cstdlib>
 #include <signal.h>
 #include <ctime>
+#include <vector>
 
 using namespace std;
 

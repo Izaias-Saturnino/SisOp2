@@ -40,3 +40,7 @@ void sendMessage(string message, int seqn, int messageType,int fragmentos, char 
 		printf("ERROR writing to socket\n");
 }
 
+vector<string> json_list_to_string_vector(string json){
+	vector<string> list;
+	return list;
+}

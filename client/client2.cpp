@@ -20,11 +20,12 @@ bool exit_program = false;
 //update handler variables
 pthread_t updateThread;
 
-void verificaRecebimentoParametros(int argc){
+bool verify_parameters(int argc){
     if (argc < 3) {  
         cout<<"Faltam parametros"<<endl;
         exit(0);
     }
+    return argc < 3;
 }
 
 //move to socket manager
@@ -221,7 +222,12 @@ void exit(){
 }
 
 int main(int argc, char *argv[]){
-    verificaRecebimentoParametros(argc);
+    bool parameters_meet_conditions = verify_parameters(argc);
+
+    if(!parameters_meet_conditions){
+        std::cerr << "Parameters do not meet conditions" << std::endl;
+        exit(0);
+    }
 
     bool connection_successful = init_client_connection(argc, argv);
     if(!connection_successful){

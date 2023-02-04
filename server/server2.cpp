@@ -11,6 +11,8 @@
 #include <filesystem>
 namespace fs = std::filesystem;
 
+#include "../common/common.cpp"
+#include "../dir_manager.cpp"
 #include "./server.hpp"
 
 using namespace std;
@@ -34,15 +36,20 @@ thread_local bool end_connection;
 
 LoginManager *loginManager = new LoginManager();
 
+bool verify_parameters(int argc,char *argv[]){
+    if (argc < 2) {  //Verifica se recebeu o IP como parametro
+        fprintf(stderr,"usage %s hostname\n", argv[0]);
+        exit(0);
+    }
+    return argc < 2;
+}
+
 //move to socket manager
-//talvez dividir em open_socket() e bind_socket()
 bool open_server(int argc, char *argv[]){
     bool server_is_open = true;
 
     struct sockaddr_in serv_addr;
     struct hostent *server;
-    
-    verificaRecebimentoIP(argc, argv);
 
     server = gethostbyname(argv[1]);
 
@@ -100,7 +107,7 @@ void exit(){
 }
 
 int main(int argc, char *argv[]){
-    verificaRecebimentoIP(argc, argv);
+    bool parameters_meet_conditions = verify_parameters(argc, argv);
 
     bool server_is_up = open_server(argc, argv);
     if(!server_is_up){
@@ -134,8 +141,23 @@ void read_request(){
 string get_request_type(){
     string type;
     switch(pkt.type){
+        case 0:
+            type = "login";
+            break;
         case 1:
-            type = "some type";
+            type = "file";
+            break;
+        case 2:
+            type = "list_file";
+            break;
+        case 3:
+            type = "delete";
+            break;
+        case 4:
+            type = "download";
+            break;
+        case 5:
+            type = "download_all";
             break;
         default:
             type = "error";
@@ -147,23 +169,22 @@ string get_request_type(){
 void send_message(vector<string> args){
     string message_type = args[0];
 
-    if(message_type == "file"){
-        //send download answer
-    }
-    else if(message_type == "list_files_from_server"){
-        //send delete answer
-    }
-    else if(message_type == "could_not_read_request"){
-        //send mensagem de erro de comando não entendido
-    }
-    else if(message_type == "login"){
+    if(message_type == "login"){
         //mandar mensagem de login (no payload da mensagem diz se deu erro ou não)
     }
-    else if(message_type == "undefined_error"){
-        //mandar mensagem de comando não entendido
+    else if(message_type == "file"){
+        //send download answer
+    }
+    else if(message_type == "list_files"){
+        //send message asking for file list on client
+    }
+    else if(message_type == "delete"){
+        //send delete answer
     }
     else{
         std::cerr << "Message answer type not defined" << std::endl;
+        //mandar mensagem de erro comando não entendido
+        //dar uns prints pra ajudar na identificação do erro
     }
 }
 
@@ -176,7 +197,7 @@ bool auth(){
 //pegar os dados de login do payload da request de login
 void get_login_data(){
     //pegar os dados de login do payload da request de login
-    //essas variáveis são: user, request_from_new_device, request_from new user, etc.
+    //essas variáveis são: user, request_from_new_device, etc.
     //poderia adicionar password para mais segurança
     strcpy(user,pkt.user);
     user_folder_name = user;
@@ -201,18 +222,21 @@ bool handle_login(){
     return login_successful;
 }
 
-
-
-vector<string> get_client_file_list(){
+string get_client_file_list(){
     //mandar mensagem ao cliente pedindo uma lista de arquivos
+    vector<string> args;
+    args.push_back("list_files");
+    send_message(args);
+    //pega na mensagem e deserializa a lista
+    read_request();
+    string file_list = pkt._payload;
+    return file_list;
 }
 
-vector<string> get_server_file_list(){
+string get_server_file_list(){
     string user_folder_path = server_path+user;
     return get_file_list(user_folder_path);
 }
-
-
 
 
 void send_file_to_clients(string file_relative_path){
@@ -226,8 +250,9 @@ void send_files_to_clients(vector<string> files_to_send){
 }
 
 void send_all_files_to_client(){
-    vector<string> server_file_list = get_server_file_list();
-    send_files_to_clients(server_file_list);
+    string server_file_list = get_server_file_list();
+    vector<string> server_file_list_json = json_list_to_string_vector(server_file_list);
+    send_files_to_clients(server_file_list_json);
 }
 
 void remove_files_on_clients(vector<string> files_to_remove){
@@ -260,17 +285,18 @@ void handle_first_sync(){
 
     if(!server_client_are_consistent){
 
-        vector<string> client_file_list = get_client_file_list();
-        vector<string> server_file_list = get_server_file_list();
-        vector<string> removed_files_list = get_removed_files_list(server_file_list, client_file_list);
-        vector<string> new_files_list = get_new_files_list(server_file_list, client_file_list);
+        string client_file_list = get_client_file_list();
+        string server_file_list = get_server_file_list();
+        string removed_files_list = get_removed_files_list(server_file_list, client_file_list);
+        string new_files_list = get_new_files_list(server_file_list, client_file_list);
 
-        remove_files_on_clients(removed_files_list);
-        send_files_to_clients(new_files_list);
+        vector<string> removed_files_paths_list = json_list_to_string_vector(removed_files_list);
+        vector<string> new_files_paths_list = json_list_to_string_vector(new_files_list);
+
+        remove_files_on_clients(removed_files_paths_list);
+        send_files_to_clients(new_files_paths_list);
     }
 }
-
-
 
 void handle_request(){
     read_request();
@@ -298,16 +324,9 @@ void handle_request(){
         send_file_to_clients(file_relative_path);
     }
     else if(request_type == "list_files_from_server"){
-        vector<string> list = get_server_file_list();
+        string list = get_server_file_list();
 
-        vector<string> comm = {"list_files_from_server"};
-
-        vector<string> args;
-
-        args.reserve(list.size() + comm.size());
-        args.insert(args.end(), comm.begin(), comm.end());
-        args.insert(args.end(), list.begin(), list.end());
-
+        vector<string> args = {"list_files_from_server", list};
         send_message(args);
     }
     else if(request_type == "could_not_read_request"){
