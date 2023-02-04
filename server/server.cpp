@@ -104,12 +104,13 @@ void *ThreadClient(void *arg)
     char resposta[40];
     char user[256];
     string directory = "/sync_dir/";
-    fstream file_server;
+    ofstream file_server;
     int size=0;
     int received_fragments=0;
     vector<vector<char>> fragments(10);
     while (true)
     {
+        memset(pkt._payload, 0, 256);
         readSocket(&pkt, sockfd);
         strcpy(user, pkt.user);
 
@@ -127,7 +128,7 @@ void *ThreadClient(void *arg)
             receivedFilePath = receivedFilePath.substr(receivedFilePath.find_last_of("/") + 1);
             directory = "./";
             directory = directory + pkt.user + "/" + receivedFilePath;
-            file_server.open(directory, ios::out);
+            file_server.open(directory, ios_base::binary);
             size = pkt.total_size;
 
             cout << directory << "\n"
@@ -137,33 +138,49 @@ void *ThreadClient(void *arg)
             fragments.resize(size+1);
             received_fragments =0;
         }
-        if(pkt.type == MENSAGEM_ENVIO_PARTE_ARQUIVO|| pkt.type == MENSAGEM_ARQUIVO_LIDO)
+        if(pkt.type == MENSAGEM_ENVIO_PARTE_ARQUIVO || pkt.type == MENSAGEM_ARQUIVO_LIDO)
         {
             char buffer [256];
-            vector<char> bufferconvert(buffer, buffer + 256);;
-            strcpy(buffer,pkt._payload);
+            vector<char> bufferconvert(256);
+
+            memset(buffer, 0, 256);
+
+            memcpy(buffer,pkt._payload, 256);
+
+            for(int i=0;i<256;i++){
+                printf("%x ",(unsigned char)pkt._payload[i]);
+            }
+            printf("\n\n");
+
+            for(int i=0;i<256;i++){
+                printf("%x ",(unsigned char)buffer[i]);
+            }
+            printf("\n\n");
+
+            for(int i = 0; i < bufferconvert.size(); i++){
+                bufferconvert[i] = buffer[i];
+            }
             
             if (pkt.type == MENSAGEM_ENVIO_PARTE_ARQUIVO)
             {
                 received_fragments++;
-                cout << buffer;
                 fragments.at(pkt.seqn)=bufferconvert;
-                
-
             }
             if(received_fragments == size+1)
             {
                 for (int i =0 ;i<fragments.size();i++){
-                    cout << i << "\n"; 
                     for(int j=0;j<fragments.at(i).size();j++){
-                    file_server << fragments.at(i).at(j);
+                        char* frag = &(fragments.at(i).at(j));
+                        printf("%x ",(unsigned char)fragments.at(i).at(j));
+                        file_server.write(frag, sizeof(char));
                     }
                 }
                 file_server.close();
             }
 
         }
-         if (pkt.type == MENSAGEM_PEDIDO_LISTA_ARQUIVOS_SERVIDOR)
+
+        if (pkt.type == MENSAGEM_PEDIDO_LISTA_ARQUIVOS_SERVIDOR)
         {
             vector<string> infos = print_file_list("./" + string(user));
             for (int i = 0; i < infos.size(); i++)

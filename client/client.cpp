@@ -126,7 +126,7 @@ int upload_file_client(int sock, char username[],std::string file_path)
 
 
 	ifstream file;
-	file.open(file_path, ios::out | ios::binary);
+	file.open(file_path, ios_base::binary);
 	if (!file.is_open())
 	{
 		cout << " falha ao abrir"
@@ -144,9 +144,12 @@ int upload_file_client(int sock, char username[],std::string file_path)
 		
 		sendMessage(file_path, 1, MENSAGEM_ENVIO_NOME_ARQUIVO, std::ceil(file_size/256), username, sock);
 		for (int i=0;i< file_size;i+=((sizeof(buffer)))) // to read file
-		{	memset(buffer, 0, 256);
+		{	
+			memset(buffer, 0, 256);
 			file.read(buffer,sizeof(buffer));
-			cout << buffer;
+			for(int i=0;i<256;i++){
+                printf("%x ",(unsigned char)buffer[i]);
+            }
 			sendMessage(buffer, i/256 , MENSAGEM_ENVIO_PARTE_ARQUIVO, 4, username, sock);
 		}
 		file.close();
