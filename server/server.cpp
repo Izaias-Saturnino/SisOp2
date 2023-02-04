@@ -198,6 +198,11 @@ void *ThreadClient(void *arg)
             //fazer depois
             //sendMessage(toRemoveFilePath, 1, MENSAGEM_DELETAR_NOS_CLIENTES, 1, user, sockfd); // pedido de delete enviado para o cliente
         }
+        if (pkt.type == MENSAGEM_DOWNLOAD_NO_SERVIDOR){
+            directory = "./";
+            directory = directory + pkt.user + "/" + string(pkt._payload);
+            upload_file_server(sockfd,user,directory);
+        }
     }
 
     return 0;
@@ -211,4 +216,46 @@ void receive_file_client(int sock, char username[])
 
     receivedFilePath = string(receivedFilePathPacket._payload);
     receivedFilePath.substr(receivedFilePath.find_last_of("/") + 1);
+}
+int upload_file_server(int sock, char username[], std::string file_path)
+{
+	char buffer[256];
+
+	ifstream file;
+    cout<<file_path;
+	file.open(file_path, ios_base::binary);
+	if (!file.is_open())
+	{
+		cout << " falha ao abrir"
+			 << "\n"
+			 << endl;
+        sendMessage("", 1, MENSAGEM_FALHA_ENVIO, 1, username, sock);
+		return 0;
+		// mensagem erro
+	}
+	else
+	{
+		file.seekg(0, file.end);
+		int file_size = file.tellg();
+		cout << file_size << "\n";
+		file.clear();
+		file.seekg(0);
+
+		sendMessage((char *)file_path.c_str(), 1, MENSAGEM_ENVIO_NOME_ARQUIVO, std::ceil(file_size / 256), username, sock);
+		for (int i = 0; i < file_size; i += ((sizeof(buffer)))) // to read file
+		{
+			memset(buffer, 0, 256);
+			file.read(buffer, sizeof(buffer));
+            for(int i =0;i<256; i++){
+                printf("%x ", (unsigned char)buffer[i]);
+            }
+            
+			sendMessage(buffer, i / 256, MENSAGEM_ENVIO_PARTE_ARQUIVO, 4, username, sock);
+		}
+		file.close();
+		cout << " arquivo lido"
+			 << "\n"
+			 << endl;
+		return 1;
+	}
 }
