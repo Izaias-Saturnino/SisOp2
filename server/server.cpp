@@ -184,6 +184,20 @@ void *ThreadClient(void *arg)
                 }
             }
         }
+
+        if (pkt.type == MENSAGEM_DELETAR_NO_SERVIDOR){
+            string toRemoveFilePath;
+
+            toRemoveFilePath = string(pkt._payload);
+            toRemoveFilePath = toRemoveFilePath.substr(toRemoveFilePath.find_last_of("/") + 1);
+            directory = "./";
+            directory = directory + pkt.user + "/" + toRemoveFilePath;
+
+            delete_file(directory);
+
+            //fazer depois
+            //sendMessage(toRemoveFilePath, 1, MENSAGEM_DELETAR_NOS_CLIENTES, 1, user, sockfd); // pedido de delete enviado para o cliente
+        }
     }
 
     return 0;
