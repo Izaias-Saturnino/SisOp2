@@ -49,6 +49,8 @@ struct usuario{
     bool sessaoAtiva2;
     int socketClient1;
     int socketClient2;
+    bool sync1;
+    bool sync2;
 };
 typedef struct usuario USUARIO;
 

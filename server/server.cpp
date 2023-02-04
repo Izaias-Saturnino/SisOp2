@@ -3,17 +3,22 @@
 #define PORT 4000
 
 LoginManager *loginManager = new LoginManager();
+char user[256];
+int newSockfd,conectionSocket;
 
 int main(int argc, char *argv[])
 {
-    int sockfd, newSockfd;
     struct sockaddr_in serv_addr, cli_addr;
     struct hostent *server;
+    struct sigaction sigIntHandler;
     pthread_t clientThread;
     socklen_t clilen;
-    char user[256];
     bool usuarioValido;
     PACKET pkt;
+
+    sigIntHandler.sa_handler = handle_ctrlc;
+	sigemptyset(&sigIntHandler.sa_mask);
+	sigIntHandler.sa_flags = 0;
 
     verificaRecebimentoIP(argc, argv);
 
@@ -24,7 +29,7 @@ int main(int argc, char *argv[])
         imprimeServerError();
     }
 
-    if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1) /// Verifica IP valido
+    if ((conectionSocket = socket(AF_INET, SOCK_STREAM, 0)) == -1) /// Verifica IP valido
         printf("ERROR opening socket\n");
 
     serv_addr.sin_family = AF_INET;
@@ -32,7 +37,7 @@ int main(int argc, char *argv[])
     serv_addr.sin_addr = *((struct in_addr *)server->h_addr);
     bzero(&(serv_addr.sin_zero), 8);
 
-    if (bind(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
+    if (bind(conectionSocket, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
     {
         printf("ERROR on binding\n");
         exit(0);
@@ -41,11 +46,12 @@ int main(int argc, char *argv[])
     {
         while (true)
         {
+            sigaction(SIGINT, &sigIntHandler, NULL);
             /*listen to clients*/
-            listen(sockfd, 5);
+            listen(conectionSocket, 5);
             clilen = sizeof(struct sockaddr_in);
 
-            if ((newSockfd = accept(sockfd, (struct sockaddr *)&cli_addr, &clilen)) == -1)
+            if ((newSockfd = accept(conectionSocket, (struct sockaddr *)&cli_addr, &clilen)) == -1)
                 printf("ERROR on accept");
 
             else
@@ -64,7 +70,7 @@ int main(int argc, char *argv[])
                         cout << path << "\n";
                         create_folder(path);
                     }
-                    sendMessage("OK", 1, MENSAGEM_USUARIO_VALIDO, 1, user, newSockfd);                   // Mensagem de usuario Valido
+                    sendMessage("OK", 1, MENSAGEM_USUARIO_VALIDO, 1, user, newSockfd); // Mensagem de usuario Valido
                     pthread_create(&clientThread, NULL, ThreadClient, &newSockfd); // CUIDADO: newSocket e não socket
                 }
                 else
@@ -76,7 +82,7 @@ int main(int argc, char *argv[])
     }
 
     close(newSockfd);
-    close(sockfd);
+    close(conectionSocket);
 
     return 0;
 }
@@ -202,12 +208,17 @@ void *ThreadClient(void *arg)
     return 0;
 }
 
-void receive_file_client(int sock, char username[])
-{
-    string fileName;
-    PACKET receivedFilePathPacket;
-    string receivedFilePath;
+void handle_ctrlc(int s){
+	PACKET Pkt;
 
-    receivedFilePath = string(receivedFilePathPacket._payload);
-    receivedFilePath.substr(receivedFilePath.find_last_of("/") + 1);
+	cout<<endl<<"Caught signal inside server "<<endl;
+	sendMessage("", 1, MENSAGEM_LOGOUT, 1, user, newSockfd); // logout message
+	readSocket(&Pkt, newSockfd);
+	
+	cout << endl << Pkt._payload << endl;
+
+	close(newSockfd);
+    close(conectionSocket);
+
+	exit(0);
 }

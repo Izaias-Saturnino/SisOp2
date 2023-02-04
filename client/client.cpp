@@ -11,7 +11,7 @@ int main(int argc, char *argv[])
 	char buffer[256]; 
 	struct sockaddr_in serv_addr, cli_addr;
 	struct sigaction sigIntHandler;
-	PACKET receivedPkt;
+	PACKET receivedPkt,logoutPkt;
 	string message, servAddr;
 
 	sigIntHandler.sa_handler = handle_ctrlc;
@@ -47,6 +47,9 @@ int main(int argc, char *argv[])
 
 	readSocket(&receivedPkt, sockfd);
 
+	cout<<"read antes if"<< endl;
+	cout<<receivedPkt.type<< endl;
+
 	if (receivedPkt.type ==  MENSAGEM_USUARIO_VALIDO)
 	{
 		pthread_t thr1, thr2;
@@ -68,9 +71,9 @@ int main(int argc, char *argv[])
 			}
 			if (command_complete)
 			{		
-				if (command == "exit"|| Logout == true)
+				if (command == "exit"|| Logout == true )
 				{
-					Logout = false;
+					Logout = false;					
 					break;
 				}
 				if (command == "list_client")

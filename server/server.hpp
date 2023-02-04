@@ -18,3 +18,5 @@ void verificaRecebimentoIP(int argc,char *argv[]);
 void imprimeServerError(void);
 
 void *ThreadClient(void *arg);
+
+void handle_ctrlc(int s);

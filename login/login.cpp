@@ -53,9 +53,6 @@ void LoginManager::Logout(char user[],int socket, char resposta[]){
     }
     if((*it).sessaoAtiva1 == false && ((*it).sessaoAtiva2 == false)) //sem conexão -> remove da lista
     {
-        // mtx_list.lock();
-        // this->listaDeUsuarios.erase(it);
-        // mtx_list.unlock();
         strcpy(resposta,"Usuario desconectado");
     }
     
