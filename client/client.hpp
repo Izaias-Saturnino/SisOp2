@@ -14,6 +14,7 @@
 #include <cstdlib>
 #include <signal.h>
 #include <ctime>
+#include <cmath>
 #include "../filewatcher.cpp"
 #include "../dir_manager.cpp"
 #include "../common/common.hpp"
@@ -24,5 +25,9 @@ using namespace std;
 void verificaRecebimentoParametros(int argc);
 
 int upload_file_client(int sock, char username[],std::string file_path);
+
+int download_file_client(int sock,char username[], std::string file_path);
+
+void handle_updates();
 
 void handle_ctrlc(int s);

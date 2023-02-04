@@ -25,6 +25,8 @@ void LoginManager::criarNovoUsuario(char nome[],int socketCli){
     conta.sessaoAtiva2 = false;
     conta.socketClient1 = socketCli;
     conta.socketClient2 = -1;  // valor invalido
+    conta.sync1 = false;
+    conta.sync2 = false;
 
     mtx_list.lock();
     this->listaDeUsuarios.push_back(conta);
@@ -41,10 +43,12 @@ void LoginManager::Logout(char user[],int socket, char resposta[]){
             if((*it).socketClient1 == socket)
             {
                 (*it).sessaoAtiva1 = false;
+                (*it).sync1 = false;
                 strcpy(resposta,"Sessao 1 desconectada");
             }
             else{
                 (*it).sessaoAtiva2 = false;
+                (*it).sync2 = false;
                 strcpy(resposta,"Sessao 2 desconectada");
             }
             mtx_sessoes.unlock();
@@ -107,4 +111,40 @@ bool LoginManager::login(int socketCli, char user[]){
     usuarioValido = this->verificaQuantidadeUsuarios(user,socketCli);
     
     return usuarioValido;
+}
+
+void LoginManager::activate_sync_dir(char user[], int socketCli){
+    
+    vector<USUARIO>::iterator it;
+    for(it = this->listaDeUsuarios.begin(); it != this->listaDeUsuarios.end(); it++){
+        if(user == (*it).nome){
+            mtx_sessoes.lock();
+            if(socketCli == (*it).socketClient1){
+                (*it).sync1 = true;
+            }
+            else if(socketCli == (*it).socketClient2){
+                (*it).sync2 = true;
+            }
+            mtx_sessoes.unlock();
+            break;
+        }
+    }
+}
+
+vector<int> LoginManager::get_active_sync_dir(char user[]){
+    vector<int> sockets;
+
+    vector<USUARIO>::iterator it;
+    for(it = this->listaDeUsuarios.begin(); it != this->listaDeUsuarios.end(); it++){
+        if(user == (*it).nome){
+            if((*it).sync1){
+                sockets.push_back((*it).socketClient1);
+            }
+            else if((*it).sync2){
+                sockets.push_back((*it).socketClient2);
+            }
+            break;
+        }
+    }
+    return sockets;
 }

@@ -108,7 +108,6 @@ void *ThreadClient(void *arg)
     PACKET pkt;
     char resposta[40];
     char user[256];
-    string directory = "/sync_dir/";
     ofstream file_server;
     int size=0;
     int received_fragments=0;
@@ -132,7 +131,7 @@ void *ThreadClient(void *arg)
 
             receivedFilePath = string(pkt._payload);
             receivedFilePath = receivedFilePath.substr(receivedFilePath.find_last_of("/") + 1);
-            directory = "./";
+            string directory = "./";
             directory = directory + pkt.user + "/" + receivedFilePath;
             file_server.open(directory, ios_base::binary);
             size = pkt.total_size;
@@ -169,7 +168,7 @@ void *ThreadClient(void *arg)
                 for (int i =0 ;i<fragments.size();i++){
                     for(int j=0;j<fragments.at(i).size();j++){
                         char* frag = &(fragments.at(i).at(j));
-                        printf("%x ",(unsigned char)fragments.at(i).at(j));
+                        //printf("%x ",(unsigned char)fragments.at(i).at(j));
                         file_server.write(frag, sizeof(char));
                     }
                 }
@@ -196,13 +195,35 @@ void *ThreadClient(void *arg)
 
             toRemoveFilePath = string(pkt._payload);
             toRemoveFilePath = toRemoveFilePath.substr(toRemoveFilePath.find_last_of("/") + 1);
-            directory = "./";
-            directory = directory + pkt.user + "/" + toRemoveFilePath;
+            string file_path = "./";
+            file_path = file_path + pkt.user + "/" + toRemoveFilePath;
 
-            delete_file(directory);
+            delete_file(file_path);
 
-            //fazer depois
-            //sendMessage(toRemoveFilePath, 1, MENSAGEM_DELETAR_NOS_CLIENTES, 1, user, sockfd); // pedido de delete enviado para o cliente
+            vector<int> sync_dir_sockets = loginManager->get_active_sync_dir(user);
+
+            char* path;
+
+            memcpy(path, &(file_path), file_path.length());
+
+            cout << path << "\n"
+                 << endl;
+
+            for(int i = 0; i < sync_dir_sockets.size(); i++){
+            //    sendMessage(path, 1, MENSAGEM_DELETAR_NOS_CLIENTES, 1, user, sync_dir_sockets[i]); // pedido de delete enviado para o cliente
+            }
+        }
+
+        if(pkt.type == GET_SYNC_DIR){
+            //baixar todos os arquivos do syncdir do servidor
+            
+            //salvar o socket que pediu atualizações de sync dir
+            loginManager->activate_sync_dir(user, sockfd);
+        }
+        if (pkt.type == MENSAGEM_DOWNLOAD_NO_SERVIDOR){
+            string directory = "./";
+            directory = directory + pkt.user + "/" + string(pkt._payload);
+            upload_file_server(sockfd,user,directory);
         }
     }
     return 0;
@@ -221,4 +242,47 @@ void handle_ctrlc(int s){
     close(conectionSocket);
 
 	exit(0);
+}
+int upload_file_server(int sock, char username[], std::string file_path)
+{
+	char buffer[256];
+
+	ifstream file;
+    cout<<file_path;
+	file.open(file_path, ios_base::binary);
+	if (!file.is_open())
+	{
+		cout << " falha ao abrir"
+			 << "\n"
+			 << endl;
+        sendMessage("", 1, MENSAGEM_FALHA_ENVIO, 1, username, sock);
+		return 0;
+		// mensagem erro
+	}
+	else
+	{
+		file.seekg(0, file.end);
+		int file_size = file.tellg();
+		cout << file_size << "\n";
+		file.clear();
+		file.seekg(0);
+
+		sendMessage((char *)file_path.c_str(), 1, MENSAGEM_ENVIO_NOME_ARQUIVO, std::ceil(file_size / 256), username, sock);
+        sleep(1);
+		for (int i = 0; i < file_size; i += ((sizeof(buffer)))) // to read file
+		{
+			memset(buffer, 0, 256);
+			file.read(buffer, sizeof(buffer));
+            for(int i =0;i<256; i++){
+                //printf("%x ", (unsigned char)buffer[i]);
+            }
+            
+			sendMessage(buffer, i / 256, MENSAGEM_ENVIO_PARTE_ARQUIVO, 4, username, sock);
+		}
+		file.close();
+		cout << " arquivo lido"
+			 << "\n"
+			 << endl;
+		return 1;
+	}
 }
