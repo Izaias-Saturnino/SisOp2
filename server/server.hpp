@@ -10,11 +10,14 @@
 #include <netdb.h> 
 #include <iostream>
 #include <fstream>
+#include <cmath>
 #include "../login/login.hpp"
 #include "../dir_manager.cpp"
 
 void verificaRecebimentoIP(int argc,char *argv[]);
 
 void imprimeServerError(void);
+
+int upload_file_server(int sock, char username[], std::string file_path);
 
 void *ThreadClient(void *arg);

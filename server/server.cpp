@@ -215,7 +215,7 @@ void *ThreadClient(void *arg)
             loginManager->activate_sync_dir(user, sockfd);
         }
         if (pkt.type == MENSAGEM_DOWNLOAD_NO_SERVIDOR){
-            directory = "./";
+            string directory = "./";
             directory = directory + pkt.user + "/" + string(pkt._payload);
             upload_file_server(sockfd,user,directory);
         }

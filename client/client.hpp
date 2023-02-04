@@ -26,4 +26,8 @@ void verificaRecebimentoParametros(int argc);
 
 int upload_file_client(int sock, char username[],std::string file_path);
 
+int download_file_client(int sock,char username[], std::string file_path);
+
+void handle_updates();
+
 void handle_ctrlc(int s);
