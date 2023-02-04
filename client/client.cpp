@@ -1,12 +1,14 @@
 #include "./client.hpp"
 
 bool Logout = false;
+int sockfd;
+char username[256];
 
 int main(int argc, char *argv[])
 {
-	int sockfd, PORT, newSocket;
+	int PORT, newSocket;
 	socklen_t clilen;
-	char buffer[256], username[256];
+	char buffer[256]; 
 	struct sockaddr_in serv_addr, cli_addr;
 	struct sigaction sigIntHandler;
 	PACKET receivedPkt;
@@ -66,7 +68,7 @@ int main(int argc, char *argv[])
 			}
 			if (command_complete)
 			{		
-				if (command == "exit" || Logout == true)
+				if (command == "exit"|| Logout == true)
 				{
 					break;
 				}
@@ -86,7 +88,7 @@ int main(int argc, char *argv[])
 				}
 				if (command == "upload")
 				{
-					upload_file_client(sockfd, username);
+					upload_file_client();
 
 				}
 				command = "";
@@ -118,7 +120,7 @@ void verificaRecebimentoParametros(int argc)
 	}
 }
 
-int upload_file_client(int sock, char username[])
+int upload_file_client()
 {
 	string file_path;
 	std::string buffer;
@@ -138,18 +140,18 @@ int upload_file_client(int sock, char username[])
 	}
 	else
 	{
-		sendMessage(file_path, 1, MENSAGEM_ENVIO_NOME_ARQUIVO, 4, username, sock);
+		sendMessage(file_path, 1, MENSAGEM_ENVIO_NOME_ARQUIVO, 4, username, sockfd);
 
 		while (getline(file, buffer)) // to read file
 		{
 			// function used to read the contents of file
-			sendMessage(buffer, 1, MENSAGEM_ENVIO_PARTE_ARQUIVO, 4, username, sock);
+			sendMessage(buffer, 1, MENSAGEM_ENVIO_PARTE_ARQUIVO, 4, username, sockfd);
 			cout << buffer << "\n"
 				 << endl;
 			buffer.clear();
 		}
 		file.close();
-		sendMessage(buffer, 1, MENSAGEM_ARQUIVO_LIDO, 4, username, sock);
+		sendMessage(buffer, 1, MENSAGEM_ARQUIVO_LIDO, 4, username, sockfd);
 		cout << " arquivo lido"
 			 << "\n"
 			 << endl;
@@ -158,6 +160,15 @@ int upload_file_client(int sock, char username[])
 }
 
 void handle_ctrlc(int s){
+	PACKET Pkt;
+
 	Logout = true;
-	cout<<"Caught signal"<<endl;
+	cout<<endl<<"Caught signal"<<endl;
+
+	sendMessage("", 1, MENSAGEM_LOGOUT, 1, username, sockfd); // logout message
+	readSocket(&Pkt, sockfd);
+	cout << endl << Pkt._payload << endl;
+	
+	close(sockfd);
+	exit(0);
 }
