@@ -105,6 +105,9 @@ void *ThreadClient(void *arg)
     char user[256];
     string directory = "/sync_dir/";
     fstream file_server;
+    int size=0;
+    int received_fragments=0;
+    vector<vector<char>> fragments(10);
     while (true)
     {
         readSocket(&pkt, sockfd);
@@ -125,22 +128,41 @@ void *ThreadClient(void *arg)
             directory = "./";
             directory = directory + pkt.user + "/" + receivedFilePath;
             file_server.open(directory, ios::out);
-
+            size = pkt.total_size;
 
             cout << directory << "\n"
                  << endl;
+
+            fragments.clear();
+            fragments.resize(size+1);
+            received_fragments =0;
         }
         if(pkt.type == MENSAGEM_ENVIO_PARTE_ARQUIVO|| pkt.type == MENSAGEM_ARQUIVO_LIDO)
         {
-            string receivedFileLine = (pkt._payload);
+            char buffer [256];
+            vector<char> bufferconvert;
+            strcpy(buffer,pkt._payload);
+            
             if (pkt.type == MENSAGEM_ENVIO_PARTE_ARQUIVO)
             {
-                file_server << receivedFileLine;
+                received_fragments++;
+                cout<< "received package ammount" << received_fragments << "\n";
+                cout << buffer;
+                const char* end = buffer + strlen( buffer );
+                bufferconvert.insert(bufferconvert.end,buffer,end);
+                fragments.at(pkt.seqn)=bufferconvert;
+                
+
             }
-            else
+            if(received_fragments == size+1)
             {
+                for (int i =0 ;i<fragments.size();i++){
+                    cout << i << "\n"; 
+                    for(int j=0;j<fragments.at(i).size();j++){
+                    file_server << fragments.at(i).at(j);
+                    }
+                }
                 file_server.close();
-                break;
             }
 
         }

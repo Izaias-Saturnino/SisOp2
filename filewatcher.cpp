@@ -71,10 +71,12 @@ void *folderchecker(void *arg)
             pthread_mutex_unlock(&m);
         }
     }
+    return 0;
 }
 
 void *input(void *arg)
 {
-    std::cin >> command;
+    std::getline (std::cin,command);
     command_complete=true;
+    return 0;
 }
