@@ -120,7 +120,7 @@ int main(int argc, char *argv[])
 			}
 
 			if(sync_dir_active){
-				handle_updates();
+				handle_updates(sockfd);
 			}
 		}
 
@@ -217,7 +217,7 @@ int download_file_client(int sock,char username[], std::string file_path)
 
 		memcpy(buffer, pkt._payload, 256);
 
-		printf("%d\n", received_fragments);
+		//printf("%d\n", received_fragments);
 		for (int i = 0; i < bufferconvert.size(); i++)
 		{
 			bufferconvert[i] = buffer[i];
@@ -233,7 +233,7 @@ int download_file_client(int sock,char username[], std::string file_path)
 		for (int j = 0; j < fragments.at(i).size(); j++)
 		{
 			char *frag = &(fragments.at(i).at(j));
-			printf("%x ", (unsigned char)fragments.at(i).at(j));
+			//printf("%x ", (unsigned char)fragments.at(i).at(j));
 			file_download.write(frag, sizeof(char));
 		}
 	}
@@ -255,8 +255,15 @@ void handle_ctrlc(int s){
 	exit(0);
 }
 
-void handle_updates(){
+void handle_updates(int sockfd){
+	PACKET receivedPkt;
 	//ler do socket e verificar se tem mensagem ou não
 	//enquanto mensagens existirem, tratar as mensagens
 	//quando não houver mais mensagens terminar o laço
+	while(tryReadSocket(&receivedPkt, sockfd)){
+		switch(receivedPkt.type){
+			default:
+				break;
+		}
+	}
 }

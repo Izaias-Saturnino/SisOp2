@@ -152,7 +152,7 @@ void *ThreadClient(void *arg)
 
             memcpy(buffer,pkt._payload, 256);
 
-            printf("%d",received_fragments);
+            //printf("%d",received_fragments);
 
             for(int i = 0; i < bufferconvert.size(); i++){
                 bufferconvert[i] = buffer[i];
@@ -219,6 +219,8 @@ void *ThreadClient(void *arg)
             
             //salvar o socket que pediu atualizações de sync dir
             loginManager->activate_sync_dir(user, sockfd);
+
+            cout << "active sync dir confirmed" << endl;
         }
         if (pkt.type == MENSAGEM_DOWNLOAD_NO_SERVIDOR){
             string directory = "./";
