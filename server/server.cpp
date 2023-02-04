@@ -103,10 +103,13 @@ void *ThreadClient(void *arg)
     char resposta[40];
     char user[256];
     string directory = "/sync_dir/";
-    fstream file_server;
-
+    ofstream file_server;
+    int size=0;
+    int received_fragments=0;
+    vector<vector<char>> fragments(10);
     while (true)
     {
+        memset(pkt._payload, 0, 256);
         readSocket(&pkt, sockfd);
         strcpy(user, pkt.user);
  
@@ -125,37 +128,75 @@ void *ThreadClient(void *arg)
             receivedFilePath = receivedFilePath.substr(receivedFilePath.find_last_of("/") + 1);
             directory = "./";
             directory = directory + pkt.user + "/" + receivedFilePath;
-            file_server.open(directory, ios::out);
-
+            file_server.open(directory, ios_base::binary);
+            size = pkt.total_size;
 
             cout << directory << "\n"
                  << endl;
+
+            fragments.clear();
+            fragments.resize(size+1);
+            received_fragments =0;
         }
-        if(pkt.type == MENSAGEM_ENVIO_PARTE_ARQUIVO|| pkt.type == MENSAGEM_ARQUIVO_LIDO)
+        if(pkt.type == MENSAGEM_ENVIO_PARTE_ARQUIVO || pkt.type == MENSAGEM_ARQUIVO_LIDO)
         {
-            string receivedFileLine = (pkt._payload);
+            char buffer [256];
+            vector<char> bufferconvert(256);
+
+            memset(buffer, 0, 256);
+
+            memcpy(buffer,pkt._payload, 256);
+
+            printf("%d",received_fragments);
+
+            for(int i = 0; i < bufferconvert.size(); i++){
+                bufferconvert[i] = buffer[i];
+            }
+            
             if (pkt.type == MENSAGEM_ENVIO_PARTE_ARQUIVO)
             {
-                file_server << receivedFileLine;
+                received_fragments++;
+                fragments.at(pkt.seqn)=bufferconvert;
             }
-            else
+            if(received_fragments == size+1)
             {
+                for (int i =0 ;i<fragments.size();i++){
+                    for(int j=0;j<fragments.at(i).size();j++){
+                        char* frag = &(fragments.at(i).at(j));
+                        printf("%x ",(unsigned char)fragments.at(i).at(j));
+                        file_server.write(frag, sizeof(char));
+                    }
+                }
                 file_server.close();
-                break;
             }
 
         }
-         if (pkt.type == MENSAGEM_PEDIDO_LISTA_ARQUIVOS_SERVIDOR)
+
+        if (pkt.type == MENSAGEM_PEDIDO_LISTA_ARQUIVOS_SERVIDOR)
         {
             vector<string> infos = print_file_list("./" + string(user));
             for (int i = 0; i < infos.size(); i++)
             {
-                sendMessage(infos.at(i), 1, MENSAGEM_ITEM_LISTA_DE_ARQUIVOS , 1, user, sockfd);
+                sendMessage((char*)infos.at(i).c_str(), 1, MENSAGEM_ITEM_LISTA_DE_ARQUIVOS , 1, user, sockfd);
                 if (i == infos.size() - 1)
                 {
-                    sendMessage(infos.at(i), 1, MENSAGEM_ULTIMO_ITEM_LISTA_ARQUIVOS, 1, user, sockfd);
+                    sendMessage((char*)infos.at(i).c_str(), 1, MENSAGEM_ULTIMO_ITEM_LISTA_ARQUIVOS, 1, user, sockfd);
                 }
             }
+        }
+
+        if (pkt.type == MENSAGEM_DELETAR_NO_SERVIDOR){
+            string toRemoveFilePath;
+
+            toRemoveFilePath = string(pkt._payload);
+            toRemoveFilePath = toRemoveFilePath.substr(toRemoveFilePath.find_last_of("/") + 1);
+            directory = "./";
+            directory = directory + pkt.user + "/" + toRemoveFilePath;
+
+            delete_file(directory);
+
+            //fazer depois
+            //sendMessage(toRemoveFilePath, 1, MENSAGEM_DELETAR_NOS_CLIENTES, 1, user, sockfd); // pedido de delete enviado para o cliente
         }
     }
     return 0;

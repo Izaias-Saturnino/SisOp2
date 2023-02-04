@@ -21,7 +21,7 @@ void readSocket(PACKET *pkt, int sock){
     }
 }
 
-void sendMessage(string message, int seqn, int messageType,int fragmentos, char username[], int sockfd)
+void sendMessage(char message[256], int seqn, int messageType,int fragmentos, char username[], int sockfd)
 {
 	PACKET pkt;
 	
@@ -30,7 +30,7 @@ void sendMessage(string message, int seqn, int messageType,int fragmentos, char 
 	pkt.seqn = seqn;
 	pkt.total_size = fragmentos;
 	strcpy(pkt.user, username);
-	strcpy(pkt._payload, message.c_str());
+	memcpy(pkt._payload, message,256);
 	pkt.length = strlen(pkt._payload);
 	pkt_mtx.unlock();
 

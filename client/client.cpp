@@ -1,5 +1,5 @@
 #include "./client.hpp"
-
+#include <cmath>
 bool Logout = false;
 int sockfd;
 char username[256];
@@ -87,9 +87,11 @@ int main(int argc, char *argv[])
 						readSocket(&receivedPkt, sockfd);
 					}
 				}
-				if (command == "upload")
+				if (command.find("upload ") != std::string::npos)
 				{
-					upload_file_client();
+					std::string path = command.substr(command.find("upload ") + 7);
+					cout << path;
+					upload_file_client(sockfd, username, path);
 
 				}
 				command = "";
@@ -120,16 +122,13 @@ void verificaRecebimentoParametros(int argc)
 	}
 }
 
-int upload_file_client()
+int upload_file_client(int sock, char username[],std::string file_path)
 {
-	string file_path;
-	std::string buffer;
+	char buffer[256];
 
-	cout << "Informe o caminho do arquivo a ser enviado"
-		 << "\n";
-	cin >> file_path;
+
 	ifstream file;
-	file.open(file_path);
+	file.open(file_path, ios_base::binary);
 	if (!file.is_open())
 	{
 		cout << " falha ao abrir"
@@ -139,18 +138,18 @@ int upload_file_client()
 		// mensagem erro
 	}
 	else
-	{
-		sendMessage(file_path, 1, MENSAGEM_ENVIO_NOME_ARQUIVO, 4, username, sockfd);
-
-		while (getline(file, buffer)) // to read file
-		{
-			// function used to read the contents of file
-			sendMessage(buffer, 1, MENSAGEM_ENVIO_PARTE_ARQUIVO, 4, username, sockfd);
-
-
-			cout << buffer << "\n"
-				 << endl;
-			buffer.clear();
+	{	file.seekg(0, file.end);
+		int file_size = file.tellg();
+		cout << file_size <<  "\n";
+		file.clear();
+		file.seekg(0);
+		
+		sendMessage((char*)file_path.c_str(), 1, MENSAGEM_ENVIO_NOME_ARQUIVO, std::ceil(file_size/256), username, sock);
+		for (int i=0;i< file_size;i+=((sizeof(buffer)))) // to read file
+		{	
+			memset(buffer, 0, 256);
+			file.read(buffer,sizeof(buffer));
+			sendMessage(buffer, i/256 , MENSAGEM_ENVIO_PARTE_ARQUIVO, 4, username, sock);
 		}
 		file.close();
 
