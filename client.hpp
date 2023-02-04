@@ -13,7 +13,7 @@
 #include <cstdlib>
 #include <signal.h>
 #include <ctime>
-#include "../common/common.hpp"
+#include "./common.hpp"
 
 using namespace std;
 

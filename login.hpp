@@ -5,7 +5,7 @@
 #include <netinet/in.h>
 #include <vector>
 #include <iostream>
-#include "../common/common.hpp"
+#include "./common.hpp"
 
 #define MAX_SESSIONS 2
 

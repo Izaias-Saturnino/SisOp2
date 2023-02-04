@@ -11,8 +11,8 @@
 #include <filesystem>
 namespace fs = std::filesystem;
 
-#include "../common/common.cpp"
-#include "../dir_manager.cpp"
+#include "./common.cpp"
+#include "./dir_manager.cpp"
 #include "./server.hpp"
 
 using namespace std;
