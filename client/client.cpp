@@ -1,6 +1,6 @@
 #include "./client.hpp"
 bool Logout = false;
-int sockfd;
+int socketCtrl;
 char username[256];
 
 int main(int argc, char *argv[])
@@ -12,7 +12,7 @@ int main(int argc, char *argv[])
 	char buffer[256]; 
 	struct sockaddr_in serv_addr, cli_addr;
 	struct sigaction sigIntHandler;
-	PACKET receivedPkt,logoutPkt;
+	PACKET receivedPkt;
 	string message, servAddr;
 
 	sigIntHandler.sa_handler = handle_ctrlc;
@@ -30,6 +30,8 @@ int main(int argc, char *argv[])
 		printf("ERROR opening socket");
 		exit(0);
 	}
+
+	socketCtrl = sockfd;
 
 	serv_addr.sin_family = AF_INET;
 	serv_addr.sin_port = htons(PORT);
@@ -176,7 +178,7 @@ int upload_file_client(int sock, char username[],std::string file_path)
 		}
 		file.close();
 
-		sendMessage(buffer, 1, MENSAGEM_ARQUIVO_LIDO, 4, username, sockfd);
+		sendMessage(buffer, 1, MENSAGEM_ARQUIVO_LIDO, 4, username, sock);
 
 		cout << " arquivo lido"
 			 << "\n"
@@ -243,12 +245,12 @@ void handle_ctrlc(int s){
 
 	Logout = true;
 	cout<<endl<<"Caught signal"<<endl;
-	sendMessage("", 1, MENSAGEM_LOGOUT, 1, username, sockfd); // logout message
-	readSocket(&Pkt, sockfd);
+	sendMessage("", 1, MENSAGEM_LOGOUT, 1, username, socketCtrl); // logout message
+	readSocket(&Pkt, socketCtrl);
 	
 	cout << endl << Pkt._payload << endl;
 
-	close(sockfd);
+	close(socketCtrl);
 
 	exit(0);
 }
