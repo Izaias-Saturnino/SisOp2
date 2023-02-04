@@ -41,7 +41,6 @@ int main(int argc, char *argv[])
     {
         while (true)
         {
-
             /*listen to clients*/
             listen(sockfd, 5);
             clilen = sizeof(struct sockaddr_in);
@@ -105,15 +104,17 @@ void *ThreadClient(void *arg)
     char user[256];
     string directory = "/sync_dir/";
     fstream file_server;
+
     while (true)
     {
         readSocket(&pkt, sockfd);
         strcpy(user, pkt.user);
-
+ 
         if (pkt.type == MENSAGEM_LOGOUT)
         {
             loginManager->Logout(user, sockfd, resposta);
             sendMessage(resposta, 1, MENSAGEM_RESPOSTA_LOGOUT, 1, user, sockfd); // resposta logout
+            break;
         }
         if (pkt.type == MENSAGEM_ENVIO_NOME_ARQUIVO)
         {
@@ -157,7 +158,6 @@ void *ThreadClient(void *arg)
             }
         }
     }
-
     return 0;
 }
 

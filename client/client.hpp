@@ -23,6 +23,6 @@ using namespace std;
 
 void verificaRecebimentoParametros(int argc);
 
-int upload_file_client(int sock, char username[]);
+int upload_file_client();
 
 void handle_ctrlc(int s);
