@@ -3,6 +3,8 @@ bool Logout = false;
 
 int main(int argc, char *argv[])
 {
+	bool sync_dir_active = false;
+
 	int sockfd, PORT, newSocket;
 	socklen_t clilen;
 	char buffer[256], username[256];
@@ -90,6 +92,16 @@ int main(int argc, char *argv[])
 					upload_file_client(sockfd, username, path);
 
 				}
+				if (command == ("get_sync_dir") && !sync_dir_active)
+				{
+					sync_dir_active = true;
+
+					//criar diretório se não existe
+					create_folder("./syncdir");
+
+					//informar o servidor que estamos recebendo atualizações
+					sendMessage("", 1, GET_SYNC_DIR, 1, username, sockfd);
+				}
 				if (command.find("download ") != std::string::npos)
 				{
 					std::string path = command.substr(command.find("download ") + 9);
@@ -97,6 +109,10 @@ int main(int argc, char *argv[])
 				}
 				command = "";
 				pthread_create(&thr2, NULL, input, (void *)&n2);
+			}
+
+			if(sync_dir_active){
+				handle_updates();
 			}
 		}
 
@@ -218,4 +234,10 @@ int download_file_client(int sock,char username[], std::string file_path)
 void handle_ctrlc(int s){
 	Logout = true;
 	cout<<"Caught signal"<<endl;
+}
+
+void handle_updates(){
+	//ler do socket e verificar se tem mensagem ou não
+	//enquanto mensagens existirem, tratar as mensagens
+	//quando não houver mais mensagens terminar o laço
 }

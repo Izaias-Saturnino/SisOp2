@@ -33,6 +33,7 @@ using namespace std;
 #define MENSAGEM_DELETAR_NOS_CLIENTES 31
 #define MENSAGEM_DOWNLOAD_NO_SERVIDOR 40
 #define MENSAGEM_FALHA_ENVIO 41
+#define GET_SYNC_DIR 50
 // #define MENSAGEM_
 // #define MENSAGEM_
 
@@ -51,6 +52,8 @@ struct usuario{
     bool sessaoAtiva2;
     int socketClient1;
     int socketClient2;
+    bool sync1;
+    bool sync2;
 };
 typedef struct usuario USUARIO;
 
