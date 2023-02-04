@@ -147,15 +147,7 @@ void *ThreadClient(void *arg)
 
             memcpy(buffer,pkt._payload, 256);
 
-            for(int i=0;i<256;i++){
-                printf("%x ",(unsigned char)pkt._payload[i]);
-            }
-            printf("\n\n");
-
-            for(int i=0;i<256;i++){
-                printf("%x ",(unsigned char)buffer[i]);
-            }
-            printf("\n\n");
+            printf("%d",received_fragments);
 
             for(int i = 0; i < bufferconvert.size(); i++){
                 bufferconvert[i] = buffer[i];
@@ -185,10 +177,10 @@ void *ThreadClient(void *arg)
             vector<string> infos = print_file_list("./" + string(user));
             for (int i = 0; i < infos.size(); i++)
             {
-                sendMessage(infos.at(i), 1, MENSAGEM_ITEM_LISTA_DE_ARQUIVOS , 1, user, sockfd);
+                sendMessage((char*)infos.at(i).c_str(), 1, MENSAGEM_ITEM_LISTA_DE_ARQUIVOS , 1, user, sockfd);
                 if (i == infos.size() - 1)
                 {
-                    sendMessage(infos.at(i), 1, MENSAGEM_ULTIMO_ITEM_LISTA_ARQUIVOS, 1, user, sockfd);
+                    sendMessage((char*)infos.at(i).c_str(), 1, MENSAGEM_ULTIMO_ITEM_LISTA_ARQUIVOS, 1, user, sockfd);
                 }
             }
         }

@@ -53,6 +53,6 @@ struct usuario{
 typedef struct usuario USUARIO;
 
 void readSocket(PACKET *pkt, int sock);
-void sendMessage(string message, int seqn, int messageType,int fragmentos, char username[], int sockfd);
+void sendMessage(char message[256], int seqn, int messageType,int fragmentos, char username[], int sockfd);
 
 
