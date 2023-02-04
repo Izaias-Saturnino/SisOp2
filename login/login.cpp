@@ -51,15 +51,12 @@ void LoginManager::Logout(char user[],int socket, char resposta[]){
                 (*it).sync2 = false;
                 strcpy(resposta,"Sessao 2 desconectada");
             }
-            break;
             mtx_sessoes.unlock();
+            break;
         }
     }
     if((*it).sessaoAtiva1 == false && ((*it).sessaoAtiva2 == false)) //sem conexão -> remove da lista
     {
-        // mtx_list.lock();
-        // this->listaDeUsuarios.erase(it);
-        // mtx_list.unlock();
         strcpy(resposta,"Usuario desconectado");
     }
     
@@ -80,24 +77,20 @@ bool LoginManager::verificaQuantidadeUsuarios(char nome[],int socketCli){
                     usuarioValido = false;
                 }
                 else{
-                    cout<<(*it).sessaoAtiva2<<endl;
                     (*it).sessaoAtiva2 = true;
                     (*it).socketClient2 = socketCli;
-                    cout<<"sessao2:"<< (*it).sessaoAtiva2<< endl;
-                    cout<<"Segunda conta = true \n"<<(*it).socketClient2<<endl;
+                    cout<<"Segunda conta ativada \n"<<(*it).socketClient2<<endl;
                 }
             }
             else{
                  if((*it).sessaoAtiva2 == true){ //reativa sessão 1
-                    cout<<(*it).sessaoAtiva1<<endl;
                     (*it).sessaoAtiva1 = true;
                     (*it).socketClient1 = socketCli;
-                    cout<<"sessao1:"<< (*it).sessaoAtiva1<< endl;
-                    cout<<"Segunda conta = true \n"<<(*it).socketClient1<<endl;
+                    cout<<"Segunda conta ativada \n"<<(*it).socketClient1<<endl;
                  }
                  else{
                     (*it).sessaoAtiva1 = true;
-                    cout<<"Primeira conta = true \n"<<endl;
+                    cout<<"Primeira conta ativada \n"<<endl;
                  }
             }
             mtx_sessoes.unlock();
@@ -105,7 +98,7 @@ bool LoginManager::verificaQuantidadeUsuarios(char nome[],int socketCli){
 	}
 
     if(achou != true){
-        cout<<"Usuário não encontrado! Criando um novo usuario...\n"<<endl;
+        cout<<"Usuário não encontrado!"<<endl<< "Criando um novo usuario...\n"<<endl;
         this->criarNovoUsuario(nome,socketCli);
     }
 

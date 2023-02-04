@@ -21,3 +21,5 @@ void imprimeServerError(void);
 int upload_file_server(int sock, char username[], std::string file_path);
 
 void *ThreadClient(void *arg);
+
+void handle_ctrlc(int s);

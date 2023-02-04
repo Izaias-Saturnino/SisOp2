@@ -1,5 +1,7 @@
 #include "./client.hpp"
 bool Logout = false;
+int sockfd;
+char username[256];
 
 int main(int argc, char *argv[])
 {
@@ -7,10 +9,10 @@ int main(int argc, char *argv[])
 
 	int sockfd, PORT, newSocket;
 	socklen_t clilen;
-	char buffer[256], username[256];
+	char buffer[256]; 
 	struct sockaddr_in serv_addr, cli_addr;
 	struct sigaction sigIntHandler;
-	PACKET receivedPkt;
+	PACKET receivedPkt,logoutPkt;
 	string message, servAddr;
 
 	sigIntHandler.sa_handler = handle_ctrlc;
@@ -46,6 +48,9 @@ int main(int argc, char *argv[])
 
 	readSocket(&receivedPkt, sockfd);
 
+	cout<<"read antes if"<< endl;
+	cout<<receivedPkt.type<< endl;
+
 	if (receivedPkt.type ==  MENSAGEM_USUARIO_VALIDO)
 	{
 		pthread_t thr1, thr2;
@@ -67,8 +72,9 @@ int main(int argc, char *argv[])
 			}
 			if (command_complete)
 			{		
-				if (command == "exit" || Logout == true)
+				if (command == "exit"|| Logout == true )
 				{
+					Logout = false;					
 					break;
 				}
 				if (command == "list_client")
@@ -117,7 +123,6 @@ int main(int argc, char *argv[])
 		}
 
 		sendMessage("", 1, MENSAGEM_LOGOUT, 1, username, sockfd); // logout message
-
 		readSocket(&receivedPkt, sockfd);
 
 		cout << endl << receivedPkt._payload << endl;
@@ -170,7 +175,9 @@ int upload_file_client(int sock, char username[],std::string file_path)
 			sendMessage(buffer, i/256 , MENSAGEM_ENVIO_PARTE_ARQUIVO, 4, username, sock);
 		}
 		file.close();
-		sendMessage(buffer, 1, MENSAGEM_ARQUIVO_LIDO, 4, username, sock);
+
+		sendMessage(buffer, 1, MENSAGEM_ARQUIVO_LIDO, 4, username, sockfd);
+
 		cout << " arquivo lido"
 			 << "\n"
 			 << endl;
@@ -232,8 +239,18 @@ int download_file_client(int sock,char username[], std::string file_path)
 	return 1;
 }
 void handle_ctrlc(int s){
+	PACKET Pkt;
+
 	Logout = true;
-	cout<<"Caught signal"<<endl;
+	cout<<endl<<"Caught signal"<<endl;
+	sendMessage("", 1, MENSAGEM_LOGOUT, 1, username, sockfd); // logout message
+	readSocket(&Pkt, sockfd);
+	
+	cout << endl << Pkt._payload << endl;
+
+	close(sockfd);
+
+	exit(0);
 }
 
 void handle_updates(){
