@@ -70,6 +70,7 @@ int main(int argc, char *argv[])
 			{		
 				if (command == "exit"|| Logout == true)
 				{
+					Logout = false;
 					break;
 				}
 				if (command == "list_client")
@@ -97,7 +98,6 @@ int main(int argc, char *argv[])
 		}
 
 		sendMessage("", 1, MENSAGEM_LOGOUT, 1, username, sockfd); // logout message
-
 		readSocket(&receivedPkt, sockfd);
 
 		cout << endl << receivedPkt._payload << endl;
@@ -146,12 +146,16 @@ int upload_file_client()
 		{
 			// function used to read the contents of file
 			sendMessage(buffer, 1, MENSAGEM_ENVIO_PARTE_ARQUIVO, 4, username, sockfd);
+
+
 			cout << buffer << "\n"
 				 << endl;
 			buffer.clear();
 		}
 		file.close();
+
 		sendMessage(buffer, 1, MENSAGEM_ARQUIVO_LIDO, 4, username, sockfd);
+
 		cout << " arquivo lido"
 			 << "\n"
 			 << endl;
@@ -164,11 +168,12 @@ void handle_ctrlc(int s){
 
 	Logout = true;
 	cout<<endl<<"Caught signal"<<endl;
-
 	sendMessage("", 1, MENSAGEM_LOGOUT, 1, username, sockfd); // logout message
 	readSocket(&Pkt, sockfd);
-	cout << endl << Pkt._payload << endl;
 	
+	cout << endl << Pkt._payload << endl;
+
 	close(sockfd);
+
 	exit(0);
 }
