@@ -151,7 +151,7 @@ void *ThreadClient(void *arg)
                  << endl;
 
             fragments.clear();
-            fragments.resize(size+1);
+            fragments.resize(size);
             received_fragments =0;
         }
         if(pkt.type == MENSAGEM_ENVIO_PARTE_ARQUIVO || pkt.type == MENSAGEM_ARQUIVO_LIDO)
@@ -177,7 +177,7 @@ void *ThreadClient(void *arg)
             if(received_fragments %10 ==9){
 			    sendMessage("",1,MENSAGEM_DOWNLOAD_NO_SERVIDOR,1,user,sockfd);
 		    }
-            if(received_fragments == size+1)
+            if(received_fragments == size)
             {
                 for (int i =0 ;i<fragments.size();i++){
                     for(int j=0;j<fragments.at(i).size();j++){
@@ -295,7 +295,7 @@ int upload_file_server(int sock, char username[], std::string file_path)
                 readSocket(&pktreceived,sock);
             }
 		}
-        sendMessage(buffer, i / 256, MENSAGEM_ARQUIVO_LIDO, 4, username, sock);
+        //sendMessage(buffer, i / 256, MENSAGEM_ARQUIVO_LIDO, 4, username, sock);
         sleep(1);
 		file.close();
 		cout << " arquivo lido"
