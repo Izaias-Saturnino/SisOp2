@@ -314,17 +314,14 @@ void *handle_updates(void *arg)
 				cout << "could not delete file" << endl;
 			}
 		}
-		else if(receivedPkt.type == MENSAGEM_ENVIO_NOME_ARQUIVO){
+		if(receivedPkt.type == MENSAGEM_ENVIO_NOME_ARQUIVO){
 
 		}
-		else if(receivedPkt.type == MENSAGEM_ENVIO_PARTE_ARQUIVO || receivedPkt.type == MENSAGEM_ARQUIVO_LIDO){
+		if(receivedPkt.type == MENSAGEM_ENVIO_PARTE_ARQUIVO || receivedPkt.type == MENSAGEM_ARQUIVO_LIDO){
 
 		}
-		else if(receivedPkt.type == MENSAGEM_PEDIDO_LISTA_ARQUIVOS_CLIENTE){
+		if(receivedPkt.type == MENSAGEM_PEDIDO_LISTA_ARQUIVOS_CLIENTE){
 			
-		}
-		else{
-			cout << "wrong message type: " << receivedPkt.type << endl;
 		}
 	}
 }
