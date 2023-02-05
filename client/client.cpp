@@ -293,6 +293,12 @@ void *handle_updates(void *arg)
     int sockfd = *(int *)arg;
 
 	PACKET receivedPkt;
+
+	ofstream file_client;
+	int size = 0;
+	int received_fragments=0;
+    vector<vector<char>> fragments(10);
+
 	//ler do socket e verificar se tem mensagem ou não
 	//enquanto mensagens existirem, tratar as mensagens
 	//quando não houver mais mensagens terminar o laço
@@ -303,8 +309,8 @@ void *handle_updates(void *arg)
 
             toRemoveFilePath = string(receivedPkt._payload);
             toRemoveFilePath = toRemoveFilePath.substr(toRemoveFilePath.find_last_of("/") + 1);
-            string file_path = "./sync_dir";
-            file_path = file_path + "/" + toRemoveFilePath;
+            string file_path = "./";
+            file_path = file_path + "sync_dir" + "/" + toRemoveFilePath;
 
             int result = delete_file(file_path);
 
@@ -314,12 +320,57 @@ void *handle_updates(void *arg)
 				cout << "could not delete file" << endl;
 			}
 		}
-		if(receivedPkt.type == MENSAGEM_ENVIO_NOME_ARQUIVO){
+		if (receivedPkt.type == MENSAGEM_ENVIO_NOME_ARQUIVO)
+        {
+            string receivedFilePath;
 
-		}
-		if(receivedPkt.type == MENSAGEM_ENVIO_PARTE_ARQUIVO || receivedPkt.type == MENSAGEM_ARQUIVO_LIDO){
+            receivedFilePath = string(receivedPkt._payload);
+            receivedFilePath = receivedFilePath.substr(receivedFilePath.find_last_of("/") + 1);
+            string directory = "./";
+            directory = directory + "sync_dir" + "/" + receivedFilePath;
+            file_client.open(directory, ios_base::binary);
+            size = receivedPkt.total_size;
 
-		}
+            cout << directory << "\n"
+                 << endl;
+
+            fragments.clear();
+            fragments.resize(size+1);
+            received_fragments =0;
+        }
+        if(receivedPkt.type == MENSAGEM_ENVIO_PARTE_ARQUIVO || receivedPkt.type == MENSAGEM_ARQUIVO_LIDO)
+        {
+            char buffer [256];
+            vector<char> bufferconvert(256);
+
+            memset(buffer, 0, 256);
+
+            memcpy(buffer,receivedPkt._payload, 256);
+
+            //printf("%d",received_fragments);
+
+            for(int i = 0; i < bufferconvert.size(); i++){
+                bufferconvert[i] = buffer[i];
+            }
+            
+            if (receivedPkt.type == MENSAGEM_ENVIO_PARTE_ARQUIVO)
+            {
+                received_fragments++;
+                fragments.at(receivedPkt.seqn)=bufferconvert;
+            }
+            if(received_fragments == size+1)
+            {
+                for (int i =0 ;i<fragments.size();i++){
+                    for(int j=0;j<fragments.at(i).size();j++){
+                        char* frag = &(fragments.at(i).at(j));
+                        //printf("%x ",(unsigned char)fragments.at(i).at(j));
+                        file_client.write(frag, sizeof(char));
+                    }
+                }
+                file_client.close();
+            }
+
+        }
 		if(receivedPkt.type == MENSAGEM_PEDIDO_LISTA_ARQUIVOS_CLIENTE){
 			
 		}

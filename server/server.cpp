@@ -123,6 +123,7 @@ void *ThreadClient(void *arg)
     int size=0;
     int received_fragments=0;
     vector<vector<char>> fragments(10);
+    string directory;
     while (true)
     {
         memset(pkt._payload, 0, 256);
@@ -142,7 +143,7 @@ void *ThreadClient(void *arg)
 
             receivedFilePath = string(pkt._payload);
             receivedFilePath = receivedFilePath.substr(receivedFilePath.find_last_of("/") + 1);
-            string directory = "./";
+            directory = "./";
             directory = directory + pkt.user + "/" + receivedFilePath;
             file_server.open(directory, ios_base::binary);
             size = pkt.total_size;
@@ -185,7 +186,13 @@ void *ThreadClient(void *arg)
                 }
                 file_server.close();
             }
+            if(pkt.type == MENSAGEM_ARQUIVO_LIDO){
+                vector<int> sync_dir_sockets = loginManager->get_active_sync_dir(user);
 
+                for(int i = 0; i < sync_dir_sockets.size(); i++){
+                    upload_file_server(sync_dir_sockets[i],user,directory);
+                }
+            }
         }
         if (pkt.type == MENSAGEM_PEDIDO_LISTA_ARQUIVOS_SERVIDOR)
         {
@@ -217,9 +224,7 @@ void *ThreadClient(void *arg)
 
             vector<int> sync_dir_sockets = loginManager->get_active_sync_dir(user);
 
-            cout << "user: " << user<< endl;
             for(int i = 0; i < sync_dir_sockets.size(); i++){
-                cout << "sync_socket " << i << ": " << sync_dir_sockets[i] << endl;
                 sendMessage((char *)toRemoveFilePath.c_str(), 1, MENSAGEM_DELETAR_NOS_CLIENTES, 1, user, sync_dir_sockets[i]); // pedido de delete enviado para o cliente
             }
         }

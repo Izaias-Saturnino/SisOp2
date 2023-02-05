@@ -146,11 +146,5 @@ vector<int> LoginManager::get_active_sync_dir(char user[]){
             break;
         }
     }
-    if(sockets.size() > 0){
-        cout << "sockets[0]: " << sockets[0] << endl;
-    }
-    else{
-        cout << "sockets size = 0" << endl;
-    }
     return sockets;
 }
