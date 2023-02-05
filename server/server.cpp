@@ -81,7 +81,6 @@ int main(int argc, char *argv[])
                 }
                 else if(pkt.type == GET_SYNC_DIR){
                     //baixar todos os arquivos do syncdir do servidor
-                    cout << "sync_socket: " << newSockfd << endl;
             
                     //salvar o socket que pediu atualizações de sync dir
                     loginManager->activate_sync_dir(user, newSockfd);

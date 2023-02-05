@@ -46,7 +46,7 @@ void LoginManager::Logout(char user[],int socket, char resposta[]){
                 (*it).sync1 = -1;
                 strcpy(resposta,"Sessao 1 desconectada");
             }
-            else{
+            else if((*it).socketClient2 == socket){
                 (*it).sessaoAtiva2 = false;
                 (*it).sync2 = -1;
                 strcpy(resposta,"Sessao 2 desconectada");
