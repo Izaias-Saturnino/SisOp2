@@ -134,9 +134,12 @@ int main(int argc, char *argv[])
 					{
 						printf("ERROR connecting\n");
 						exit(0);
-					}					
+					}
 
-					//informar o servidor que estamos recebendo atualizações
+					//cria nova thread para lidar com atualizações
+					pthread_create(&thr1, NULL, handle_updates, &sockfd_sync);
+
+					//informa o servidor que se está recebendo atualizações
 					sendMessage("", 1, GET_SYNC_DIR, 1, username, sockfd_sync);
 				}
 				else if (command.find("download ") != std::string::npos)
@@ -151,10 +154,6 @@ int main(int argc, char *argv[])
 				}
 				command = "";
 				pthread_create(&thr2, NULL, input, (void *)&n2);
-			}
-
-			if(sync_dir_active){
-				handle_updates(sockfd);
 			}
 		}
 
@@ -289,14 +288,16 @@ void handle_ctrlc(int s){
 	exit(0);
 }
 
-void handle_updates(int sockfd){
+void *handle_updates(void *arg)
+{
+    int sockfd = *(int *)arg;
+
 	PACKET receivedPkt;
 	//ler do socket e verificar se tem mensagem ou não
 	//enquanto mensagens existirem, tratar as mensagens
 	//quando não houver mais mensagens terminar o laço
 	while(true){
 		readSocket(&receivedPkt, sockfd);
-		cout << "read" << endl;
 		if(receivedPkt.type == MENSAGEM_DELETAR_NOS_CLIENTES){
 			string toRemoveFilePath;
 
@@ -307,10 +308,9 @@ void handle_updates(int sockfd){
 
             int result = delete_file(file_path);
 
-			cout << "file path:" << endl;
-			cout << file_path << endl;
-
 			if(result == -1){
+				cout << "file path:" << endl;
+				cout << file_path << endl;
 				cout << "could not delete file" << endl;
 			}
 		}
@@ -321,7 +321,7 @@ void handle_updates(int sockfd){
 
 		}
 		else if(receivedPkt.type == MENSAGEM_PEDIDO_LISTA_ARQUIVOS_CLIENTE){
-
+			
 		}
 		else{
 			cout << "wrong message type: " << receivedPkt.type << endl;

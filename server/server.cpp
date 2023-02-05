@@ -81,6 +81,7 @@ int main(int argc, char *argv[])
                 }
                 else if(pkt.type == GET_SYNC_DIR){
                     //baixar todos os arquivos do syncdir do servidor
+                    cout << "sync_socket: " << newSockfd << endl;
             
                     //salvar o socket que pediu atualizações de sync dir
                     loginManager->activate_sync_dir(user, newSockfd);
@@ -216,7 +217,9 @@ void *ThreadClient(void *arg)
 
             vector<int> sync_dir_sockets = loginManager->get_active_sync_dir(user);
 
+            cout << "user: " << user<< endl;
             for(int i = 0; i < sync_dir_sockets.size(); i++){
+                cout << "sync_socket " << i << ": " << sync_dir_sockets[i] << endl;
                 sendMessage((char *)toRemoveFilePath.c_str(), 1, MENSAGEM_DELETAR_NOS_CLIENTES, 1, user, sync_dir_sockets[i]); // pedido de delete enviado para o cliente
             }
         }

@@ -117,7 +117,7 @@ void LoginManager::activate_sync_dir(char user[], int socketCli){
     
     vector<USUARIO>::iterator it;
     for(it = this->listaDeUsuarios.begin(); it != this->listaDeUsuarios.end(); it++){
-        if(user == (*it).nome){
+        if(strcmp(user, (*it).nome) == 0){
             mtx_sessoes.lock();
             if((*it).sync1 == -1){
                 (*it).sync1 = socketCli;
@@ -136,7 +136,7 @@ vector<int> LoginManager::get_active_sync_dir(char user[]){
 
     vector<USUARIO>::iterator it;
     for(it = this->listaDeUsuarios.begin(); it != this->listaDeUsuarios.end(); it++){
-        if(user == (*it).nome){
+        if(strcmp(user, (*it).nome) == 0){
             if((*it).sync1 != -1){
                 sockets.push_back((*it).sync1);
             }
@@ -145,6 +145,12 @@ vector<int> LoginManager::get_active_sync_dir(char user[]){
             }
             break;
         }
+    }
+    if(sockets.size() > 0){
+        cout << "sockets[0]: " << sockets[0] << endl;
+    }
+    else{
+        cout << "sockets size = 0" << endl;
     }
     return sockets;
 }
