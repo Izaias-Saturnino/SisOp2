@@ -262,6 +262,9 @@ int download_file_client(int sock,char username[], std::string file_path)
 			received_fragments++;
 			fragments.at(pkt.seqn) = bufferconvert;
 		}
+		if(received_fragments %10 ==9){
+			sendMessage("",1,MENSAGEM_DOWNLOAD_NO_SERVIDOR,1,username,sock);
+		}
 	}
 	for (int i = 0; i < fragments.size(); i++)
 	{

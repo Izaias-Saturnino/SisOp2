@@ -253,7 +253,7 @@ void handle_ctrlc(int s){
 int upload_file_server(int sock, char username[], std::string file_path)
 {
 	char buffer[256];
-
+    PACKET pktreceived;
 	ifstream file;
     cout<<file_path;
 	file.open(file_path, ios_base::binary);
@@ -277,6 +277,7 @@ int upload_file_server(int sock, char username[], std::string file_path)
 		sendMessage((char *)file_path.c_str(), 1, MENSAGEM_ENVIO_NOME_ARQUIVO, std::ceil(file_size / 256), username, sock);
         sleep(1);
         int i;
+        int counter = 0;
 		for (i = 0; i < file_size; i += ((sizeof(buffer)))) // to read file
 		{
 			memset(buffer, 0, 256);
@@ -286,6 +287,10 @@ int upload_file_server(int sock, char username[], std::string file_path)
             }
             
 			sendMessage(buffer, i / 256, MENSAGEM_ENVIO_PARTE_ARQUIVO, 4, username, sock);
+            counter++;
+            if(counter %10==9){
+                readSocket(&pktreceived,sock);
+            }
 		}
         sendMessage(buffer, i / 256, MENSAGEM_ARQUIVO_LIDO, 4, username, sock);
         sleep(1);
