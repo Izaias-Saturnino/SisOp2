@@ -59,23 +59,33 @@ int main(int argc, char *argv[])
                 /*inicio login*/
                 readSocket(&pkt, newSockfd);
                 strcpy(user, pkt.user);
-                usuarioValido = loginManager->login(newSockfd, user);
+                if(pkt.type == MENSAGEM_LOGIN){
+                    usuarioValido = loginManager->login(newSockfd, user);
 
-                if (usuarioValido)
-                {
-                    string path = "./" + string(user);
-                    cout << path << "\n";
-                    if (!filesystem::is_directory(path))
+                    if (usuarioValido)
                     {
+                        string path = "./" + string(user);
                         cout << path << "\n";
-                        create_folder(path);
+                        if (!filesystem::is_directory(path))
+                        {
+                            cout << path << "\n";
+                            create_folder(path);
+                        }
+                        sendMessage("OK", 1, MENSAGEM_USUARIO_VALIDO, 1, user, newSockfd); // Mensagem de usuario Valido
+                        pthread_create(&clientThread, NULL, ThreadClient, &newSockfd); // CUIDADO: newSocket e não socket
                     }
-                    sendMessage("OK", 1, MENSAGEM_USUARIO_VALIDO, 1, user, newSockfd); // Mensagem de usuario Valido
-                    pthread_create(&clientThread, NULL, ThreadClient, &newSockfd); // CUIDADO: newSocket e não socket
+                    else
+                    {
+                        sendMessage("Excedido numero de sessoes", 1, MENSAGEM_USUARIO_INVALIDO, 1, user, newSockfd); // Mensagem de usuario invalido
+                    }
                 }
-                else
-                {
-                    sendMessage("Excedido numero de sessoes", 1, MENSAGEM_USUARIO_INVALIDO, 1, user, newSockfd); // Mensagem de usuario invalido
+                else if(pkt.type == GET_SYNC_DIR){
+                    //baixar todos os arquivos do syncdir do servidor
+            
+                    //salvar o socket que pediu atualizações de sync dir
+                    loginManager->activate_sync_dir(user, newSockfd);
+
+                    cout << "active sync dir confirmed" << endl;
                 }
             }
         }
@@ -196,28 +206,19 @@ void *ThreadClient(void *arg)
             string file_path = "./";
             file_path = file_path + pkt.user + "/" + toRemoveFilePath;
 
-            delete_file(file_path);
+            int result = delete_file(file_path);
+
+            if(result == -1){
+				cout << "could not delete file" << endl;
+                cout << "file path:" << endl;
+			    cout << file_path << endl;
+			}
 
             vector<int> sync_dir_sockets = loginManager->get_active_sync_dir(user);
 
-            char* path;
-
-            memcpy(path, &(file_path), file_path.length());
-
-            cout << path << "\n"
-                 << endl;
-
             for(int i = 0; i < sync_dir_sockets.size(); i++){
-            //    sendMessage(path, 1, MENSAGEM_DELETAR_NOS_CLIENTES, 1, user, sync_dir_sockets[i]); // pedido de delete enviado para o cliente
+                sendMessage((char *)toRemoveFilePath.c_str(), 1, MENSAGEM_DELETAR_NOS_CLIENTES, 1, user, sync_dir_sockets[i]); // pedido de delete enviado para o cliente
             }
-        }
-        else if(pkt.type == GET_SYNC_DIR){
-            //baixar todos os arquivos do syncdir do servidor
-            
-            //salvar o socket que pediu atualizações de sync dir
-            loginManager->activate_sync_dir(user, sockfd);
-
-            cout << "active sync dir confirmed" << endl;
         }
         else if (pkt.type == MENSAGEM_DOWNLOAD_NO_SERVIDOR){
             string directory = "./";
@@ -225,7 +226,7 @@ void *ThreadClient(void *arg)
             upload_file_server(sockfd,user,directory);
         }
         else{
-            cout << "message type not found" << endl;
+            cout << "wrong message type: " << pkt.type << endl;
         }
     }
     return 0;

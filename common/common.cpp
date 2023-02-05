@@ -4,31 +4,6 @@ mutex pkt_mtx;
 
 using namespace std;
 
-bool tryReadSocket(PACKET *pkt, int sock){
-    int n = 0;
-	bool erro = false;
-
-	bool something_found = true;
-
-    while(n != sizeof(*pkt) && erro != true)
-    {
-		if(n == 0){
-			something_found = false;
-			break;
-		}
-    	/* read from the socket */
-		n = read(sock, pkt, sizeof(*pkt)); 
-
-		if (n < 0) 
-		{
-			cout<<"ERROR reading from socket"<<endl;
-			erro = true;
-		}	
-    }
-
-	return something_found;
-}
-
 void readSocket(PACKET *pkt, int sock){
     int n = 0;
 	bool erro = false;

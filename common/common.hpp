@@ -29,6 +29,7 @@ using namespace std;
 #define MENSAGEM_PEDIDO_LISTA_ARQUIVOS_SERVIDOR 20
 #define MENSAGEM_ITEM_LISTA_DE_ARQUIVOS 21
 #define MENSAGEM_ULTIMO_ITEM_LISTA_ARQUIVOS 22
+#define MENSAGEM_PEDIDO_LISTA_ARQUIVOS_CLIENTE 23
 #define MENSAGEM_DELETAR_NO_SERVIDOR 30
 #define MENSAGEM_DELETAR_NOS_CLIENTES 31
 #define MENSAGEM_DOWNLOAD_NO_SERVIDOR 40
@@ -52,8 +53,8 @@ struct usuario{
     bool sessaoAtiva2;
     int socketClient1;
     int socketClient2;
-    bool sync1;
-    bool sync2;
+    int sync1;
+    int sync2;
 };
 typedef struct usuario USUARIO;
 

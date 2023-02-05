@@ -79,11 +79,11 @@ int main(int argc, char *argv[])
 					Logout = false;					
 					break;
 				}
-				if (command == "list_client")
+				else if (command == "list_client")
 				{
 					print_file_list("./sync_dir");
 				}
-				if (command == "list_server")
+				else if (command == "list_server")
 				{
 					sendMessage("", 1, MENSAGEM_PEDIDO_LISTA_ARQUIVOS_SERVIDOR, 1, username, sockfd);
 					readSocket(&receivedPkt, sockfd);
@@ -93,27 +93,61 @@ int main(int argc, char *argv[])
 						readSocket(&receivedPkt, sockfd);
 					}
 				}
-				if (command.find("upload ") != std::string::npos)
+				else if (command.find("upload ") != std::string::npos)
 				{
 					std::string path = command.substr(command.find("upload ") + 7);
-					cout << path;
+					cout << path << "\n";
 					upload_file_client(sockfd, username, path);
 
 				}
-				if (command == ("get_sync_dir") && !sync_dir_active)
+				else if (command == ("get_sync_dir") && !sync_dir_active)
 				{
 					sync_dir_active = true;
 
 					//criar diretório se não existe
-					create_folder("./syncdir");
+					create_folder("./sync_dir");
+
+					//cria novo socket para lidar com as atualizações recebidas do servidor pelo cliente
+
+					int sockfd_sync;
+					struct sockaddr_in serv_addr;
+					struct sigaction sigIntHandler;
+
+					sigIntHandler.sa_handler = handle_ctrlc;
+					sigemptyset(&sigIntHandler.sa_mask);
+					sigIntHandler.sa_flags = 0;
+
+					verificaRecebimentoParametros(argc);
+
+					if ((sockfd_sync = socket(AF_INET, SOCK_STREAM, 0)) == -1)
+					{
+						printf("ERROR opening socket");
+						exit(0);
+					}
+
+					serv_addr.sin_family = AF_INET;
+					serv_addr.sin_port = htons(PORT);
+					inet_aton(servAddr.c_str(), &serv_addr.sin_addr);
+					bzero(&(serv_addr.sin_zero), 8);
+
+					if (connect(sockfd_sync, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
+					{
+						printf("ERROR connecting\n");
+						exit(0);
+					}					
 
 					//informar o servidor que estamos recebendo atualizações
-					sendMessage("", 1, GET_SYNC_DIR, 1, username, sockfd);
+					sendMessage("", 1, GET_SYNC_DIR, 1, username, sockfd_sync);
 				}
-				if (command.find("download ") != std::string::npos)
+				else if (command.find("download ") != std::string::npos)
 				{
 					std::string path = command.substr(command.find("download ") + 9);
 					download_file_client(sockfd,username,path);
+				}
+				else if (command.find("delete ") != std::string::npos)
+				{
+					std::string path = command.substr(command.find("delete ") + 7);
+					sendMessage((char *)path.c_str(), 1, MENSAGEM_DELETAR_NO_SERVIDOR, 1, username, sockfd);
 				}
 				command = "";
 				pthread_create(&thr2, NULL, input, (void *)&n2);
@@ -260,10 +294,37 @@ void handle_updates(int sockfd){
 	//ler do socket e verificar se tem mensagem ou não
 	//enquanto mensagens existirem, tratar as mensagens
 	//quando não houver mais mensagens terminar o laço
-	while(tryReadSocket(&receivedPkt, sockfd)){
-		switch(receivedPkt.type){
-			default:
-				break;
+	while(true){
+		readSocket(&receivedPkt, sockfd);
+		cout << "read" << endl;
+		if(receivedPkt.type == MENSAGEM_DELETAR_NOS_CLIENTES){
+			string toRemoveFilePath;
+
+            toRemoveFilePath = string(receivedPkt._payload);
+            toRemoveFilePath = toRemoveFilePath.substr(toRemoveFilePath.find_last_of("/") + 1);
+            string file_path = "./sync_dir";
+            file_path = file_path + "/" + toRemoveFilePath;
+
+            int result = delete_file(file_path);
+
+			cout << "file path:" << endl;
+			cout << file_path << endl;
+
+			if(result == -1){
+				cout << "could not delete file" << endl;
+			}
+		}
+		else if(receivedPkt.type == MENSAGEM_ENVIO_NOME_ARQUIVO){
+
+		}
+		else if(receivedPkt.type == MENSAGEM_ENVIO_PARTE_ARQUIVO || receivedPkt.type == MENSAGEM_ARQUIVO_LIDO){
+
+		}
+		else if(receivedPkt.type == MENSAGEM_PEDIDO_LISTA_ARQUIVOS_CLIENTE){
+
+		}
+		else{
+			cout << "wrong message type: " << receivedPkt.type << endl;
 		}
 	}
 }

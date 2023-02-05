@@ -25,8 +25,8 @@ void LoginManager::criarNovoUsuario(char nome[],int socketCli){
     conta.sessaoAtiva2 = false;
     conta.socketClient1 = socketCli;
     conta.socketClient2 = -1;  // valor invalido
-    conta.sync1 = false;
-    conta.sync2 = false;
+    conta.sync1 = -1;  // valor invalido
+    conta.sync2 = -1;  // valor invalido
 
     mtx_list.lock();
     this->listaDeUsuarios.push_back(conta);
@@ -43,12 +43,12 @@ void LoginManager::Logout(char user[],int socket, char resposta[]){
             if((*it).socketClient1 == socket)
             {
                 (*it).sessaoAtiva1 = false;
-                (*it).sync1 = false;
+                (*it).sync1 = -1;
                 strcpy(resposta,"Sessao 1 desconectada");
             }
             else{
                 (*it).sessaoAtiva2 = false;
-                (*it).sync2 = false;
+                (*it).sync2 = -1;
                 strcpy(resposta,"Sessao 2 desconectada");
             }
             mtx_sessoes.unlock();
@@ -119,11 +119,11 @@ void LoginManager::activate_sync_dir(char user[], int socketCli){
     for(it = this->listaDeUsuarios.begin(); it != this->listaDeUsuarios.end(); it++){
         if(user == (*it).nome){
             mtx_sessoes.lock();
-            if(socketCli == (*it).socketClient1){
-                (*it).sync1 = true;
+            if((*it).sync1 == -1){
+                (*it).sync1 = socketCli;
             }
-            else if(socketCli == (*it).socketClient2){
-                (*it).sync2 = true;
+            else if((*it).sync2 == -1){
+                (*it).sync2 = socketCli;
             }
             mtx_sessoes.unlock();
             break;
@@ -137,11 +137,11 @@ vector<int> LoginManager::get_active_sync_dir(char user[]){
     vector<USUARIO>::iterator it;
     for(it = this->listaDeUsuarios.begin(); it != this->listaDeUsuarios.end(); it++){
         if(user == (*it).nome){
-            if((*it).sync1){
-                sockets.push_back((*it).socketClient1);
+            if((*it).sync1 != -1){
+                sockets.push_back((*it).sync1);
             }
-            else if((*it).sync2){
-                sockets.push_back((*it).socketClient2);
+            else if((*it).sync2 != -1){
+                sockets.push_back((*it).sync2);
             }
             break;
         }
