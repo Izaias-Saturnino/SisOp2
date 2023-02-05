@@ -239,7 +239,7 @@ int download_file_client(int sock,char username[], std::string file_path)
 	int size = pkt.total_size;
 	int received_fragments = 0;
 	vector<vector<char>> fragments(size+1);
-	while (received_fragments != size)
+	while (received_fragments != size+1)
 	{
 		memset(pkt._payload, 0, 256);
 		readSocket(&pkt, sock);
