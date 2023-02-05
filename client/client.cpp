@@ -198,21 +198,21 @@ int upload_file_client(int sock, char username[],std::string file_path)
 	else
 	{	
 		file.seekg(0, file.end);
-		int file_size = file.tellg();
+		float file_size = file.tellg();
 		cout << file_size <<  "\n";
 		file.clear();
 		file.seekg(0);
 		
-		sendMessage((char*)file_path.c_str(), 1, MENSAGEM_ENVIO_NOME_ARQUIVO, std::ceil(file_size/256) + 1, username, sock);
+		sendMessage((char*)file_path.c_str(), 1, MENSAGEM_ENVIO_NOME_ARQUIVO, (int) (std::ceil(file_size/256)), username, sock);
 		sleep(1);
 		int counter=0;
 		cout << "FIle size:" << std::ceil(file_size/256);
 		for (int i=0;i< file_size;i+=((sizeof(buffer)))) // to read file
-		{	
-			cout << "counter:" << i/256;
+		{
 			memset(buffer, 0, 256);
 			file.read(buffer,sizeof(buffer));
 			sendMessage(buffer, i/256 , MENSAGEM_ENVIO_PARTE_ARQUIVO, 4, username, sock);
+			counter++;
 			if(counter%10==9){
 				readSocket(&pktreceived,sock);
 			}

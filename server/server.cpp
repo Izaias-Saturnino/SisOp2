@@ -272,12 +272,12 @@ int upload_file_server(int sock, char username[], std::string file_path)
 	else
 	{
 		file.seekg(0, file.end);
-		int file_size = file.tellg();
+		float file_size = file.tellg();
 		cout << file_size << "\n";
 		file.clear();
 		file.seekg(0);
 
-		sendMessage((char *)file_path.c_str(), 1, MENSAGEM_ENVIO_NOME_ARQUIVO, std::ceil(file_size / 256), username, sock);
+		sendMessage((char *)file_path.c_str(), 1, MENSAGEM_ENVIO_NOME_ARQUIVO, (int) (std::ceil(file_size / 256)), username, sock);
         sleep(1);
         int i;
         int counter = 0;

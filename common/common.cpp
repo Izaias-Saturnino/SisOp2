@@ -4,6 +4,9 @@ mutex pkt_mtx;
 
 using namespace std;
 
+int readpktnum = 0;
+int sendpktnum = 0;
+
 void readSocket(PACKET *pkt, int sock){
     int n = 0;
 	bool erro = false;
@@ -19,6 +22,8 @@ void readSocket(PACKET *pkt, int sock){
 			erro = true;
 		}	
     }
+	cout << "readpktnum: " << readpktnum << endl;
+	readpktnum++;
 }
 
 void sendMessage(char message[256], int seqn, int messageType,int fragmentos, char username[], int sockfd)
@@ -37,5 +42,8 @@ void sendMessage(char message[256], int seqn, int messageType,int fragmentos, ch
 	int n = write(sockfd, &pkt, sizeof(pkt));
 	if (n < 0)
 		printf("ERROR writing to socket\n");
+
+	cout << "sendpktnum: " << sendpktnum << endl;
+	sendpktnum++;
 }
 
