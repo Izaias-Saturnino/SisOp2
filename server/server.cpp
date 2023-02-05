@@ -276,7 +276,8 @@ int upload_file_server(int sock, char username[], std::string file_path)
 
 		sendMessage((char *)file_path.c_str(), 1, MENSAGEM_ENVIO_NOME_ARQUIVO, std::ceil(file_size / 256), username, sock);
         sleep(1);
-		for (int i = 0; i < file_size; i += ((sizeof(buffer)))) // to read file
+        int i;
+		for (i = 0; i < file_size; i += ((sizeof(buffer)))) // to read file
 		{
 			memset(buffer, 0, 256);
 			file.read(buffer, sizeof(buffer));
@@ -286,6 +287,8 @@ int upload_file_server(int sock, char username[], std::string file_path)
             
 			sendMessage(buffer, i / 256, MENSAGEM_ENVIO_PARTE_ARQUIVO, 4, username, sock);
 		}
+        sendMessage(buffer, i / 256, MENSAGEM_ARQUIVO_LIDO, 4, username, sock);
+        sleep(1);
 		file.close();
 		cout << " arquivo lido"
 			 << "\n"

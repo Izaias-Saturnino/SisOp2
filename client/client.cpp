@@ -273,6 +273,7 @@ int download_file_client(int sock,char username[], std::string file_path)
 		}
 	}
 	file_download.close();
+	readSocket(&pkt, sock);
 	return 1;
 }
 void handle_ctrlc(int s){
@@ -375,5 +376,62 @@ void *handle_updates(void *arg)
                 file_client.close();
             }
         }
+
+		//
+
+		/*if (pkt.type == MENSAGEM_ENVIO_NOME_ARQUIVO)
+        {
+            string receivedFilePath;
+
+            receivedFilePath = string(pkt._payload);
+            receivedFilePath = receivedFilePath.substr(receivedFilePath.find_last_of("/") + 1);
+            string directory = "./";
+            directory = directory + "sync_dir" + "/" + receivedFilePath;
+            file_client.open(directory, ios_base::binary);
+            size = pkt.total_size;
+
+            cout << directory << "\n"
+                 << endl;
+
+            fragments.clear();
+            fragments.resize(size+1);
+            received_fragments =0;
+        }
+        do
+        {
+            char buffer [256];
+            vector<char> bufferconvert(256);
+
+            memset(buffer, 0, 256);
+
+            memcpy(buffer,pkt._payload, 256);
+
+            //printf("%d",received_fragments);
+
+            for(int i = 0; i < bufferconvert.size(); i++){
+                bufferconvert[i] = buffer[i];
+            }
+            
+            if (pkt.type == MENSAGEM_ENVIO_PARTE_ARQUIVO)
+            {
+                received_fragments++;
+                fragments.at(pkt.seqn)=bufferconvert;
+            }
+
+			cout << "received_fragments: " << received_fragments << endl;
+
+            if(received_fragments == size)
+            {
+                for (int i =0 ;i<fragments.size();i++){
+                    for(int j=0;j<fragments.at(i).size();j++){
+                        char* frag = &(fragments.at(i).at(j));
+                        //printf("%x ",(unsigned char)fragments.at(i).at(j));
+                        file_client.write(frag, sizeof(char));
+                    }
+                }
+                file_client.close();
+            }
+        }while(pkt.type == MENSAGEM_ENVIO_PARTE_ARQUIVO);
+		*/
 	}
 }
