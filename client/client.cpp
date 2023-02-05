@@ -244,8 +244,8 @@ int download_file_client(int sock,char username[], std::string file_path)
 	file_download.open(directory, ios_base::binary);
 	int size = pkt.total_size;
 	int received_fragments = 0;
-	vector<vector<char>> fragments(size+1);
-	while (received_fragments != size+1)
+	vector<vector<char>> fragments(size);
+	while (received_fragments != size)
 	{
 		memset(pkt._payload, 0, 256);
 		readSocket(&pkt, sock);
