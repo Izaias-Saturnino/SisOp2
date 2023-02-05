@@ -174,6 +174,9 @@ void *ThreadClient(void *arg)
                 received_fragments++;
                 fragments.at(pkt.seqn)=bufferconvert;
             }
+            if(received_fragments %10 ==9){
+			    sendMessage("",1,MENSAGEM_DOWNLOAD_NO_SERVIDOR,1,user,sockfd);
+		    }
             if(received_fragments == size+1)
             {
                 for (int i =0 ;i<fragments.size();i++){

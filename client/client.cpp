@@ -183,7 +183,7 @@ void verificaRecebimentoParametros(int argc)
 int upload_file_client(int sock, char username[],std::string file_path)
 {
 	char buffer[256];
-
+	PACKET pktreceived;
 
 	ifstream file;
 	file.open(file_path, ios_base::binary);
@@ -205,11 +205,15 @@ int upload_file_client(int sock, char username[],std::string file_path)
 		
 		sendMessage((char*)file_path.c_str(), 1, MENSAGEM_ENVIO_NOME_ARQUIVO, std::ceil(file_size/256), username, sock);
 		sleep(1);
+		int counter=0;
 		for (int i=0;i< file_size;i+=((sizeof(buffer)))) // to read file
 		{	
 			memset(buffer, 0, 256);
 			file.read(buffer,sizeof(buffer));
 			sendMessage(buffer, i/256 , MENSAGEM_ENVIO_PARTE_ARQUIVO, 4, username, sock);
+			if(counter%10==9){
+				readSocket(&pktreceived,sock);
+			}
 		}
 		file.close();
 
