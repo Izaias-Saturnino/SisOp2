@@ -66,10 +66,10 @@ int main(int argc, char *argv[])
                     if (usuarioValido)
                     {
                         string path = "./" + string(user);
-                        cout << path << "\n";
+                        //cout << path << "\n";
                         if (!filesystem::is_directory(path))
                         {
-                            cout << path << "\n";
+                            //cout << path << "\n";
                             create_folder(path);
                         }
                         sendMessage("OK", 1, MENSAGEM_USUARIO_VALIDO, 1, user, newSockfd); // Mensagem de usuario Valido
@@ -155,8 +155,7 @@ void *ThreadClient(void *arg)
             file_server.open(directory, ios_base::binary);
             size = pkt.total_size;
 
-            cout << directory << "\n"
-                 << endl;
+            //cout << directory << "\n" << endl;
 
             fragments.clear();
             fragments.resize(size);
@@ -185,7 +184,7 @@ void *ThreadClient(void *arg)
             if(received_fragments %200 ==199){
 			    sendMessage("",1,MENSAGEM_DOWNLOAD_NO_SERVIDOR,1,user,sockfd);
 		    }
-            cout << "received_fragments: " << received_fragments << " & size: " << size << endl;
+            //cout << "received_fragments: " << received_fragments << " & size: " << size << endl;
             if(received_fragments == size)
             {
                 for (int i =0 ;i<fragments.size();i++){
@@ -199,7 +198,7 @@ void *ThreadClient(void *arg)
 
                 vector<int> sync_dir_sockets = loginManager->get_active_sync_dir(user);
 
-                cout << "directory: " << directory << endl;
+                //cout << "directory: " << directory << endl;
 
                 for(int i = 0; i < sync_dir_sockets.size(); i++){
                     if(pkt.type == MENSAGEM_ENVIO_PARTE_ARQUIVO_SYNC){
@@ -207,7 +206,7 @@ void *ThreadClient(void *arg)
                             continue;
                         }
                     }
-                    cout << "sync_dir_sockets[" << i << "]: " << sync_dir_sockets[i] << endl;
+                    //cout << "sync_dir_sockets[" << i << "]: " << sync_dir_sockets[i] << endl;
                     upload_file_server(sync_dir_sockets[i],user,directory);
                 }
             }
@@ -242,10 +241,10 @@ void *ThreadClient(void *arg)
 
             vector<int> sync_dir_sockets = loginManager->get_active_sync_dir(user);
 
-            cout << "toRemoveFilePath: " << toRemoveFilePath << endl;
+            //cout << "toRemoveFilePath: " << toRemoveFilePath << endl;
 
             for(int i = 0; i < sync_dir_sockets.size(); i++){
-                cout << "sync_dir_sockets[" << i << "]: " << sync_dir_sockets[i] << endl;
+                //cout << "sync_dir_sockets[" << i << "]: " << sync_dir_sockets[i] << endl;
                 sendMessage((char *)toRemoveFilePath.c_str(), 1, MENSAGEM_DELETAR_NOS_CLIENTES, 1, user, sync_dir_sockets[i]); // pedido de delete enviado para o cliente
             }
         }
@@ -277,11 +276,11 @@ int upload_file_server(int sock, char username[], std::string file_path)
 	char buffer[256];
     PACKET pktreceived;
 	ifstream file;
-    cout<<file_path;
+    //cout<<file_path;
 	file.open(file_path, ios_base::binary);
 	if (!file.is_open())
 	{
-		cout << " falha ao abrir"
+		cout << " could not open file"
 			 << "\n"
 			 << endl;
         sendMessage("", 1, MENSAGEM_FALHA_ENVIO, 1, username, sock);
@@ -292,13 +291,13 @@ int upload_file_server(int sock, char username[], std::string file_path)
 	{
 		file.seekg(0, file.end);
 		float file_size = file.tellg();
-		cout << file_size << "\n";
+		//cout << file_size << "\n";
 		file.clear();
 		file.seekg(0);
 
         int max_fragments = (int) (std::ceil(file_size/256));
 
-        cout << "max_fragments: " << max_fragments << endl;
+        //cout << "max_fragments: " << max_fragments << endl;
 
 		sendMessage((char *)file_path.c_str(), 1, MENSAGEM_ENVIO_NOME_ARQUIVO, max_fragments, username, sock);
         sleep(1);
@@ -324,9 +323,7 @@ int upload_file_server(int sock, char username[], std::string file_path)
         sendMessage(buffer, i / 256, MENSAGEM_ARQUIVO_LIDO, max_fragments, username, sock);
         sleep(1);
 		file.close();
-		cout << " arquivo lido"
-			 << "\n"
-			 << endl;
+		//cout << " arquivo lido" << "\n" << endl;
 		return 1;
 	}
 }
