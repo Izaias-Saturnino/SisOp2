@@ -54,17 +54,20 @@ void *folderchecker(void *arg)
             {
                 if (event->mask & IN_CREATE)
                 {
-                    name.push_back(&(event->name));
+                    string s = ((char*) &(event->name));
+                    name.push_back(s);
                     action.push_back(FILE_CREATED);
                 }
                 else if (event->mask & IN_DELETE)
                 {
-                    name.push_back(&(event->name));
+                    string s = ((char*) &(event->name));
+                    name.push_back(s);
                     action.push_back(FILE_DELETED);
                 }
                 else if (event->mask & IN_MODIFY)
                 {
-                    name.push_back(&(event->name));
+                    string s = ((char*) &(event->name));
+                    name.push_back(s);
                     action.push_back(FILE_MODIFIED);
 
                 }
