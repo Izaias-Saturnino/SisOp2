@@ -164,7 +164,9 @@ int main(int argc, char *argv[])
 					//cria nova thread para lidar com atualizações
 					pthread_create(&thr1, NULL, handle_updates, &sockfd_sync);
 
-					while(wait_for_first_sync);
+					while(wait_for_first_sync){
+						sleep(1);
+					}
 
 					//cria nova thread para lidar com modificações na pasta sync_dir
 					pthread_create(&thr3, NULL, folderchecker, (void *)&n1);
