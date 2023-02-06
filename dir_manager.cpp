@@ -62,7 +62,7 @@ vector<string> get_folder_diference(vector<string> folderA, vector<string> folde
 //remove o aquivo do servidor
 int delete_file(string file_path){
     const char *c = file_path.c_str();
-    int result = remove(c);
+    int result = fs::remove_all(c);
 
     return result;
 }

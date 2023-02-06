@@ -218,7 +218,7 @@ void *ThreadClient(void *arg)
                 sendMessage((char*)infos.at(i).c_str(), 1, MENSAGEM_ITEM_LISTA_DE_ARQUIVOS , 1, user, sockfd);
                 if (i == infos.size() - 1)
                 {
-                    sendMessage((char*)infos.at(i).c_str(), 1, MENSAGEM_ULTIMO_ITEM_LISTA_ARQUIVOS, 1, user, sockfd);
+                    sendMessage("", 1, ACK, 1, user, sockfd);
                 }
             }
         }

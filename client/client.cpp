@@ -106,7 +106,9 @@ int main(int argc, char *argv[])
 				{
 					sync_dir_active = true;
 
-					//criar diretório se não existe
+					//deleta o diretório caso ele exista
+					delete_file("./sync_dir");
+					//cria o diretório
 					create_folder("./sync_dir");
 
 					//cria novo socket para lidar com as atualizações recebidas do servidor pelo cliente
