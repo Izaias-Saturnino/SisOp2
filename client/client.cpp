@@ -95,7 +95,7 @@ int main(int argc, char *argv[])
 				}
 				else if (command.find("upload ") != std::string::npos)
 				{
-					std::string path = command.substr(command.find("upload ") + 7);
+					std::string path = command.substr(command.find("upload ") + 7, command.length());
 					cout << path << "\n";
 					upload_file_client(sockfd, username, path);
 
@@ -146,12 +146,12 @@ int main(int argc, char *argv[])
 				}
 				else if (command.find("download ") != std::string::npos)
 				{
-					std::string path = command.substr(command.find("download ") + 9);
+					std::string path = command.substr(command.find("download ") + 9, command.length());
 					download_file_client(sockfd,username,path);
 				}
 				else if (command.find("delete ") != std::string::npos)
 				{
-					std::string path = command.substr(command.find("delete ") + 7);
+					std::string path = command.substr(command.find("delete ") + 7, command.length());
 					sendMessage((char *)path.c_str(), 1, MENSAGEM_DELETAR_NO_SERVIDOR, 1, username, sockfd);
 				}
 				command = "";
@@ -245,7 +245,7 @@ int download_file_client(int sock,char username[], std::string file_path)
 	}
 	string receivedFilePath;
 	receivedFilePath = string(pkt._payload);
-	receivedFilePath = receivedFilePath.substr(receivedFilePath.find_last_of("/") + 1);
+	receivedFilePath = receivedFilePath.substr(receivedFilePath.find_last_of("/") + 1, receivedFilePath.length());
 	string directory = "./sync_dir";
 	directory = directory + "/" + receivedFilePath;
 	cout << directory;
@@ -330,7 +330,7 @@ void *handle_updates(void *arg)
 			string toRemoveFilePath;
 
             toRemoveFilePath = string(pkt._payload);
-            toRemoveFilePath = toRemoveFilePath.substr(toRemoveFilePath.find_last_of("/") + 1);
+            toRemoveFilePath = toRemoveFilePath.substr(toRemoveFilePath.find_last_of("/") + 1, toRemoveFilePath.length());
             string file_path = "./";
             file_path = file_path + "sync_dir" + "/" + toRemoveFilePath;
 
@@ -347,7 +347,7 @@ void *handle_updates(void *arg)
             string receivedFilePath;
 
             receivedFilePath = string(pkt._payload);
-            receivedFilePath = receivedFilePath.substr(receivedFilePath.find_last_of("/") + 1);
+            receivedFilePath = receivedFilePath.substr(receivedFilePath.find_last_of("/") + 1, receivedFilePath.length());
             string directory = "./";
             directory = directory + "sync_dir" + "/" + receivedFilePath;
             file_client.open(directory, ios_base::binary);
