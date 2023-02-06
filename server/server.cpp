@@ -82,6 +82,11 @@ int main(int argc, char *argv[])
                 }
                 else if(pkt.type == GET_SYNC_DIR){
                     //baixar todos os arquivos do syncdir do servidor
+                    vector<string> file_paths = get_file_list("./" + string(user));
+
+                    for(int i = 0; i < file_paths.size(); i++){
+                        upload_file_server(newSockfd, user, file_paths[i]);
+                    }
             
                     //salvar o socket que pediu atualizações de sync dir
                     loginManager->activate_sync_dir(user, newSockfd);
