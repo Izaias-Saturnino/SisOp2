@@ -44,6 +44,7 @@ int main(int argc, char *argv[])
     }
     else
     {
+        printf("server started\n");
         while (true)
         {
             sigaction(SIGINT, &sigIntHandler, NULL);
@@ -187,11 +188,13 @@ void *ThreadClient(void *arg)
                     }
                 }
                 file_server.close();
-            }
-            if(pkt.type == MENSAGEM_ARQUIVO_LIDO){
+
                 vector<int> sync_dir_sockets = loginManager->get_active_sync_dir(user);
 
+                cout << "directory: " << directory << endl;
+
                 for(int i = 0; i < sync_dir_sockets.size(); i++){
+                    cout << "sync_dir_sockets[" << i << "]: " << sync_dir_sockets[i] << endl;
                     upload_file_server(sync_dir_sockets[i],user,directory);
                 }
             }
@@ -226,7 +229,10 @@ void *ThreadClient(void *arg)
 
             vector<int> sync_dir_sockets = loginManager->get_active_sync_dir(user);
 
+            cout << "toRemoveFilePath: " << toRemoveFilePath << endl;
+
             for(int i = 0; i < sync_dir_sockets.size(); i++){
+                cout << "sync_dir_sockets[" << i << "]: " << sync_dir_sockets[i] << endl;
                 sendMessage((char *)toRemoveFilePath.c_str(), 1, MENSAGEM_DELETAR_NOS_CLIENTES, 1, user, sync_dir_sockets[i]); // pedido de delete enviado para o cliente
             }
         }
@@ -283,6 +289,7 @@ int upload_file_server(int sock, char username[], std::string file_path)
         int counter = 0;
 		for (i = 0; i < file_size; i += ((sizeof(buffer)))) // to read file
 		{
+            cout << "counter: " << counter;
 			memset(buffer, 0, 256);
 			file.read(buffer, sizeof(buffer));
             for(int i =0;i<256; i++){
@@ -295,7 +302,7 @@ int upload_file_server(int sock, char username[], std::string file_path)
                 readSocket(&pktreceived,sock);
             }
 		}
-        //sendMessage(buffer, i / 256, MENSAGEM_ARQUIVO_LIDO, 4, username, sock);
+        sendMessage(buffer, i / 256, MENSAGEM_ARQUIVO_LIDO, 4, username, sock);
         sleep(1);
 		file.close();
 		cout << " arquivo lido"

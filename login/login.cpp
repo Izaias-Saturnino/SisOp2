@@ -121,9 +121,11 @@ void LoginManager::activate_sync_dir(char user[], int socketCli){
             mtx_sessoes.lock();
             if((*it).sync1 == -1){
                 (*it).sync1 = socketCli;
+                cout << "socket: " << socketCli << " foi guardado em sync1" << endl;
             }
             else if((*it).sync2 == -1){
                 (*it).sync2 = socketCli;
+                cout << "socket: " << socketCli << " foi guardado em sync2" << endl;
             }
             mtx_sessoes.unlock();
             break;
@@ -139,9 +141,11 @@ vector<int> LoginManager::get_active_sync_dir(char user[]){
         if(strcmp(user, (*it).nome) == 0){
             if((*it).sync1 != -1){
                 sockets.push_back((*it).sync1);
+                cout << "sync1 tem o valor: " << (*it).sync1 << endl;
             }
             else if((*it).sync2 != -1){
                 sockets.push_back((*it).sync2);
+                cout << "sync2 tem o valor: " << (*it).sync2 << endl;
             }
             break;
         }

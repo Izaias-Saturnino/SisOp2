@@ -22,7 +22,7 @@ void readSocket(PACKET *pkt, int sock){
 			erro = true;
 		}	
     }
-	cout << "readpktnum: " << readpktnum << endl;
+	//cout << "readpktnum: " << readpktnum << endl;
 	readpktnum++;
 }
 
@@ -43,7 +43,7 @@ void sendMessage(char message[256], int seqn, int messageType,int fragmentos, ch
 	if (n < 0)
 		printf("ERROR writing to socket\n");
 
-	cout << "sendpktnum: " << sendpktnum << endl;
+	//cout << "sendpktnum: " << sendpktnum << endl;
 	sendpktnum++;
 }
 

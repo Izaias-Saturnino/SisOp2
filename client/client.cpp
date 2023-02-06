@@ -50,8 +50,8 @@ int main(int argc, char *argv[])
 
 	readSocket(&receivedPkt, sockfd);
 
-	cout<<"read antes if"<< endl;
-	cout<<receivedPkt.type<< endl;
+	//cout<<"read antes if"<< endl;
+	cout<< "receivedPkt.type" << receivedPkt.type << endl;
 
 	if (receivedPkt.type ==  MENSAGEM_USUARIO_VALIDO)
 	{
@@ -136,11 +136,13 @@ int main(int argc, char *argv[])
 						exit(0);
 					}
 
-					//cria nova thread para lidar com atualizações
-					pthread_create(&thr1, NULL, handle_updates, &sockfd_sync);
+					cout << "sockfd_sync: " << sockfd_sync << endl;
 
 					//informa o servidor que se está recebendo atualizações
 					sendMessage("", 1, GET_SYNC_DIR, 1, username, sockfd_sync);
+
+					//cria nova thread para lidar com atualizações
+					pthread_create(&thr1, NULL, handle_updates, &sockfd_sync);
 				}
 				else if (command.find("download ") != std::string::npos)
 				{
@@ -315,7 +317,9 @@ void *handle_updates(void *arg)
 	//enquanto mensagens existirem, tratar as mensagens
 	//quando não houver mais mensagens terminar o laço
 	while(true){
+		cout << "lendo" << endl;
 		readSocket(&pkt, sockfd);
+		cout << "pkt.type: " << pkt.type << endl;
 		if(pkt.type == MENSAGEM_DELETAR_NOS_CLIENTES){
 			string toRemoveFilePath;
 
@@ -343,8 +347,7 @@ void *handle_updates(void *arg)
             file_client.open(directory, ios_base::binary);
             size = pkt.total_size;
 
-            cout << directory << "\n"
-                 << endl;
+            cout << directory << "\n" << endl;
 
             fragments.clear();
             fragments.resize(size+1);
@@ -371,10 +374,11 @@ void *handle_updates(void *arg)
                 fragments.at(pkt.seqn)=bufferconvert;
             }
 
-			cout << "received_fragments: " << received_fragments << endl;
+			//cout << "received_fragments: " << received_fragments << endl;
 
             if(received_fragments == size)
             {
+				cout << "escrevendo" << endl;
                 for (int i =0 ;i<fragments.size();i++){
                     for(int j=0;j<fragments.at(i).size();j++){
                         char* frag = &(fragments.at(i).at(j));
@@ -385,62 +389,5 @@ void *handle_updates(void *arg)
                 file_client.close();
             }
         }
-
-		//
-
-		/*if (pkt.type == MENSAGEM_ENVIO_NOME_ARQUIVO)
-        {
-            string receivedFilePath;
-
-            receivedFilePath = string(pkt._payload);
-            receivedFilePath = receivedFilePath.substr(receivedFilePath.find_last_of("/") + 1);
-            string directory = "./";
-            directory = directory + "sync_dir" + "/" + receivedFilePath;
-            file_client.open(directory, ios_base::binary);
-            size = pkt.total_size;
-
-            cout << directory << "\n"
-                 << endl;
-
-            fragments.clear();
-            fragments.resize(size+1);
-            received_fragments =0;
-        }
-        do
-        {
-            char buffer [256];
-            vector<char> bufferconvert(256);
-
-            memset(buffer, 0, 256);
-
-            memcpy(buffer,pkt._payload, 256);
-
-            //printf("%d",received_fragments);
-
-            for(int i = 0; i < bufferconvert.size(); i++){
-                bufferconvert[i] = buffer[i];
-            }
-            
-            if (pkt.type == MENSAGEM_ENVIO_PARTE_ARQUIVO)
-            {
-                received_fragments++;
-                fragments.at(pkt.seqn)=bufferconvert;
-            }
-
-			cout << "received_fragments: " << received_fragments << endl;
-
-            if(received_fragments == size)
-            {
-                for (int i =0 ;i<fragments.size();i++){
-                    for(int j=0;j<fragments.at(i).size();j++){
-                        char* frag = &(fragments.at(i).at(j));
-                        //printf("%x ",(unsigned char)fragments.at(i).at(j));
-                        file_client.write(frag, sizeof(char));
-                    }
-                }
-                file_client.close();
-            }
-        }while(pkt.type == MENSAGEM_ENVIO_PARTE_ARQUIVO);
-		*/
 	}
 }
