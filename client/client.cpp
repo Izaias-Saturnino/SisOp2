@@ -246,7 +246,7 @@ int download_file_client(int sock,char username[], std::string file_path)
 	string receivedFilePath;
 	receivedFilePath = string(pkt._payload);
 	receivedFilePath = receivedFilePath.substr(receivedFilePath.find_last_of("/") + 1, receivedFilePath.length());
-	string directory = "./sync_dir";
+	string directory = ".";
 	directory = directory + "/" + receivedFilePath;
 	cout << directory;
 	ofstream file_download;
