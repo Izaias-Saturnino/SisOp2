@@ -6,6 +6,9 @@
 #include <pthread.h>
 #include<fcntl.h> 
 #include<string> 
+#define FILE_CREATED =1
+#define FILE_DELETED =2
+#define FILE_MODIFIED =3
 
 #define EVENT_SIZE (sizeof(struct inotify_event))
 #define EVENT_BUF_LEN (1024 * (EVENT_SIZE + 16))
@@ -13,12 +16,12 @@
 
 int inotify_fd,watch_dir;
 
-std::string name="";
+
 std::string command ="";
 bool command_complete;
-pthread_mutex_t m = PTHREAD_MUTEX_INITIALIZER; 
 
-int action =0;
+vector<std::string> name;
+vector<int> action;
 
 void *folderchecker(void *arg)
 {
@@ -45,30 +48,28 @@ void *folderchecker(void *arg)
         length = read(inotify_fd, buffer, EVENT_BUF_LEN);
         while (i < length)
         {
-            pthread_mutex_lock(&m);
             struct inotify_event *event = (struct inotify_event *)&buffer[i];
             if (event->len)
             {
                 if (event->mask & IN_CREATE)
                 {
-                   name = event->name;
-                   action =1;
+                   name.pushback(event->name);
+                   action.pushback(FILE_CREATED);
                 }
                 else if (event->mask & IN_DELETE)
                 {
-                   name = event->name;
-                   action =2;
+                   name.pushback(event->name);
+                   action.pushback(FILE_DELETED);
 
                 }
                 else if (event->mask & IN_MODIFY)
                 {
-                    name = event->name;
-                    action =3;
+                   name.pushback(event->name);
+                   action.pushback(FILE_MODIFIED);
 
                 }
             }
             i += EVENT_SIZE + event->len;
-            pthread_mutex_unlock(&m);
         }
     }
     return 0;
