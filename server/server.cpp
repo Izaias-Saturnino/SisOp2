@@ -155,7 +155,7 @@ void *ThreadClient(void *arg)
             fragments.resize(size);
             received_fragments =0;
         }
-        if(pkt.type == MENSAGEM_ENVIO_PARTE_ARQUIVO || pkt.type == MENSAGEM_ARQUIVO_LIDO)
+        if(pkt.type == MENSAGEM_ENVIO_PARTE_ARQUIVO || pkt.type == MENSAGEM_ENVIO_PARTE_ARQUIVO_SYNC || pkt.type == MENSAGEM_ARQUIVO_LIDO)
         {
             char buffer [256];
             vector<char> bufferconvert(256);
@@ -195,6 +195,11 @@ void *ThreadClient(void *arg)
                 cout << "directory: " << directory << endl;
 
                 for(int i = 0; i < sync_dir_sockets.size(); i++){
+                    if(pkt.type == MENSAGEM_ENVIO_PARTE_ARQUIVO_SYNC){
+                        if(sync_dir_sockets[i] == loginManager->get_sender_sync_sock(sockfd)){
+                            continue;
+                        }
+                    }
                     cout << "sync_dir_sockets[" << i << "]: " << sync_dir_sockets[i] << endl;
                     upload_file_server(sync_dir_sockets[i],user,directory);
                 }
@@ -212,7 +217,7 @@ void *ThreadClient(void *arg)
                 }
             }
         }
-        if (pkt.type == MENSAGEM_DELETAR_NO_SERVIDOR){
+        if (pkt.type == MENSAGEM_DELETAR_NO_SERVIDOR || pkt.type == MENSAGEM_DELETAR_NO_SERVIDOR_SYNC){
             string toRemoveFilePath;
 
             toRemoveFilePath = string(pkt._payload);
@@ -233,6 +238,11 @@ void *ThreadClient(void *arg)
             cout << "toRemoveFilePath: " << toRemoveFilePath << endl;
 
             for(int i = 0; i < sync_dir_sockets.size(); i++){
+                if(pkt.type == MENSAGEM_DELETAR_NO_SERVIDOR_SYNC){
+                    if(sync_dir_sockets[i] == loginManager->get_sender_sync_sock(sockfd)){
+                        continue;
+                    }
+                }
                 cout << "sync_dir_sockets[" << i << "]: " << sync_dir_sockets[i] << endl;
                 sendMessage((char *)toRemoveFilePath.c_str(), 1, MENSAGEM_DELETAR_NOS_CLIENTES, 1, user, sync_dir_sockets[i]); // pedido de delete enviado para o cliente
             }

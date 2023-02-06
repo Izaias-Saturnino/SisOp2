@@ -20,6 +20,7 @@ class LoginManager{
         void Logout(char user[], int socket,char resposta[]);
         void activate_sync_dir(char user[], int socket);
         vector<int> get_active_sync_dir(char user[]);
+        int get_sender_sync_sock(int sock);
     private:
         void criarNovoUsuario(char nome[],int socketCli);
         bool verificaQuantidadeUsuarios(char nome[],int socketCli);

@@ -152,3 +152,20 @@ vector<int> LoginManager::get_active_sync_dir(char user[]){
     }
     return sockets;
 }
+
+int LoginManager::get_sender_sync_sock(int sock){
+    int sync_sock = -1;
+    vector<USUARIO>::iterator it;
+    for(it = this->listaDeUsuarios.begin(); it != this->listaDeUsuarios.end(); it++){
+        if((*it).socketClient1 == sock){
+            sync_sock = (*it).sync1;
+            cout << "sync1 não recebe o arquivo. sock: " << (*it).sync1 << endl;
+        }
+        else if((*it).socketClient2 == sock){
+            sync_sock = (*it).sync2;
+            cout << "sync2 não recebe o arquivo. sock: " << (*it).sync2 << endl;
+        }
+        break;
+    }
+    return sync_sock;
+}
