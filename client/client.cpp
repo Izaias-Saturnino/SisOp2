@@ -51,7 +51,7 @@ int main(int argc, char *argv[])
 	readSocket(&receivedPkt, sockfd);
 
 	//cout<<"read antes if"<< endl;
-	cout<< "receivedPkt.type" << receivedPkt.type << endl;
+	cout<< "receivedPkt.type: " << receivedPkt.type << endl;
 
 	if (receivedPkt.type ==  MENSAGEM_USUARIO_VALIDO)
 	{
@@ -201,9 +201,11 @@ int upload_file_client(int sock, char username[],std::string file_path)
 	{	
 		file.seekg(0, file.end);
 		float file_size = file.tellg();
-		cout << file_size <<  "\n";
+		cout << "file_size: " << file_size << endl;
 		file.clear();
 		file.seekg(0);
+
+		cout << "ceil: " << (int) (std::ceil(file_size / 256)) << endl;
 		
 		sendMessage((char*)file_path.c_str(), 1, MENSAGEM_ENVIO_NOME_ARQUIVO, (int) (std::ceil(file_size/256)), username, sock);
 		sleep(1);

@@ -283,16 +283,19 @@ int upload_file_server(int sock, char username[], std::string file_path)
 		file.clear();
 		file.seekg(0);
 
+        cout << "ceil: " << (int) (std::ceil(file_size / 256)) << endl;
+
 		sendMessage((char *)file_path.c_str(), 1, MENSAGEM_ENVIO_NOME_ARQUIVO, (int) (std::ceil(file_size / 256)), username, sock);
         sleep(1);
         int i;
         int counter = 0;
 		for (i = 0; i < file_size; i += ((sizeof(buffer)))) // to read file
 		{
-            cout << "counter: " << counter;
+            //cout << "i: " << i << endl;
+            //cout << "counter: " << counter << endl;
 			memset(buffer, 0, 256);
 			file.read(buffer, sizeof(buffer));
-            for(int i =0;i<256; i++){
+            for(int j =0;j<256; j++){
                 //printf("%x ", (unsigned char)buffer[i]);
             }
             
