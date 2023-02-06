@@ -4,9 +4,10 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <pthread.h>
-#include<fcntl.h> 
-#include<string>
-#include<vector>
+#include <fcntl.h> 
+#include <string>
+#include <vector>
+
 #define FILE_CREATED 1
 #define FILE_DELETED 2
 #define FILE_MODIFIED 3
@@ -26,6 +27,7 @@ vector<int> action;
 
 void *folderchecker(void *arg)
 {
+    sleep(10);
     inotify_fd = inotify_init();
 
 
@@ -46,7 +48,9 @@ void *folderchecker(void *arg)
         int length;
         int i = 0;
         char buffer[EVENT_BUF_LEN];
+        //mtx_sync_update.lock();
         length = read(inotify_fd, buffer, EVENT_BUF_LEN);
+        //mtx_sync_update.unlock();
         while (i < length)
         {
             struct inotify_event *event = (struct inotify_event *)&buffer[i];
@@ -74,6 +78,7 @@ void *folderchecker(void *arg)
             }
             i += EVENT_SIZE + event->len;
         }
+        sleep(1);
     }
     return 0;
 }

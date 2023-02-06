@@ -24,7 +24,7 @@ using namespace std;
 
 void verificaRecebimentoParametros(int argc);
 
-int upload_file_client(int sock, char username[],std::string file_path);
+int upload_file_client(int sock, char username[],std::string file_path, bool sync);
 
 int download_file_client(int sock,char username[], std::string file_path);
 

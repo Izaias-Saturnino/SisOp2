@@ -3,6 +3,8 @@ bool Logout = false;
 int socketCtrl;
 char username[256];
 
+mutex mtx_sync_update;
+
 int main(int argc, char *argv[])
 {
 	bool sync_dir_active = false;
@@ -55,10 +57,10 @@ int main(int argc, char *argv[])
 
 	if (receivedPkt.type ==  MENSAGEM_USUARIO_VALIDO)
 	{
-		pthread_t thr1, thr2;
+		pthread_t thr1, thr2, thr3;
 		int n1 = 1;
 		int n2 = 2;
-		//TO DO: somente criar se comando get sync dir for ativado pthread_create(&thr1, NULL, folderchecker, (void *)&n1); 
+		//TO DO: somente criar se comando get sync dir for ativado 
 		pthread_create(&thr2, NULL, input, (void *)&n2);
 		cout << "type exit to end your session \n"
 			 << endl;
@@ -66,13 +68,22 @@ int main(int argc, char *argv[])
 		{
 			sigaction(SIGINT, &sigIntHandler, NULL);
 
-			if (action.size() > 0)
+			if (action.size() > 0 && sync_dir_active)
 			{
+				mtx_sync_update.lock();
 				for(int i = 0; i < action.size(); i++){
-					std::cout << action[i] << " " << name[i] << "\n";
-					//TO DO action handling
+					cout << "action size: " << action.size();
+					std::cout << "action: " << action[i] << " & name: " << name[i] << "\n";
+					if(action[i] == FILE_CREATED || action[i] == FILE_MODIFIED){
+						upload_file_client(sockfd, username, "./sync_dir/"+name[i], true);
+					}
+					if(action[i] == FILE_DELETED){
+						sendMessage((char *)("./sync_dir/"+name[i]).c_str(), 1, MENSAGEM_DELETAR_NO_SERVIDOR, 1, username, sockfd);
+					}
 				}
-				action = {};
+				action.clear();
+				name.clear();
+				mtx_sync_update.unlock();
 			}
 			if (command_complete)
 			{		
@@ -99,7 +110,7 @@ int main(int argc, char *argv[])
 				{
 					std::string path = command.substr(command.find("upload ") + 7, command.length());
 					cout << path << "\n";
-					upload_file_client(sockfd, username, path);
+					upload_file_client(sockfd, username, path, false);
 
 				}
 				else if (command == ("get_sync_dir") && !sync_dir_active)
@@ -147,6 +158,9 @@ int main(int argc, char *argv[])
 
 					//cria nova thread para lidar com atualizações
 					pthread_create(&thr1, NULL, handle_updates, &sockfd_sync);
+
+					//cria nova thread para lidar com modificações na pasta sync_dir
+					pthread_create(&thr3, NULL, folderchecker, (void *)&n1);
 				}
 				else if (command.find("download ") != std::string::npos)
 				{
@@ -186,7 +200,7 @@ void verificaRecebimentoParametros(int argc)
 	}
 }
 
-int upload_file_client(int sock, char username[],std::string file_path)
+int upload_file_client(int sock, char username[],std::string file_path, bool sync)
 {
 	char buffer[256];
 	PACKET pktreceived;
@@ -221,10 +235,14 @@ int upload_file_client(int sock, char username[],std::string file_path)
 		{
 			memset(buffer, 0, 256);
 			file.read(buffer,sizeof(buffer));
-			sendMessage(buffer, i/256 , MENSAGEM_ENVIO_PARTE_ARQUIVO, max_fragments, username, sock);
+			if(sync){
+				sendMessage(buffer, i/256 , MENSAGEM_ENVIO_PARTE_ARQUIVO_SYNC, max_fragments, username, sock);
+			}else{
+				sendMessage(buffer, i/256 , MENSAGEM_ENVIO_PARTE_ARQUIVO, max_fragments, username, sock);
+			}
 			counter++;
-			if(counter%10==9){
-				counter = 9;
+			if(counter%200==199){
+				counter = 199;
 				readSocket(&pktreceived,sock);
 			}
 		}
@@ -279,7 +297,7 @@ int download_file_client(int sock,char username[], std::string file_path)
 			received_fragments++;
 			fragments.at(pkt.seqn) = bufferconvert;
 		}
-		if(received_fragments %10 ==9){
+		if(received_fragments %200 ==199){
 			sendMessage("",1,MENSAGEM_DOWNLOAD_NO_SERVIDOR,1,username,sock);
 		}
 		cout << "received_fragments: " << received_fragments << " & size: " << size << endl;
@@ -338,7 +356,9 @@ void *handle_updates(void *arg)
             string file_path = "./";
             file_path = file_path + "sync_dir" + "/" + toRemoveFilePath;
 
+			mtx_sync_update.lock();
             int result = delete_file(file_path);
+			mtx_sync_update.unlock();
 
 			if(result == -1){
 				cout << "file path:" << endl;
@@ -354,6 +374,7 @@ void *handle_updates(void *arg)
             receivedFilePath = receivedFilePath.substr(receivedFilePath.find_last_of("/") + 1, receivedFilePath.length());
             string directory = "./";
             directory = directory + "sync_dir" + "/" + receivedFilePath;
+			mtx_sync_update.lock();
             file_client.open(directory, ios_base::binary);
             size = pkt.total_size;
 
@@ -384,7 +405,7 @@ void *handle_updates(void *arg)
                 fragments.at(pkt.seqn)=bufferconvert;
             }
 
-			if(received_fragments %10==9){
+			if(received_fragments %200==199){
                 sendMessage("", 1, ACK, 1, username, sockfd);
             }
 
@@ -401,6 +422,7 @@ void *handle_updates(void *arg)
                     }
                 }
                 file_client.close();
+				mtx_sync_update.unlock();
             }
         }
 	}

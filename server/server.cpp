@@ -180,7 +180,7 @@ void *ThreadClient(void *arg)
                 received_fragments++;
                 fragments.at(pkt.seqn)=bufferconvert;
             }
-            if(received_fragments %10 ==9){
+            if(received_fragments %200 ==199){
 			    sendMessage("",1,MENSAGEM_DOWNLOAD_NO_SERVIDOR,1,user,sockfd);
 		    }
             cout << "received_fragments: " << received_fragments << " & size: " << size << endl;
@@ -222,7 +222,7 @@ void *ThreadClient(void *arg)
                 }
             }
         }
-        if (pkt.type == MENSAGEM_DELETAR_NO_SERVIDOR || pkt.type == MENSAGEM_DELETAR_NO_SERVIDOR_SYNC){
+        if (pkt.type == MENSAGEM_DELETAR_NO_SERVIDOR){
             string toRemoveFilePath;
 
             toRemoveFilePath = string(pkt._payload);
@@ -243,11 +243,6 @@ void *ThreadClient(void *arg)
             cout << "toRemoveFilePath: " << toRemoveFilePath << endl;
 
             for(int i = 0; i < sync_dir_sockets.size(); i++){
-                if(pkt.type == MENSAGEM_DELETAR_NO_SERVIDOR_SYNC){
-                    if(sync_dir_sockets[i] == loginManager->get_sender_sync_sock(sockfd)){
-                        continue;
-                    }
-                }
                 cout << "sync_dir_sockets[" << i << "]: " << sync_dir_sockets[i] << endl;
                 sendMessage((char *)toRemoveFilePath.c_str(), 1, MENSAGEM_DELETAR_NOS_CLIENTES, 1, user, sync_dir_sockets[i]); // pedido de delete enviado para o cliente
             }
@@ -310,7 +305,7 @@ int upload_file_server(int sock, char username[], std::string file_path)
 		for (i = 0; i < file_size; i += ((sizeof(buffer)))) // to read file
 		{
             //cout << "i: " << i << endl;
-            cout << "counter: " << counter << endl;
+            //cout << "counter: " << counter << endl;
 			memset(buffer, 0, 256);
 			file.read(buffer, sizeof(buffer));
             for(int j =0;j<256; j++){
@@ -319,8 +314,8 @@ int upload_file_server(int sock, char username[], std::string file_path)
             
 			sendMessage(buffer, i / 256, MENSAGEM_ENVIO_PARTE_ARQUIVO, max_fragments, username, sock);
             counter++;
-            if(counter %10==9){
-                counter = 9;
+            if(counter %200==199){
+                counter = 199;
                 readSocket(&pktreceived,sock);
             }
 		}
