@@ -178,6 +178,7 @@ void *ThreadClient(void *arg)
             if(received_fragments %10 ==9){
 			    sendMessage("",1,MENSAGEM_DOWNLOAD_NO_SERVIDOR,1,user,sockfd);
 		    }
+            cout << "received_fragments: " << received_fragments << " & size: " << size << endl;
             if(received_fragments == size)
             {
                 for (int i =0 ;i<fragments.size();i++){
@@ -283,29 +284,32 @@ int upload_file_server(int sock, char username[], std::string file_path)
 		file.clear();
 		file.seekg(0);
 
-        cout << "ceil: " << (int) (std::ceil(file_size / 256)) << endl;
+        int max_fragments = (int) (std::ceil(file_size/256));
 
-		sendMessage((char *)file_path.c_str(), 1, MENSAGEM_ENVIO_NOME_ARQUIVO, (int) (std::ceil(file_size / 256)), username, sock);
+        cout << "max_fragments: " << max_fragments << endl;
+
+		sendMessage((char *)file_path.c_str(), 1, MENSAGEM_ENVIO_NOME_ARQUIVO, max_fragments, username, sock);
         sleep(1);
         int i;
         int counter = 0;
 		for (i = 0; i < file_size; i += ((sizeof(buffer)))) // to read file
 		{
             //cout << "i: " << i << endl;
-            //cout << "counter: " << counter << endl;
+            cout << "counter: " << counter << endl;
 			memset(buffer, 0, 256);
 			file.read(buffer, sizeof(buffer));
             for(int j =0;j<256; j++){
                 //printf("%x ", (unsigned char)buffer[i]);
             }
             
-			sendMessage(buffer, i / 256, MENSAGEM_ENVIO_PARTE_ARQUIVO, 4, username, sock);
+			sendMessage(buffer, i / 256, MENSAGEM_ENVIO_PARTE_ARQUIVO, max_fragments, username, sock);
             counter++;
             if(counter %10==9){
+                counter = 9;
                 readSocket(&pktreceived,sock);
             }
 		}
-        sendMessage(buffer, i / 256, MENSAGEM_ARQUIVO_LIDO, 4, username, sock);
+        sendMessage(buffer, i / 256, MENSAGEM_ARQUIVO_LIDO, max_fragments, username, sock);
         sleep(1);
 		file.close();
 		cout << " arquivo lido"

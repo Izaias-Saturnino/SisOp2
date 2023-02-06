@@ -205,19 +205,22 @@ int upload_file_client(int sock, char username[],std::string file_path)
 		file.clear();
 		file.seekg(0);
 
-		cout << "ceil: " << (int) (std::ceil(file_size / 256)) << endl;
+		int max_fragments = (int) (std::ceil(file_size/256));
+
+		cout << "max_fragments: " << max_fragments << endl;
 		
-		sendMessage((char*)file_path.c_str(), 1, MENSAGEM_ENVIO_NOME_ARQUIVO, (int) (std::ceil(file_size/256)), username, sock);
+		sendMessage((char*)file_path.c_str(), 1, MENSAGEM_ENVIO_NOME_ARQUIVO, max_fragments, username, sock);
 		sleep(1);
 		int counter=0;
-		cout << "FIle size:" << std::ceil(file_size/256);
+		cout << "File size:" << std::ceil(file_size/256);
 		for (int i=0;i< file_size;i+=((sizeof(buffer)))) // to read file
 		{
 			memset(buffer, 0, 256);
 			file.read(buffer,sizeof(buffer));
-			sendMessage(buffer, i/256 , MENSAGEM_ENVIO_PARTE_ARQUIVO, 4, username, sock);
+			sendMessage(buffer, i/256 , MENSAGEM_ENVIO_PARTE_ARQUIVO, max_fragments, username, sock);
 			counter++;
 			if(counter%10==9){
+				counter = 9;
 				readSocket(&pktreceived,sock);
 			}
 		}
@@ -262,7 +265,7 @@ int download_file_client(int sock,char username[], std::string file_path)
 
 		memcpy(buffer, pkt._payload, 256);
 
-		//printf("%d\n", received_fragments);
+		printf("%d\n", received_fragments);
 		for (int i = 0; i < bufferconvert.size(); i++)
 		{
 			bufferconvert[i] = buffer[i];
@@ -275,6 +278,7 @@ int download_file_client(int sock,char username[], std::string file_path)
 		if(received_fragments %10 ==9){
 			sendMessage("",1,MENSAGEM_DOWNLOAD_NO_SERVIDOR,1,username,sock);
 		}
+		cout << "received_fragments: " << received_fragments << " & size: " << size << endl;
 	}
 	for (int i = 0; i < fragments.size(); i++)
 	{
