@@ -380,6 +380,10 @@ void *handle_updates(void *arg)
                 fragments.at(pkt.seqn)=bufferconvert;
             }
 
+			if(received_fragments %10==9){
+                sendMessage("", 1, ACK, 1, username, sockfd);
+            }
+
 			//cout << "received_fragments: " << received_fragments << endl;
 
             if(received_fragments == size)
