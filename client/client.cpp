@@ -5,6 +5,8 @@ char username[256];
 
 mutex mtx_sync_update;
 
+bool wait_for_first_sync = true;
+
 int main(int argc, char *argv[])
 {
 	bool sync_dir_active = false;
@@ -158,6 +160,8 @@ int main(int argc, char *argv[])
 
 					//cria nova thread para lidar com atualizações
 					pthread_create(&thr1, NULL, handle_updates, &sockfd_sync);
+
+					while(wait_for_first_sync);
 
 					//cria nova thread para lidar com modificações na pasta sync_dir
 					pthread_create(&thr3, NULL, folderchecker, (void *)&n1);
@@ -424,5 +428,8 @@ void *handle_updates(void *arg)
 				mtx_sync_update.unlock();
             }
         }
+		if(pkt.type == FIRST_SYNC_END && wait_for_first_sync){
+			wait_for_first_sync = false;
+		}
 	}
 }

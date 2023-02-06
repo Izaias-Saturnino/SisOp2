@@ -27,7 +27,6 @@ vector<int> action;
 
 void *folderchecker(void *arg)
 {
-    sleep(10);
     inotify_fd = inotify_init();
 
 

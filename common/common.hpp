@@ -34,6 +34,7 @@ using namespace std;
 #define MENSAGEM_DOWNLOAD_NO_SERVIDOR 40
 #define MENSAGEM_FALHA_ENVIO 41
 #define GET_SYNC_DIR 50
+#define FIRST_SYNC_END 51
 #define ACK 60
 // #define MENSAGEM_
 // #define MENSAGEM_

@@ -87,6 +87,8 @@ int main(int argc, char *argv[])
                     for(int i = 0; i < file_paths.size(); i++){
                         upload_file_server(newSockfd, user, file_paths[i]);
                     }
+
+                    sendMessage("", 1, FIRST_SYNC_END, 1, user, newSockfd); // Mensagem de usuario invalido
             
                     //salvar o socket que pediu atualizações de sync dir
                     loginManager->activate_sync_dir(user, newSockfd);
