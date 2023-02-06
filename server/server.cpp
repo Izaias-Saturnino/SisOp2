@@ -175,7 +175,7 @@ void *ThreadClient(void *arg)
                 bufferconvert[i] = buffer[i];
             }
             
-            if (pkt.type == MENSAGEM_ENVIO_PARTE_ARQUIVO)
+            if (pkt.type == MENSAGEM_ENVIO_PARTE_ARQUIVO || pkt.type == MENSAGEM_ENVIO_PARTE_ARQUIVO_SYNC)
             {
                 received_fragments++;
                 fragments.at(pkt.seqn)=bufferconvert;

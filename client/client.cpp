@@ -71,8 +71,8 @@ int main(int argc, char *argv[])
 			if (action.size() > 0 && sync_dir_active)
 			{
 				mtx_sync_update.lock();
+				cout << "action size: " << action.size() << endl;
 				for(int i = 0; i < action.size(); i++){
-					cout << "action size: " << action.size();
 					std::cout << "action: " << action[i] << " & name: " << name[i] << "\n";
 					if(action[i] == FILE_CREATED || action[i] == FILE_MODIFIED){
 						upload_file_client(sockfd, username, "./sync_dir/"+name[i], true);
@@ -230,7 +230,6 @@ int upload_file_client(int sock, char username[],std::string file_path, bool syn
 		sendMessage((char*)file_path.c_str(), 1, MENSAGEM_ENVIO_NOME_ARQUIVO, max_fragments, username, sock);
 		sleep(1);
 		int counter=0;
-		cout << "File size:" << std::ceil(file_size/256);
 		for (int i=0;i< file_size;i+=((sizeof(buffer)))) // to read file
 		{
 			memset(buffer, 0, 256);
@@ -292,7 +291,7 @@ int download_file_client(int sock,char username[], std::string file_path)
 		{
 			bufferconvert[i] = buffer[i];
 		}
-		if (pkt.type == MENSAGEM_ENVIO_PARTE_ARQUIVO)
+		if (pkt.type == MENSAGEM_ENVIO_PARTE_ARQUIVO || pkt.type == MENSAGEM_ENVIO_PARTE_ARQUIVO_SYNC)
 		{
 			received_fragments++;
 			fragments.at(pkt.seqn) = bufferconvert;
@@ -384,7 +383,7 @@ void *handle_updates(void *arg)
             fragments.resize(size+1);
             received_fragments =0;
         }
-        if(pkt.type == MENSAGEM_ENVIO_PARTE_ARQUIVO || pkt.type == MENSAGEM_ARQUIVO_LIDO)
+        if(pkt.type == MENSAGEM_ENVIO_PARTE_ARQUIVO || pkt.type == MENSAGEM_ENVIO_PARTE_ARQUIVO_SYNC || pkt.type == MENSAGEM_ARQUIVO_LIDO)
         {
             char buffer [256];
             vector<char> bufferconvert(256);
@@ -399,7 +398,7 @@ void *handle_updates(void *arg)
                 bufferconvert[i] = buffer[i];
             }
             
-            if (pkt.type == MENSAGEM_ENVIO_PARTE_ARQUIVO)
+            if (pkt.type == MENSAGEM_ENVIO_PARTE_ARQUIVO || pkt.type == MENSAGEM_ENVIO_PARTE_ARQUIVO_SYNC)
             {
                 received_fragments++;
                 fragments.at(pkt.seqn)=bufferconvert;
