@@ -66,11 +66,13 @@ int main(int argc, char *argv[])
 		{
 			sigaction(SIGINT, &sigIntHandler, NULL);
 
-			// TO DO: Command é global? precisa de mutex?
-			if (action != 0)
+			if (action.size() > 0)
 			{
-				std::cout << action << " " << name << "\n";
-				action = 0;
+				for(int i = 0; i < action.size(); i++){
+					std::cout << action[i] << " " << name[i] << "\n";
+					//TO DO action handling
+				}
+				action = {};
 			}
 			if (command_complete)
 			{		

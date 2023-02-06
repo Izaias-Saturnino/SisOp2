@@ -5,22 +5,23 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include<fcntl.h> 
-#include<string> 
-#define FILE_CREATED =1
-#define FILE_DELETED =2
-#define FILE_MODIFIED =3
+#include<string>
+#include<vector>
+#define FILE_CREATED 1
+#define FILE_DELETED 2
+#define FILE_MODIFIED 3
 
 #define EVENT_SIZE (sizeof(struct inotify_event))
 #define EVENT_BUF_LEN (1024 * (EVENT_SIZE + 16))
 
+using namespace std;
 
 int inotify_fd,watch_dir;
 
-
-std::string command ="";
+string command ="";
 bool command_complete;
 
-vector<std::string> name;
+vector<string> name;
 vector<int> action;
 
 void *folderchecker(void *arg)
@@ -53,19 +54,18 @@ void *folderchecker(void *arg)
             {
                 if (event->mask & IN_CREATE)
                 {
-                   name.pushback(event->name);
-                   action.pushback(FILE_CREATED);
+                    name.push_back(&(event->name));
+                    action.push_back(FILE_CREATED);
                 }
                 else if (event->mask & IN_DELETE)
                 {
-                   name.pushback(event->name);
-                   action.pushback(FILE_DELETED);
-
+                    name.push_back(&(event->name));
+                    action.push_back(FILE_DELETED);
                 }
                 else if (event->mask & IN_MODIFY)
                 {
-                   name.pushback(event->name);
-                   action.pushback(FILE_MODIFIED);
+                    name.push_back(&(event->name));
+                    action.push_back(FILE_MODIFIED);
 
                 }
             }

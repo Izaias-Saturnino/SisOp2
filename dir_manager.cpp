@@ -20,7 +20,7 @@ bool create_folder(string folder_path){
 vector<string> get_file_list(string path){
     vector<string> list;
     for (const auto & entry : fs::directory_iterator(path))
-        list.push_back(entry.path());
+        list.push_back(entry.path().string());
     return list;
 }
 //imprime arquivos e seu mac
