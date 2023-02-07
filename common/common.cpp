@@ -25,8 +25,8 @@ void readSocket(PACKET *pkt, int sock){
 	if(readpktnum != (*pkt).seqn){
 		cout << "(*pkt).seqn: " << (*pkt).seqn << ". readpktnum: " << readpktnum << ". ";
 	}
-	//cout << "readpktnum: " << readpktnum;
-	//cout << ". sock: " << sock << endl;
+	cout << "readpktnum: " << readpktnum;
+	cout << ". sock: " << sock << endl;
 	readpktnum++;
 }
 

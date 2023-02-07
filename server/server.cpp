@@ -168,6 +168,7 @@ void *ThreadClient(void *arg)
             fragments.clear();
             fragments.resize(size);
             received_fragments = 0;
+            cout << "write25" << endl;
             sendMessage("", 1, ACK, 1, user, sockfd);
         }
         if(pkt.type == MENSAGEM_ENVIO_PARTE_ARQUIVO || pkt.type == MENSAGEM_ENVIO_PARTE_ARQUIVO_SYNC)
@@ -191,6 +192,7 @@ void *ThreadClient(void *arg)
                 fragments.at(pkt.seqn)=bufferconvert;
             }
             if(received_fragments %200 ==199){
+                cout << "write26" << endl;
 			    sendMessage("",1,MENSAGEM_DOWNLOAD_NO_SERVIDOR,1,user,sockfd);
 		    }
             cout << "received_fragments: " << received_fragments << " & size: " << size << endl;
@@ -346,6 +348,7 @@ int send_file_to_client(int sock, char username[], std::string file_path)
             }
 		}
         cout << "write13" << endl;
+        sendMessage(buffer, 1, MENSAGEM_ARQUIVO_LIDO, max_fragments, username, sock);
         cout << "read5" << endl;
         readSocket(&pktreceived,sock);
         if(pktreceived.type != ACK){
@@ -353,7 +356,6 @@ int send_file_to_client(int sock, char username[], std::string file_path)
             cout << "received msg type: " << pktreceived.type << endl;
             cout << "error on send_file_to_client() end" << endl;
         }
-        sendMessage(buffer, i / 256, MENSAGEM_ARQUIVO_LIDO, max_fragments, username, sock);
 		file.close();
 		cout << " arquivo lido"
 			 << "\n"
