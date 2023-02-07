@@ -22,11 +22,11 @@ void readSocket(PACKET *pkt, int sock){
 			erro = true;
 		}	
     }
-	cout << "readpktnum: " << readpktnum;
-	cout << ". sock: " << sock << endl;
 	if(readpktnum != (*pkt).seqn){
 		cout << "(*pkt).seqn: " << (*pkt).seqn << ". readpktnum: " << readpktnum << ". ";
 	}
+	//cout << "readpktnum: " << readpktnum;
+	//cout << ". sock: " << sock << endl;
 	readpktnum++;
 }
 
@@ -36,7 +36,7 @@ void sendMessage(char message[256], int seqn, int messageType,int fragmentos, ch
 	
 	pkt_mtx.lock();
 	pkt.type = messageType;
-	pkt.seqn = sendpktnum;
+	pkt.seqn = seqn;
 	pkt.total_size = fragmentos;
 	strcpy(pkt.user, username);
 	memcpy(pkt._payload, message,256);

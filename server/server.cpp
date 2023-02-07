@@ -187,13 +187,12 @@ void *ThreadClient(void *arg)
             
             if (pkt.type == MENSAGEM_ENVIO_PARTE_ARQUIVO || pkt.type == MENSAGEM_ENVIO_PARTE_ARQUIVO_SYNC)
             {
-                if(received_fragments >= fragments.size()){
-                    cout << "1: received_fragments >= fragments.size()" << endl;
-                    cout << "received_fragments: " << received_fragments << ". fragments.size(): " << fragments.size() << endl;
-                }
-                fragments.at(received_fragments)=bufferconvert;
                 received_fragments++;
+                fragments.at(pkt.seqn)=bufferconvert;
             }
+            if(received_fragments %200 ==199){
+			    sendMessage("",1,MENSAGEM_DOWNLOAD_NO_SERVIDOR,1,user,sockfd);
+		    }
             cout << "received_fragments: " << received_fragments << " & size: " << size << endl;
             if(received_fragments == size)
             {
@@ -327,7 +326,7 @@ int send_file_to_client(int sock, char username[], std::string file_path)
         }
         int i;
         int counter = 0;
-		for (i = 0; i < max_fragments; i++) // to read file
+		for (i = 0; i < file_size; i += ((sizeof(buffer)))) // to read file
 		{
             //cout << "i: " << i << endl;
             //cout << "counter: " << counter << endl;
@@ -338,12 +337,15 @@ int send_file_to_client(int sock, char username[], std::string file_path)
             }
             
             cout << "write12" << endl;
-			sendMessage(buffer, 1, MENSAGEM_ENVIO_PARTE_ARQUIVO, max_fragments, username, sock);
+			sendMessage(buffer, i / 256, MENSAGEM_ENVIO_PARTE_ARQUIVO, max_fragments, username, sock);
             counter++;
             cout << "counter: " << counter << endl;
+            if(counter %200==199){
+                counter = 199;
+                readSocket(&pktreceived,sock);
+            }
 		}
         cout << "write13" << endl;
-        sendMessage(buffer, 1, MENSAGEM_ARQUIVO_LIDO, max_fragments, username, sock);
         cout << "read5" << endl;
         readSocket(&pktreceived,sock);
         if(pktreceived.type != ACK){
@@ -351,6 +353,7 @@ int send_file_to_client(int sock, char username[], std::string file_path)
             cout << "received msg type: " << pktreceived.type << endl;
             cout << "error on send_file_to_client() end" << endl;
         }
+        sendMessage(buffer, i / 256, MENSAGEM_ARQUIVO_LIDO, max_fragments, username, sock);
 		file.close();
 		cout << " arquivo lido"
 			 << "\n"

@@ -262,14 +262,15 @@ int upload_to_server(int sock, char username[],std::string file_path, bool sync)
 			memset(buffer, 0, 256);
 			file.read(buffer,sizeof(buffer));
 			if(sync){
-				cout << "write7" << endl;
-				sendMessage(buffer, 1, MENSAGEM_ENVIO_PARTE_ARQUIVO_SYNC, max_fragments, username, sock);
+				sendMessage(buffer, i/256 , MENSAGEM_ENVIO_PARTE_ARQUIVO_SYNC, max_fragments, username, sock);
 			}else{
-				cout << "write8" << endl;
-				sendMessage(buffer, 1, MENSAGEM_ENVIO_PARTE_ARQUIVO, max_fragments, username, sock);
+				sendMessage(buffer, i/256 , MENSAGEM_ENVIO_PARTE_ARQUIVO, max_fragments, username, sock);
 			}
 			counter++;
-			cout << "counter: " << counter << endl;
+			if(counter%200==199){
+				counter = 199;
+				readSocket(&pktreceived,sock);
+			}
 		}
 		file.close();
 
@@ -448,11 +449,8 @@ void *handle_updates(void *arg)
             
             if (pkt.type == MENSAGEM_ENVIO_PARTE_ARQUIVO || pkt.type == MENSAGEM_ENVIO_PARTE_ARQUIVO_SYNC)
             {
-				if(received_fragments >= fragments.size()){
-                    cout << "1: received_fragments >= fragments.size()" << endl;
-                }
-                fragments.at(received_fragments)=bufferconvert;
-				received_fragments++;
+                received_fragments++;
+                fragments.at(pkt.seqn)=bufferconvert;
             }
 
 			if(received_fragments %200==199){
