@@ -85,6 +85,7 @@ void *folderchecker(void *arg)
 void *input(void *arg)
 {
     std::getline (std::cin,command);
+    cout << "command: " << command << endl;
     command_complete=true;
     return 0;
 }
