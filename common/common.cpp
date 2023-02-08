@@ -11,10 +11,10 @@ void readSocket(PACKET *pkt, int sock){
     int n = 0;
 	bool erro = false;
 
-    while(n != sizeof(*pkt) && erro != true)
+    while(n < sizeof(*pkt) && erro != true)
     {
     	/* read from the socket */
-		n += read(sock, pkt+n, sizeof(*pkt)-n); 
+		n = read(sock, pkt+n, sizeof(*pkt)-n); 
 
 		if (n < 0) 
 		{
