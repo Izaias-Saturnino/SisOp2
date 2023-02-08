@@ -9,7 +9,6 @@ int sendpktnum = 0;
 
 void readSocket(PACKET *pkt, int sock){
     int n = 0;
-	bool erro = false;
 
     while(n != sizeof(*pkt))
     {
@@ -20,15 +19,11 @@ void readSocket(PACKET *pkt, int sock){
 		{
 			n += result;
 		}
-
+    }
+	if(pkt->type == 0 || pkt->type > 60 || n != sizeof(*pkt) || n != sizeof(PACKET)){
 		cout << "n: " << n << endl;
 		cout << "pkt.type: " << pkt->type << endl;
 		cout << "pkt._payload: " << pkt->_payload << endl;
-    }
-	cout << "n: " << n << endl;
-	cout << "pkt.type: " << pkt->type << endl;
-	cout << "pkt._payload: " << pkt->_payload << endl;
-	if(pkt->type == 0 || pkt->type > 60){
 		sleep(60);
 	}
 	if(readpktnum != (*pkt).seqn){
@@ -54,7 +49,7 @@ void sendMessage(char message[256], int seqn, int messageType,int fragmentos, ch
 	int n = write(sockfd, &pkt, sizeof(pkt));
 	if (n < 0)
 		printf("ERROR writing to socket\n");
-	if (n != sizeof(pkt)){
+	if (n != sizeof(pkt) || n != sizeof(PACKET)){
 		printf("ERROR writing all data to socket\n");
 		cout << "n: " << n << endl;
 		cout << "pkt.type: " << pkt.type << endl;
@@ -64,6 +59,7 @@ void sendMessage(char message[256], int seqn, int messageType,int fragmentos, ch
 		}
 	}
 
+	cout << "pkt.seqn: " << pkt.seqn << endl;
 	cout << "sendpktnum: " << sendpktnum;
 	cout << ". sock: " << sockfd << endl;
 	sendpktnum++;

@@ -184,17 +184,15 @@ void *ThreadClient(void *arg)
                 bufferconvert[i] = buffer[i];
             }
             
-            if (pkt.type == MENSAGEM_ENVIO_PARTE_ARQUIVO || pkt.type == MENSAGEM_ENVIO_PARTE_ARQUIVO_SYNC)
-            {
-                cout << "received_fragments: " << received_fragments;
-				cout << ". pkt.seqn: " << pkt.seqn;
-				cout << ". fragments.size(): " << fragments.size() << endl;
-                received_fragments++;
-                fragments.at(pkt.seqn)=bufferconvert;
-            }
+            cout << "received_fragments: " << received_fragments;
+            cout << ". pkt.seqn: " << pkt.seqn;
+            cout << ". fragments.size(): " << fragments.size() << endl;
+            fragments.at(pkt.seqn)=bufferconvert;
+            received_fragments++;
+
             if(received_fragments %200 ==199){
                 cout << "write26" << endl;
-			    //sendMessage("",1,MENSAGEM_DOWNLOAD_NO_SERVIDOR,1,user,sockfd);
+			    sendMessage("",1,MENSAGEM_DOWNLOAD_NO_SERVIDOR,1,user,sockfd);
 		    }
             cout << "received_fragments: " << received_fragments << " & size: " << size << endl;
             if(received_fragments == size)
@@ -334,8 +332,8 @@ int send_file_to_client(int sock, char username[], std::string file_path)
             counter++;
             cout << "counter: " << counter << endl;
             if(counter %200==199){
-                counter = 199;
-                //readSocket(&pktreceived,sock);
+                cout << "read30" << endl;
+                readSocket(&pktreceived,sock);
             }
 		}
         cout << "write13" << endl;
