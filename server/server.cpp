@@ -232,6 +232,7 @@ void *ThreadClient(void *arg)
                 cout << "write6" << endl;
                 sendMessage((char*)infos.at(i).c_str(), 1, MENSAGEM_ITEM_LISTA_DE_ARQUIVOS , 1, user, sockfd);
             }
+            sendMessage("", 1, ACK , 1, user, sockfd);
         }
         if (pkt.type == MENSAGEM_DELETAR_NO_SERVIDOR){
             string toRemoveFilePath;
