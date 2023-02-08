@@ -168,8 +168,6 @@ void *ThreadClient(void *arg)
             fragments.clear();
             fragments.resize(size);
             received_fragments = 0;
-            cout << "write25" << endl;
-            sendMessage("", 1, ACK, 1, user, sockfd);
         }
         if(pkt.type == MENSAGEM_ENVIO_PARTE_ARQUIVO || pkt.type == MENSAGEM_ENVIO_PARTE_ARQUIVO_SYNC)
         {
@@ -193,7 +191,7 @@ void *ThreadClient(void *arg)
             }
             if(received_fragments %200 ==199){
                 cout << "write26" << endl;
-			    sendMessage("",1,MENSAGEM_DOWNLOAD_NO_SERVIDOR,1,user,sockfd);
+			    //sendMessage("",1,MENSAGEM_DOWNLOAD_NO_SERVIDOR,1,user,sockfd);
 		    }
             cout << "received_fragments: " << received_fragments << " & size: " << size << endl;
             if(received_fragments == size)
@@ -223,8 +221,7 @@ void *ThreadClient(void *arg)
             }
         }
         if(pkt.type == MENSAGEM_ARQUIVO_LIDO){
-            cout << "write20" << endl;
-            sendMessage("", 1, ACK, 1, user, sockfd);
+
         }
         if (pkt.type == MENSAGEM_PEDIDO_LISTA_ARQUIVOS_SERVIDOR)
         {
@@ -234,8 +231,6 @@ void *ThreadClient(void *arg)
                 cout << "write6" << endl;
                 sendMessage((char*)infos.at(i).c_str(), 1, MENSAGEM_ITEM_LISTA_DE_ARQUIVOS , 1, user, sockfd);
             }
-            cout << "write7" << endl;
-            sendMessage("", 1, ACK, 1, user, sockfd);
         }
         if (pkt.type == MENSAGEM_DELETAR_NO_SERVIDOR){
             string toRemoveFilePath;
@@ -319,13 +314,6 @@ int send_file_to_client(int sock, char username[], std::string file_path)
 
         cout << "write11" << endl;
 		sendMessage((char *)file_path.c_str(), 1, MENSAGEM_ENVIO_NOME_ARQUIVO, max_fragments, username, sock);
-        cout << "read3" << endl;
-        readSocket(&pktreceived,sock);
-        if(pktreceived.type != ACK){
-            cout << "expected msg type: " << ACK << endl;
-            cout << "received msg type: " << pktreceived.type << endl;
-            cout << "error on send_file_to_client() begin" << endl;
-        }
         int i;
         int counter = 0;
 		for (i = 0; i < file_size; i += ((sizeof(buffer)))) // to read file
@@ -344,18 +332,11 @@ int send_file_to_client(int sock, char username[], std::string file_path)
             cout << "counter: " << counter << endl;
             if(counter %200==199){
                 counter = 199;
-                readSocket(&pktreceived,sock);
+                //readSocket(&pktreceived,sock);
             }
 		}
         cout << "write13" << endl;
         sendMessage(buffer, 1, MENSAGEM_ARQUIVO_LIDO, max_fragments, username, sock);
-        cout << "read5" << endl;
-        readSocket(&pktreceived,sock);
-        if(pktreceived.type != ACK){
-            cout << "expected msg type: " << ACK << endl;
-            cout << "received msg type: " << pktreceived.type << endl;
-            cout << "error on send_file_to_client() end" << endl;
-        }
 		file.close();
 		cout << " arquivo lido"
 			 << "\n"

@@ -248,13 +248,6 @@ int upload_to_server(int sock, char username[],std::string file_path, bool sync)
 		
 		cout << "write6" << endl;
 		sendMessage((char*)file_path.c_str(), 1, MENSAGEM_ENVIO_NOME_ARQUIVO, max_fragments, username, sock);
-		cout << "read21" << endl;
-		readSocket(&pktreceived,sock);
-        if(pktreceived.type != ACK){
-            cout << "expected msg type: " << ACK << endl;
-            cout << "received msg type: " << pktreceived.type << endl;
-            cout << "error on upload_to_server() begin" << endl;
-        }
 		int counter=0;
 		int i;
 		for (i=0;i< file_size;i+=((sizeof(buffer)))) // to read file
@@ -272,20 +265,13 @@ int upload_to_server(int sock, char username[],std::string file_path, bool sync)
 			cout << "counter: " << counter << endl;
 			if(counter%200==199){
 				counter = 199;
-				readSocket(&pktreceived,sock);
+				//readSocket(&pktreceived,sock);
 			}
 		}
 		file.close();
 
 		cout << "write9" << endl;
         sendMessage(buffer, 1, MENSAGEM_ARQUIVO_LIDO, max_fragments, username, sock);
-        cout << "read22" << endl;
-        readSocket(&pktreceived,sock);
-        if(pktreceived.type != ACK){
-            cout << "expected msg type: " << ACK << endl;
-            cout << "received msg type: " << pktreceived.type << endl;
-            cout << "error on send_file_to_client() end" << endl;
-        }
 
 		cout << "arquivo lido."
 			 << "\n"
@@ -359,8 +345,6 @@ int download_file_from_server(int sock,char username[], std::string file_path)
 		cout << "received msg type: " << pkt.type << endl;
 		cout << "error on download_file_from_server()" << endl;
 	}
-	cout << "write15" << endl;
-	sendMessage("", 1, ACK, 1, username, sock);
 	return 1;
 }
 void handle_ctrlc(int s){
@@ -433,7 +417,6 @@ void *handle_updates(void *arg)
             fragments.clear();
             fragments.resize(size+1);
             received_fragments = 0;
-			sendMessage("", 1, ACK, 1, username, sockfd);
         }
         if(pkt.type == MENSAGEM_ENVIO_PARTE_ARQUIVO || pkt.type == MENSAGEM_ENVIO_PARTE_ARQUIVO_SYNC)
         {
@@ -458,7 +441,7 @@ void *handle_updates(void *arg)
 
 			if(received_fragments %200==199){
 				cout << "write13" << endl;
-                sendMessage("", 1, ACK, 1, username, sockfd);
+                //sendMessage("", 1, ACK, 1, username, sockfd);
             }
 
 			cout << "received_fragments: " << received_fragments << endl;
@@ -478,8 +461,7 @@ void *handle_updates(void *arg)
             }
         }
 		if(pkt.type == MENSAGEM_ARQUIVO_LIDO){
-			cout << "write16" << endl;
-			sendMessage("", 1, ACK, 1, username, sockfd);
+
 		}
 		if(pkt.type == FIRST_SYNC_END && wait_for_first_sync){
 			wait_for_first_sync = false;
