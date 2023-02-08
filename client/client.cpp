@@ -435,6 +435,9 @@ void *handle_updates(void *arg)
             
             if (pkt.type == MENSAGEM_ENVIO_PARTE_ARQUIVO || pkt.type == MENSAGEM_ENVIO_PARTE_ARQUIVO_SYNC)
             {
+				cout << "received_fragments: " << received_fragments;
+				cout << ". pkt.seqn: " << pkt.seqn;
+				cout << ". fragments.size(): " << fragments.size() << endl;
                 received_fragments++;
                 fragments.at(pkt.seqn)=bufferconvert;
             }
