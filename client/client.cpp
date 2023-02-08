@@ -168,7 +168,7 @@ int main(int argc, char *argv[])
 					pthread_create(&thr1, NULL, handle_updates, &sockfd_sync);
 
 					while(wait_for_first_sync){
-						usleep(500000);
+						sleep(1);
 					}
 
 					//cria nova thread para lidar com modificações na pasta sync_dir
@@ -239,20 +239,23 @@ int upload_to_server(int sock, char username[],std::string file_path, bool sync)
 	else
 	{	
 		file.seekg(0, file.end);
-		float file_size = file.tellg();
+		int file_size = file.tellg();
 		cout << "file_size: " << file_size << endl;
 		file.clear();
 		file.seekg(0);
 
-		int max_fragments = (int) (std::ceil(file_size/256));
+		int max_fragments = file_size/256;
+
+		if(file_size % 256 != 0){
+			max_fragments++;
+		}
 
 		cout << "max_fragments: " << max_fragments << endl;
 		
 		cout << "write6" << endl;
 		sendMessage((char*)file_path.c_str(), 1, MENSAGEM_ENVIO_NOME_ARQUIVO, max_fragments, username, sock);
 		int counter=0;
-		int i;
-		for (i=0;i< file_size;i+=((sizeof(buffer)))) // to read file
+		for (int i=0;i< file_size;i+=((sizeof(buffer)))) // to read file
 		{
 			memset(buffer, 0, 256);
 			file.read(buffer,sizeof(buffer));
@@ -376,10 +379,7 @@ void *handle_updates(void *arg)
 	int size = 0;
 	int received_fragments=0;
     vector<vector<char>> fragments(10);
-
-	//ler do socket e verificar se tem mensagem ou não
-	//enquanto mensagens existirem, tratar as mensagens
-	//quando não houver mais mensagens terminar o laço
+	
 	while(true){
 		cout << "read10" << endl;
 		readSocket(&pkt, sockfd);
@@ -417,8 +417,12 @@ void *handle_updates(void *arg)
             cout << directory << "\n" << endl;
 
             fragments.clear();
-            fragments.resize(size+1);
+            fragments.resize(size);
             received_fragments = 0;
+
+			if(size == 0){
+				mtx_sync_update.unlock();
+			}
         }
         if(pkt.type == MENSAGEM_ENVIO_PARTE_ARQUIVO || pkt.type == MENSAGEM_ENVIO_PARTE_ARQUIVO_SYNC)
         {
@@ -435,14 +439,11 @@ void *handle_updates(void *arg)
                 bufferconvert[i] = buffer[i];
             }
             
-            if (pkt.type == MENSAGEM_ENVIO_PARTE_ARQUIVO || pkt.type == MENSAGEM_ENVIO_PARTE_ARQUIVO_SYNC)
-            {
-				cout << "received_fragments: " << received_fragments;
-				cout << ". pkt.seqn: " << pkt.seqn;
-				cout << ". fragments.size(): " << fragments.size() << endl;
-				fragments.at(pkt.seqn)=bufferconvert;
-                received_fragments++;
-            }
+			cout << "received_fragments: " << received_fragments;
+			cout << ". pkt.seqn: " << pkt.seqn;
+			cout << ". fragments.size(): " << fragments.size() << endl;
+			fragments.at(pkt.seqn)=bufferconvert;
+			received_fragments++;
 
 			if(received_fragments %200==199){
 				cout << "write13" << endl;

@@ -152,7 +152,6 @@ void *ThreadClient(void *arg)
         }
         if (pkt.type == MENSAGEM_ENVIO_NOME_ARQUIVO)
         {
-
             string receivedFilePath;
 
             receivedFilePath = string(pkt._payload);
@@ -168,6 +167,19 @@ void *ThreadClient(void *arg)
             fragments.clear();
             fragments.resize(size);
             received_fragments = 0;
+
+            if(size == 0){
+                file_server.close();
+
+                vector<int> sync_dir_sockets = loginManager->get_active_sync_dir(user);
+
+                cout << "directory: " << directory << endl;
+
+                for(int i = 0; i < sync_dir_sockets.size(); i++){
+                    cout << "sync_dir_sockets[" << i << "]: " << sync_dir_sockets[i] << endl;
+                    send_file_to_client(sync_dir_sockets[i],user,directory);
+                }
+            }
         }
         if(pkt.type == MENSAGEM_ENVIO_PARTE_ARQUIVO || pkt.type == MENSAGEM_ENVIO_PARTE_ARQUIVO_SYNC)
         {
@@ -192,7 +204,7 @@ void *ThreadClient(void *arg)
 
             if(received_fragments %200 ==199){
                 cout << "write26" << endl;
-			    sendMessage("",1,MENSAGEM_DOWNLOAD_NO_SERVIDOR,1,user,sockfd);
+			    sendMessage("", 1, ACK, 1, user, sockfd);
 		    }
             cout << "received_fragments: " << received_fragments << " & size: " << size << endl;
             if(received_fragments == size)
@@ -300,17 +312,20 @@ int send_file_to_client(int sock, char username[], std::string file_path)
         cout << "write10" << endl;
         sendMessage("", 1, MENSAGEM_FALHA_ENVIO, 1, username, sock);
 		return 0;
-		// mensagem erro
 	}
 	else
 	{
 		file.seekg(0, file.end);
-		float file_size = file.tellg();
+		int file_size = file.tellg();
 		cout << file_size << "\n";
 		file.clear();
 		file.seekg(0);
 
-        int max_fragments = (int) (std::ceil(file_size/256));
+        int max_fragments = file_size/256;
+
+		if(file_size % 256 != 0){
+			max_fragments++;
+		}
 
         cout << "max_fragments: " << max_fragments << endl;
 

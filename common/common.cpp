@@ -26,15 +26,14 @@ void readSocket(PACKET *pkt, int sock){
 		cout << "pkt._payload: " << pkt->_payload << endl;
 		sleep(60);
 	}
-	if(readpktnum != (*pkt).seqn){
-		cout << "(*pkt).seqn: " << (*pkt).seqn << ". readpktnum: " << readpktnum << ". ";
-	}
-	cout << "readpktnum: " << readpktnum;
+
+	cout << "pkt.type: " << pkt->type;
+	cout << ". readpktnum: " << readpktnum;
 	cout << ". sock: " << sock << endl;
 	readpktnum++;
 }
 
-void sendMessage(char message[256], int seqn, int messageType,int fragmentos, char username[], int sockfd)
+void sendMessage(char message[256], int seqn, int messageType, int fragmentos, char username[], int sockfd)
 {
 	PACKET pkt;
 	
@@ -59,8 +58,8 @@ void sendMessage(char message[256], int seqn, int messageType,int fragmentos, ch
 		}
 	}
 
-	cout << "pkt.seqn: " << pkt.seqn << endl;
-	cout << "sendpktnum: " << sendpktnum;
+	cout << "pkt.type: " << pkt.type;
+	cout << ". sendpktnum: " << sendpktnum;
 	cout << ". sock: " << sockfd << endl;
 	sendpktnum++;
 	pkt_mtx.unlock();
