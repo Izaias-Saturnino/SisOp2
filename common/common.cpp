@@ -15,16 +15,7 @@ int readSocket(PACKET *pkt, int sock){
     	/* read from the socket */
 		int result = read(sock, pkt+n, sizeof(*pkt)-n);
 
-		if (result == 0){
-			cout << "no connection" << endl;
-			break;
-		}
-		if (result < 0){
-			cout << "connection ERROR" << endl;
-			break;
-		}
-
-		if (result > 0) 
+		if (result >= 0) 
 		{
 			n += result;
 		}
