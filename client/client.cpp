@@ -4,6 +4,8 @@ int socketCtrl = -1;
 int socketCtrl2 = -1;
 char username[256];
 
+//debug what i got now and then block resend
+
 mutex mtx_sync_update;
 
 bool wait_for_first_sync = true;
@@ -420,9 +422,19 @@ void *handle_updates(void *arg)
             fragments.resize(size);
             received_fragments = 0;
 
-			if(size == 0){
+			if(size == 0)
+            {
+				cout << "escrevendo" << endl;
+                for (int i =0 ;i<fragments.size();i++){
+                    for(int j=0;j<fragments.at(i).size();j++){
+                        char* frag = &(fragments.at(i).at(j));
+                        //printf("%x ",(unsigned char)fragments.at(i).at(j));
+                        file_client.write(frag, sizeof(char));
+                    }
+                }
+                file_client.close();
 				mtx_sync_update.unlock();
-			}
+            }
         }
         if(pkt.type == MENSAGEM_ENVIO_PARTE_ARQUIVO || pkt.type == MENSAGEM_ENVIO_PARTE_ARQUIVO_SYNC)
         {
