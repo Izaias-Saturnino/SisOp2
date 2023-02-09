@@ -72,7 +72,18 @@ void *folderchecker(void *arg)
                     string s = ((char*) &(event->name));
                     name.push_back(s);
                     action.push_back(FILE_MODIFIED);
-
+                }
+                else if (event->mask & IN_MOVED_FROM)
+                {
+                    string s = ((char*) &(event->name));
+                    name.push_back(s);
+                    action.push_back(FILE_CREATED);
+                }
+                else if (event->mask & IN_MOVED_TO)
+                {
+                    string s = ((char*) &(event->name));
+                    name.push_back(s);
+                    action.push_back(FILE_DELETED);
                 }
             }
             i += EVENT_SIZE + event->len;

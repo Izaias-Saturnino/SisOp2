@@ -239,6 +239,7 @@ void *ThreadClient(void *arg)
                 for(int i = 0; i < sync_dir_sockets.size(); i++){
                     if(pkt.type == MENSAGEM_ENVIO_PARTE_ARQUIVO_SYNC){
                         if(sync_dir_sockets[i] == loginManager->get_sender_sync_sock(sockfd)){
+                            cout << "sync_dir_sockets[" << i << "]: " << sync_dir_sockets[i] << " não recebe o arquivo." << endl;
                             continue;
                         }
                     }
