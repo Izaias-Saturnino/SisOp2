@@ -43,11 +43,15 @@ void LoginManager::Logout(char user[],int socket, char resposta[]){
             if((*it).socketClient1 == socket)
             {
                 (*it).sessaoAtiva1 = false;
+                close((*it).socketClient1);
+                close((*it).sync1);
                 (*it).sync1 = -1;
                 strcpy(resposta,"Sessao 1 desconectada");
             }
-            else if((*it).socketClient2 == socket){
+            if((*it).socketClient2 == socket){
                 (*it).sessaoAtiva2 = false;
+                close((*it).socketClient2);
+                close((*it).sync2);
                 (*it).sync2 = -1;
                 strcpy(resposta,"Sessao 2 desconectada");
             }
@@ -102,9 +106,10 @@ bool LoginManager::login(int socketCli, char nome[]){
 void LoginManager::activate_sync_dir(char user[], int socketCli){
     
     vector<USUARIO>::iterator it;
+
+    mtx_sessoes.lock();
     for(it = this->listaDeUsuarios.begin(); it != this->listaDeUsuarios.end(); it++){
         if(strcmp(user, (*it).nome) == 0){
-            mtx_sessoes.lock();
             if((*it).sync1 == -1){
                 (*it).sync1 = socketCli;
                 cout << "socket: " << socketCli << " foi guardado em sync1" << endl;
@@ -113,10 +118,10 @@ void LoginManager::activate_sync_dir(char user[], int socketCli){
                 (*it).sync2 = socketCli;
                 cout << "socket: " << socketCli << " foi guardado em sync2" << endl;
             }
-            mtx_sessoes.unlock();
             break;
         }
     }
+    mtx_sessoes.unlock();
 }
 
 vector<int> LoginManager::get_active_sync_dir(char user[]){

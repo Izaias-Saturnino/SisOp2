@@ -119,7 +119,7 @@ int main(int argc, char *argv[])
         }
     }
 
-    cout << "closing connections" << endl;
+    cout << endl << "closing connections" << endl;
     close_connections();
 
     return 0;
