@@ -223,6 +223,7 @@ void *ThreadClient(void *arg)
             cout << "received_fragments: " << received_fragments << " & size: " << size << endl;
             if(received_fragments == size)
             {
+                cout << "reasembling file" << endl;
                 for (int i =0 ;i<fragments.size();i++){
                     for(int j=0;j<fragments.at(i).size();j++){
                         char* frag = &(fragments.at(i).at(j));
