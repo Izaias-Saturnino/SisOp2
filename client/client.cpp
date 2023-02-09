@@ -1,6 +1,7 @@
 #include "./client.hpp"
 bool Logout = false;
-int socketCtrl;
+int socketCtrl = -1;
+int socketCtrl2 = -1;
 char username[256];
 
 mutex mtx_sync_update;
@@ -11,7 +12,7 @@ int main(int argc, char *argv[])
 {
 	bool sync_dir_active = false;
 
-	int sockfd, PORT, newSocket;
+	int sockfd, PORT, newSocket, sockfd_sync;
 	socklen_t clilen;
 	char buffer[256]; 
 	struct sockaddr_in serv_addr, cli_addr;
@@ -63,8 +64,11 @@ int main(int argc, char *argv[])
 		pthread_t thr1, thr2, thr3;
 		int n1 = 1;
 		int n2 = 2;
-		//TO DO: somente criar se comando get sync dir for ativado 
-		pthread_create(&thr2, NULL, input, (void *)&n2);
+
+		while(pthread_create(&thr2, NULL, input, (void *)&n2) != 0){
+			cout << "ERROR creating first input thread. retrying..." << endl;
+		}
+
 		cout << "type exit to end your session \n"
 			 << endl;
 		while (true)
@@ -89,11 +93,12 @@ int main(int argc, char *argv[])
 				name.clear();
 				mtx_sync_update.unlock();
 			}
-			if (command_complete)
+			if (command.size() > 2)
 			{
 				if (command == "exit"|| Logout == true )
 				{
-					Logout = false;					
+					cout << "exiting application..." << endl;
+					Logout = false;
 					break;
 				}
 				else if (command == "list_client")
@@ -104,13 +109,14 @@ int main(int argc, char *argv[])
 				{
 					cout << "write2" << endl;
 					sendMessage("", 1, MENSAGEM_PEDIDO_LISTA_ARQUIVOS_SERVIDOR, 1, username, sockfd);
-					cout << "read2" << endl;
-					readSocket(&receivedPkt, sockfd);
 
-					while(receivedPkt.type == MENSAGEM_ITEM_LISTA_DE_ARQUIVOS){
-						cout<<receivedPkt._payload;
+					cout << "read2" << endl;
+					int result = readSocket(&receivedPkt, sockfd);
+					
+					while(receivedPkt.type == MENSAGEM_ITEM_LISTA_DE_ARQUIVOS && result > 0){
+						cout << receivedPkt._payload;
 						cout << "read3" << endl;
-						readSocket(&receivedPkt, sockfd);
+						result = readSocket(&receivedPkt, sockfd);
 					}
 				}
 				else if (command.find("upload ") != std::string::npos)
@@ -131,7 +137,6 @@ int main(int argc, char *argv[])
 
 					//cria novo socket para lidar com as atualizações recebidas do servidor pelo cliente
 
-					int sockfd_sync;
 					struct sockaddr_in serv_addr;
 					struct sigaction sigIntHandler;
 
@@ -146,6 +151,8 @@ int main(int argc, char *argv[])
 						printf("ERROR opening socket");
 						exit(0);
 					}
+
+					socketCtrl2 = sockfd_sync;
 
 					serv_addr.sin_family = AF_INET;
 					serv_addr.sin_port = htons(PORT);
@@ -165,14 +172,21 @@ int main(int argc, char *argv[])
 					sendMessage("", 1, GET_SYNC_DIR, 1, username, sockfd_sync);
 
 					//cria nova thread para lidar com atualizações
-					pthread_create(&thr1, NULL, handle_updates, &sockfd_sync);
+					int i = pthread_create(&thr1, NULL, handle_updates, &sockfd_sync) != 0;
+					while(i != 0){
+						i = pthread_create(&thr1, NULL, handle_updates, &sockfd_sync);
+						cout << "ERROR creating handle_updates thread. retrying..." << endl;
+						cout << "ERROR number: " << i << endl;
+					}
 
 					while(wait_for_first_sync){
 						sleep(1);
 					}
 
 					//cria nova thread para lidar com modificações na pasta sync_dir
-					pthread_create(&thr3, NULL, folderchecker, (void *)&n1);
+					while(pthread_create(&thr3, NULL, folderchecker, (void *)&n1) != 0){
+						cout << "ERROR creating folderchecker thread. retrying..." << endl;
+					}
 				}
 				else if (command.find("download ") != std::string::npos)
 				{
@@ -186,30 +200,17 @@ int main(int argc, char *argv[])
 					sendMessage((char *)path.c_str(), 1, MENSAGEM_DELETAR_NO_SERVIDOR, 1, username, sockfd);
 				}
 				command = "";
-				pthread_create(&thr2, NULL, input, (void *)&n2);
 			}
 		}
-
 		cout << "write5" << endl;
 		sendMessage("", 1, MENSAGEM_LOGOUT, 1, username, sockfd); // logout message
-		cout << "read4" << endl;
-		readSocket(&receivedPkt, sockfd);
-
-		while(receivedPkt.type != MENSAGEM_RESPOSTA_LOGOUT){
-			cout << endl << "alert: messages not handled properly" << endl;
-			cout << "receivedPkt.type: " << receivedPkt.type << endl;
-			cout << "receivedPkt._payload: " << receivedPkt.type << endl << endl;
-			cout << "read20" << endl;
-			readSocket(&receivedPkt, sockfd);
-		}
-
-		cout << endl << receivedPkt._payload << endl;
 	}
 	else
 	{
 		cout << endl << receivedPkt._payload << endl;
 	}
 
+	close(sockfd_sync);
 	close(sockfd);
 	return 0;
 }
@@ -359,12 +360,11 @@ void handle_ctrlc(int s){
 	cout<<endl<<"Caught signal"<<endl;
 	cout << "write12" << endl;
 	sendMessage("", 1, MENSAGEM_LOGOUT, 1, username, socketCtrl); // logout message
-	cout << "read9" << endl;
-	readSocket(&Pkt, socketCtrl);
 	
 	cout << endl << Pkt._payload << endl;
 
 	close(socketCtrl);
+	close(socketCtrl2);
 
 	exit(0);
 }

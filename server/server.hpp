@@ -22,4 +22,6 @@ int send_file_to_client(int sock, char username[], std::string file_path);
 
 void *ThreadClient(void *arg);
 
+void close_connections();
+
 void handle_ctrlc(int s);

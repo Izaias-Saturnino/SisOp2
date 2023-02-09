@@ -4,7 +4,9 @@
 
 LoginManager *loginManager = new LoginManager();
 char user[256];
-int newSockfd,conectionSocket;
+int newSockfd,connectionSocket;
+bool END = false;
+vector<int> connections;
 
 int main(int argc, char *argv[])
 {
@@ -29,15 +31,17 @@ int main(int argc, char *argv[])
         imprimeServerError();
     }
 
-    if ((conectionSocket = socket(AF_INET, SOCK_STREAM, 0)) == -1) /// Verifica IP valido
+    if ((connectionSocket = socket(AF_INET, SOCK_STREAM, 0)) == -1) /// Verifica IP valido
         printf("ERROR opening socket\n");
+
+    connections.push_back(connectionSocket);
 
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_port = htons(PORT);
     serv_addr.sin_addr = *((struct in_addr *)server->h_addr);
     bzero(&(serv_addr.sin_zero), 8);
 
-    if (bind(conectionSocket, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
+    if (bind(connectionSocket, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
     {
         printf("ERROR on binding\n");
         exit(0);
@@ -47,16 +51,25 @@ int main(int argc, char *argv[])
         printf("server started\n");
         while (true)
         {
-            sigaction(SIGINT, &sigIntHandler, NULL);
+
             /*listen to clients*/
-            listen(conectionSocket, 5);
+            listen(connectionSocket, 5);
             clilen = sizeof(struct sockaddr_in);
 
-            if ((newSockfd = accept(conectionSocket, (struct sockaddr *)&cli_addr, &clilen)) == -1)
-                printf("ERROR on accept");
+            newSockfd = accept(connectionSocket, (struct sockaddr *)&cli_addr, &clilen);
 
+            sigaction(SIGINT, &sigIntHandler, NULL);
+            if(END){
+                break;
+            }
+
+            if (newSockfd == -1){
+                cout << "ERROR on accept" << endl;
+            }
             else
             {
+                connections.push_back(newSockfd);
+
                 /*inicio login*/
                 cout << "read0" << endl;
                 readSocket(&pkt, newSockfd);
@@ -75,7 +88,10 @@ int main(int argc, char *argv[])
                         }
                         cout << "write1" << endl;
                         sendMessage("OK", 1, MENSAGEM_USUARIO_VALIDO, 1, user, newSockfd); // Mensagem de usuario Valido
-                        pthread_create(&clientThread, NULL, ThreadClient, &newSockfd); // CUIDADO: newSocket e não socket
+
+                        while(pthread_create(&clientThread, NULL, ThreadClient, &newSockfd) != 0){ // CUIDADO: newSocket e não socket
+                            cout << "ERROR creating first input thread. retrying..." << endl;
+                        }
                     }
                     else
                     {
@@ -103,8 +119,8 @@ int main(int argc, char *argv[])
         }
     }
 
-    close(newSockfd);
-    close(conectionSocket);
+    cout << "closing connections" << endl;
+    close_connections();
 
     return 0;
 }
@@ -146,8 +162,6 @@ void *ThreadClient(void *arg)
         if (pkt.type == MENSAGEM_LOGOUT)
         {
             loginManager->Logout(user, sockfd, resposta);
-            cout << "write4" << endl;
-            sendMessage(resposta, 1, MENSAGEM_RESPOSTA_LOGOUT, 1, user, sockfd); // resposta logout
             break;
         }
         if (pkt.type == MENSAGEM_ENVIO_NOME_ARQUIVO)
@@ -278,25 +292,20 @@ void *ThreadClient(void *arg)
             send_file_to_client(sockfd,user,directory);
         }
     }
+
     return 0;
 }
 
 void handle_ctrlc(int s){
-	PACKET Pkt;
-
-	cout<<endl<<"Caught signal inside server "<<endl;
-    cout << "write9" << endl;
-	sendMessage("", 1, MENSAGEM_LOGOUT, 1, user, newSockfd); // logout message
-    cout << "read2" << endl;
-	readSocket(&Pkt, newSockfd);
-	
-	cout << endl << Pkt._payload << endl;
-
-	close(newSockfd);
-    close(conectionSocket);
-
-	exit(0);
+    END = true;
 }
+
+void close_connections(){
+    for(int i = 0; i < connections.size(); i++){
+        close(connections[i]);
+    }
+}
+
 int send_file_to_client(int sock, char username[], std::string file_path)
 {
 	char buffer[256];
