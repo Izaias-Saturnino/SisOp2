@@ -52,7 +52,7 @@ void sendMessage(char message[256], int seqn, int messageType, int fragmentos, c
     while(n < sizeof(PACKET))
     {
     	/* read from the socket */
-		int result = write(sockfd, (&pkt)+n, sizeof(PACKET)-n);
+		int result = send(sockfd, (&pkt)+n, sizeof(PACKET)-n, 0);
 
 		if (result >= 0)
 		{
