@@ -13,7 +13,7 @@ int readSocket(PACKET *pkt, int sock){
     while(n < sizeof(PACKET))
     {
     	/* read from the socket */
-		int result = read(sock, pkt+n, sizeof(PACKET)-n);
+		int result = recv(sock, pkt+n, sizeof(PACKET)-n, 0);
 
 		if (result >= 0)
 		{
