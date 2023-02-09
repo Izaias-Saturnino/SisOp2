@@ -47,19 +47,7 @@ void sendMessage(char message[256], int seqn, int messageType, int fragmentos, c
 	memcpy(pkt._payload, message,256);
 	pkt.length = strlen(pkt._payload);
 
-	int n = 0;
-
-    while(n < sizeof(PACKET))
-    {
-    	/* read from the socket */
-		int result = write(sockfd, &pkt+n, sizeof(PACKET)-n);
-
-		if (result >= 0)
-		{
-			n += result;
-		}
-    }
-
+	int n = write(sockfd, &pkt, sizeof(pkt));
 	if (n < 0)
 		printf("ERROR writing to socket\n");
 	if (n != sizeof(pkt) || n != sizeof(PACKET)){
