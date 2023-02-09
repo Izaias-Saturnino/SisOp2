@@ -271,7 +271,7 @@ int upload_to_server(int sock, char username[],std::string file_path, bool sync)
 			}
 			counter++;
 			cout << "counter: " << counter << endl;
-			if(counter%200==199){
+			if(counter % 300 == 299){
 				cout << "read30" << endl;
 				readSocket(&pktreceived,sock);
 			}
@@ -457,7 +457,7 @@ void *handle_updates(void *arg)
 			fragments.at(pkt.seqn)=bufferconvert;
 			received_fragments++;
 
-			if(received_fragments %200==199){
+			if(received_fragments % 300 == 299){
 				cout << "write13" << endl;
                 sendMessage("", 1, ACK, 1, username, sockfd);
             }

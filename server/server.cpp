@@ -108,7 +108,7 @@ int main(int argc, char *argv[])
                     }
 
                     cout << "write3" << endl;
-                    sendMessage("", 1, FIRST_SYNC_END, 1, user, newSockfd); // Mensagem de usuario invalido
+                    sendMessage("", 1, FIRST_SYNC_END, 1, user, newSockfd);
             
                     //salvar o socket que pediu atualizações de sync dir
                     loginManager->activate_sync_dir(user, newSockfd);
@@ -216,7 +216,7 @@ void *ThreadClient(void *arg)
             fragments.at(pkt.seqn)=bufferconvert;
             received_fragments++;
 
-            if(received_fragments %200 ==199){
+            if(received_fragments % 300 == 299){
                 cout << "write26" << endl;
 			    sendMessage("", 1, ACK, 1, user, sockfd);
 		    }
@@ -357,7 +357,7 @@ int send_file_to_client(int sock, char username[], std::string file_path)
 			sendMessage(buffer, i / 256, MENSAGEM_ENVIO_PARTE_ARQUIVO, max_fragments, username, sock);
             counter++;
             cout << "counter: " << counter << endl;
-            if(counter %200==199){
+            if(counter % 300 == 299){
                 cout << "read30" << endl;
                 readSocket(&pktreceived,sock);
             }
