@@ -119,7 +119,7 @@ int main(int argc, char *argv[])
         }
     }
 
-    cout << "closing connections" << endl;
+    cout << endl << "closing connections" << endl;
     close_connections();
 
     return 0;
@@ -182,6 +182,9 @@ void *ThreadClient(void *arg)
             fragments.resize(size);
             received_fragments = 0;
 
+            cout << "write44" << endl;
+        	sendMessage("", 1, ACK, 1, user, sockfd);
+
             if(size == 0){
                 file_server.close();
 
@@ -216,7 +219,7 @@ void *ThreadClient(void *arg)
             fragments.at(pkt.seqn)=bufferconvert;
             received_fragments++;
 
-            if(received_fragments %200 ==199){
+            if(received_fragments % 200 == 199){
                 cout << "write26" << endl;
 			    sendMessage("", 1, ACK, 1, user, sockfd);
 		    }
@@ -249,7 +252,7 @@ void *ThreadClient(void *arg)
             }
         }
         if(pkt.type == MENSAGEM_ARQUIVO_LIDO){
-
+            sendMessage("", 1, ACK, 1, user, sockfd);
         }
         if (pkt.type == MENSAGEM_PEDIDO_LISTA_ARQUIVOS_SERVIDOR)
         {
@@ -341,9 +344,10 @@ int send_file_to_client(int sock, char username[], std::string file_path)
 
         cout << "write11" << endl;
 		sendMessage((char *)file_path.c_str(), 1, MENSAGEM_ENVIO_NOME_ARQUIVO, max_fragments, username, sock);
-        int i;
+        cout << "read51" << endl;
+		readSocket(&pktreceived, sock);
         int counter = 0;
-		for (i = 0; i < file_size; i += ((sizeof(buffer)))) // to read file
+		for (int i = 0; i < file_size; i += ((sizeof(buffer)))) // to read file
 		{
             //cout << "i: " << i << endl;
             //cout << "counter: " << counter << endl;
@@ -357,13 +361,15 @@ int send_file_to_client(int sock, char username[], std::string file_path)
 			sendMessage(buffer, i / 256, MENSAGEM_ENVIO_PARTE_ARQUIVO, max_fragments, username, sock);
             counter++;
             cout << "counter: " << counter << endl;
-            if(counter %200==199){
+            if(counter % 200 == 199){
                 cout << "read30" << endl;
                 readSocket(&pktreceived,sock);
             }
 		}
         cout << "write13" << endl;
         sendMessage(buffer, 1, MENSAGEM_ARQUIVO_LIDO, max_fragments, username, sock);
+        cout << "write50" << endl;
+        readSocket(&pktreceived,sock);
 		file.close();
 		cout << " arquivo lido"
 			 << "\n"
