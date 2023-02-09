@@ -4,7 +4,7 @@ int socketCtrl = -1;
 int socketCtrl2 = -1;
 char username[256];
 
-//debug what i got now and then block resend
+vector<string> latest_downloads = {};
 
 mutex mtx_sync_update;
 
@@ -84,6 +84,9 @@ int main(int argc, char *argv[])
 				for(int i = 0; i < action.size(); i++){
 					std::cout << "action: " << action[i] << " & name: " << name[i] << "\n";
 					if(action[i] == FILE_CREATED || action[i] == FILE_MODIFIED){
+						if(find(latest_downloads.begin(), latest_downloads.end(), name[i]) != latest_downloads.end()){
+							continue;
+						}
 						upload_to_server(sockfd, username, "./sync_dir/"+name[i], true);
 					}
 					if(action[i] == FILE_DELETED){
@@ -345,6 +348,7 @@ int download_file_from_server(int sock,char username[], std::string file_path)
 			file_download.write(frag, sizeof(char));
 		}
 	}
+	latest_downloads.push_back(receivedFilePath);
 	file_download.close();
 	cout << "read23" << endl;
 	readSocket(&pkt, sock);
@@ -381,6 +385,7 @@ void *handle_updates(void *arg)
 	int size = 0;
 	int received_fragments=0;
     vector<vector<char>> fragments(10);
+	string receivedFilePath;
 	
 	while(true){
 		cout << "read10" << endl;
@@ -406,8 +411,6 @@ void *handle_updates(void *arg)
 		}
 		if (pkt.type == MENSAGEM_ENVIO_NOME_ARQUIVO)
         {
-            string receivedFilePath;
-
             receivedFilePath = string(pkt._payload);
             receivedFilePath = receivedFilePath.substr(receivedFilePath.find_last_of("/") + 1);
             string directory = "./";
@@ -432,6 +435,7 @@ void *handle_updates(void *arg)
                         file_client.write(frag, sizeof(char));
                     }
                 }
+				latest_downloads.push_back(receivedFilePath);
                 file_client.close();
 				mtx_sync_update.unlock();
             }
@@ -474,6 +478,7 @@ void *handle_updates(void *arg)
                         file_client.write(frag, sizeof(char));
                     }
                 }
+				latest_downloads.push_back(receivedFilePath);
                 file_client.close();
 				mtx_sync_update.unlock();
             }
