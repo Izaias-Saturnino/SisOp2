@@ -252,6 +252,8 @@ void *ThreadClient(void *arg)
 
             cout << "directory: " << directory << endl;
 
+            cout << "sync_dir_sockets.size(): " << sync_dir_sockets.size() << endl;
+
             for(int i = 0; i < sync_dir_sockets.size(); i++){
                 if(last_message_sync){
                     if(sync_dir_sockets[i] == loginManager->get_sender_sync_sock(sockfd)){

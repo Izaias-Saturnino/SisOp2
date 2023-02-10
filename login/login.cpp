@@ -134,7 +134,7 @@ vector<int> LoginManager::get_active_sync_dir(char user[]){
                 sockets.push_back((*it).sync1);
                 cout << "sync1 tem o valor: " << (*it).sync1 << endl;
             }
-            else if((*it).sync2 != -1){
+            if((*it).sync2 != -1){
                 sockets.push_back((*it).sync2);
                 cout << "sync2 tem o valor: " << (*it).sync2 << endl;
             }

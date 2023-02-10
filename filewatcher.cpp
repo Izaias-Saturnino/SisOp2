@@ -19,7 +19,7 @@ using namespace std;
 
 int inotify_fd,watch_dir;
 
-string command ="";
+string command ="get_sync_dir";
 bool command_complete;
 
 vector<string> name;

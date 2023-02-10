@@ -472,6 +472,7 @@ void *handle_updates(void *arg)
 			mtx_sync_update.unlock();
 		}
 		if(pkt.type == FIRST_SYNC_END && wait_for_first_sync){
+			latest_downloads.clear();
 			wait_for_first_sync = false;
 		}
 	}
