@@ -16,8 +16,8 @@ void serialize(PACKET *pkt, char data[sizeof(PACKET)])
 	q += sizeof(pkt->seqn);
 	*q = pkt->total_size;
 	q += sizeof(pkt->total_size);
-	*q = pkt->length;
-	q += sizeof(pkt->length);
+	*q = pkt->file_byte_size;
+	q += sizeof(pkt->file_byte_size);
 
     char *p = (char*)q;
     int i = 0;
@@ -47,8 +47,8 @@ void deserialize(PACKET *pkt, char data[sizeof(PACKET)])
 	q += sizeof(pkt->seqn);
 	pkt->total_size = *q;
 	q += sizeof(pkt->total_size);
-	pkt->length = *q;
-	q += sizeof(pkt->length);
+	pkt->file_byte_size = *q;
+	q += sizeof(pkt->file_byte_size);
 
     char *p = (char*)q;
     int i = 0;
@@ -107,7 +107,7 @@ int readSocket(PACKET *pkt, int sock){
 	return n;
 }
 
-void sendMessage(char message[BUFFER_SIZE], int seqn, int messageType, int fragmentos, char username[BUFFER_SIZE], int sockfd)
+void sendMessage(char message[BUFFER_SIZE], uint32_t file_byte_size, int messageType, int fragmentos, char username[BUFFER_SIZE], int sockfd)
 {
 	PACKET pkt;
 	
@@ -117,7 +117,7 @@ void sendMessage(char message[BUFFER_SIZE], int seqn, int messageType, int fragm
 	pkt.total_size = fragmentos;
 	strcpy(pkt.user, username);
 	memcpy(pkt._payload, message, BUFFER_SIZE);
-	pkt.length = strlen(pkt._payload);
+	pkt.file_byte_size = file_byte_size;
 
 	char data[sizeof(PACKET)];
 

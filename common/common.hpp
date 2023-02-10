@@ -42,7 +42,7 @@ typedef struct {
     uint16_t type; //Tipo do pacote (p.ex. DATA | CMD)
     uint16_t seqn; //Número de sequência
     uint32_t total_size; //Número total de fragmentos
-    uint16_t length; //Comprimento do payload
+    uint32_t file_byte_size; //Comprimento do payload
     char user[BUFFER_SIZE];
     char _payload[BUFFER_SIZE]; //Dados do pacote
 }PACKET;
@@ -61,6 +61,6 @@ typedef struct usuario USUARIO;
 void serialize(PACKET *pkt, char data[sizeof(PACKET)]);
 void deserialize(PACKET *pkt, char data[sizeof(PACKET)]);
 int readSocket(PACKET *pkt, int sock);
-void sendMessage(char message[BUFFER_SIZE], int seqn, int messageType,int fragmentos, char username[BUFFER_SIZE], int sockfd);
+void sendMessage(char message[BUFFER_SIZE], uint32_t file_byte_size, int messageType,int fragmentos, char username[BUFFER_SIZE], int sockfd);
 
 

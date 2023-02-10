@@ -153,7 +153,8 @@ void *ThreadClient(void *arg)
     string directory;
 
     bool last_message_sync = false;
-    int last_message_size = BUFFER_SIZE;
+
+    uint32_t remainder_file_size = 0;
 
     while (true)
     {
@@ -170,6 +171,8 @@ void *ThreadClient(void *arg)
         }
         if (pkt.type == MENSAGEM_ENVIO_NOME_ARQUIVO)
         {
+            remainder_file_size = pkt.file_byte_size % BUFFER_SIZE;
+
             string receivedFilePath;
 
             receivedFilePath = string(pkt._payload);
@@ -217,7 +220,7 @@ void *ThreadClient(void *arg)
             }
             
             cout << "received_fragments: " << received_fragments;
-            cout << ". pkt.seqn: " << pkt.seqn;
+            cout << ". pkt.file_byte_size: " << pkt.file_byte_size;
             cout << ". fragments.size(): " << fragments.size() << endl;
             fragments.push_back(bufferconvert);
             received_fragments++;
@@ -227,13 +230,17 @@ void *ThreadClient(void *arg)
 			    sendMessage("", 1, ACK, 1, user, sockfd);
 		    }*/
             cout << "received_fragments: " << received_fragments << " & size: " << size << endl;
-            last_message_size = pkt.length;
         }
         if(pkt.type == MENSAGEM_ARQUIVO_LIDO){
             cout << "reasembling file" << endl;
-            for (int i =0 ;i<fragments.size();i++){
+            for (int i = 0; i < fragments.size(); i++){
 				for (int j = 0; j < fragments.at(i).size(); j++)
 				{
+                    if(i == fragments.size() - 1){
+                        if(j == remainder_file_size){
+                            break;
+                        }
+                    }
 					char *frag = &(fragments.at(i).at(j));
 					//printf("%x ", (unsigned char)fragments.at(i).at(j));
 					file_server.write(frag, sizeof(char));
@@ -334,7 +341,7 @@ int send_file_to_client(int sock, char username[], std::string file_path)
 	else
 	{
 		file.seekg(0, file.end);
-		int file_size = file.tellg();
+		uint32_t file_size = file.tellg();
 		cout << file_size << "\n";
 		file.clear();
 		file.seekg(0);
@@ -348,7 +355,7 @@ int send_file_to_client(int sock, char username[], std::string file_path)
         cout << "max_fragments: " << max_fragments << endl;
 
         cout << "write11" << endl;
-		sendMessage((char *)file_path.c_str(), 1, MENSAGEM_ENVIO_NOME_ARQUIVO, max_fragments, username, sock);
+		sendMessage((char *)file_path.c_str(), file_size, MENSAGEM_ENVIO_NOME_ARQUIVO, max_fragments, username, sock);
         int i;
         int counter = 0;
 		for (i = 0; i < file_size; i += ((sizeof(buffer)))) // to read file
@@ -362,7 +369,7 @@ int send_file_to_client(int sock, char username[], std::string file_path)
             }
             
             cout << "write12" << endl;
-			sendMessage(buffer, i / BUFFER_SIZE, MENSAGEM_ENVIO_PARTE_ARQUIVO, max_fragments, username, sock);
+			sendMessage(buffer, 1, MENSAGEM_ENVIO_PARTE_ARQUIVO, max_fragments, username, sock);
             counter++;
             cout << "counter: " << counter << endl;
             /*if(counter % 300 == 299){

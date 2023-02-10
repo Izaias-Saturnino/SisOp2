@@ -245,7 +245,7 @@ int upload_to_server(int sock, char username[],std::string file_path, bool sync)
 	else
 	{	
 		file.seekg(0, file.end);
-		int file_size = file.tellg();
+		uint32_t file_size = file.tellg();
 		cout << "file_size: " << file_size << endl;
 		file.clear();
 		file.seekg(0);
@@ -259,9 +259,9 @@ int upload_to_server(int sock, char username[],std::string file_path, bool sync)
 		cout << "max_fragments: " << max_fragments << endl;
 		
 		cout << "write6" << endl;
-		sendMessage((char*)file_path.c_str(), 1, MENSAGEM_ENVIO_NOME_ARQUIVO, max_fragments, username, sock);
+		sendMessage((char*)file_path.c_str(), file_size, MENSAGEM_ENVIO_NOME_ARQUIVO, max_fragments, username, sock);
 		int counter=0;
-		for (int i=0;i< file_size;i+=((sizeof(buffer)))) // to read file
+		for (int i = 0; i < file_size; i += ((sizeof(buffer)))) // to read file
 		{
 			memset(buffer, 0, BUFFER_SIZE);
 			file.read(buffer,sizeof(buffer));
@@ -301,6 +301,7 @@ int download_file_from_server(int sock,char username[], std::string file_path)
 		cout<<"Arquivo nao existe no servidor\n";
 		return 0;
 	}
+	int file_byte_size = pkt.file_byte_size;
 	string receivedFilePath;
 	receivedFilePath = string(pkt._payload);
 	receivedFilePath = receivedFilePath.substr(receivedFilePath.find_last_of("/") + 1);
@@ -312,7 +313,6 @@ int download_file_from_server(int sock,char username[], std::string file_path)
 	uint32_t size = pkt.total_size;
 	int received_fragments = 0;
 	vector<vector<char>> fragments(size);
-	int last_message_size = BUFFER_SIZE;
 	while (received_fragments != size)
 	{
 		memset(pkt._payload, 0, BUFFER_SIZE);
@@ -337,7 +337,6 @@ int download_file_from_server(int sock,char username[], std::string file_path)
 		}
 		cout << "received_fragments: " << received_fragments << " & size: " << size << endl;
 	}
-	last_message_size = pkt.length;
 	for (int i = 0; i < fragments.size(); i++)
 	{
 		for (int j = 0; j < fragments.at(i).size(); j++)
@@ -385,7 +384,7 @@ void *handle_updates(void *arg)
 	int received_fragments=0;
     vector<vector<char>> fragments = {};
 	string receivedFilePath;
-	int last_message_size = BUFFER_SIZE;
+	uint32_t remainder_file_size = 0;
 	
 	while(true){
 		cout << "read10" << endl;
@@ -411,6 +410,8 @@ void *handle_updates(void *arg)
 		}
 		if (pkt.type == MENSAGEM_ENVIO_NOME_ARQUIVO)
         {
+			remainder_file_size = pkt.file_byte_size % BUFFER_SIZE;
+			
             receivedFilePath = string(pkt._payload);
             receivedFilePath = receivedFilePath.substr(receivedFilePath.find_last_of("/") + 1);
             string directory = "./";
@@ -440,7 +441,7 @@ void *handle_updates(void *arg)
             }
             
 			cout << "received_fragments: " << received_fragments;
-			cout << ". pkt.seqn: " << pkt.seqn;
+			cout << ". pkt.file_byte_size: " << pkt.file_byte_size;
 			cout << ". fragments.size(): " << fragments.size() << endl;
 			fragments.push_back(bufferconvert);
 			received_fragments++;
@@ -449,7 +450,6 @@ void *handle_updates(void *arg)
 				cout << "write13" << endl;
                 sendMessage("", 1, ACK, 1, username, sockfd);
             }*/
-			last_message_size = pkt.length;
 			cout << "received_fragments: " << received_fragments << endl;
         }
 		if(pkt.type == MENSAGEM_ARQUIVO_LIDO){
@@ -457,6 +457,11 @@ void *handle_updates(void *arg)
 			for (int i =0 ;i<fragments.size();i++){
 				for (int j = 0; j < fragments.at(i).size(); j++)
 				{
+					if(i == fragments.size() - 1){
+                        if(j == remainder_file_size){
+                            break;
+                        }
+                    }
 					char *frag = &(fragments.at(i).at(j));
 					//printf("%x ", (unsigned char)fragments.at(i).at(j));
 					file_client.write(frag, sizeof(char));
