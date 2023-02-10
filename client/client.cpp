@@ -342,11 +342,6 @@ int download_file_from_server(int sock,char username[], std::string file_path)
 	{
 		for (int j = 0; j < fragments.at(i).size(); j++)
 		{
-			/*if(i == fragments.size()){
-				if(j == last_message_size){
-					break;
-				}
-			}*/
 			char *frag = &(fragments.at(i).at(j));
 			//printf("%x ", (unsigned char)fragments.at(i).at(j));
 			file_download.write(frag, sizeof(char));
@@ -462,11 +457,6 @@ void *handle_updates(void *arg)
 			for (int i =0 ;i<fragments.size();i++){
 				for (int j = 0; j < fragments.at(i).size(); j++)
 				{
-					/*if(i == fragments.size()){
-						if(j == last_message_size){
-							break;
-						}
-					}*/
 					char *frag = &(fragments.at(i).at(j));
 					//printf("%x ", (unsigned char)fragments.at(i).at(j));
 					file_client.write(frag, sizeof(char));

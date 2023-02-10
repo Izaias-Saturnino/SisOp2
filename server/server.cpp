@@ -234,11 +234,6 @@ void *ThreadClient(void *arg)
             for (int i =0 ;i<fragments.size();i++){
 				for (int j = 0; j < fragments.at(i).size(); j++)
 				{
-					/*if(i == fragments.size()){
-						if(j == last_message_size){
-							break;
-						}
-					}*/
 					char *frag = &(fragments.at(i).at(j));
 					//printf("%x ", (unsigned char)fragments.at(i).at(j));
 					file_server.write(frag, sizeof(char));

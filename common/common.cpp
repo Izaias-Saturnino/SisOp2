@@ -74,7 +74,7 @@ int readSocket(PACKET *pkt, int sock){
 
 	char data[sizeof(PACKET)];
 
-	cout << "reading" << endl;
+	//cout << "reading" << endl;
 
     while(n < sizeof(PACKET))
     {
@@ -87,7 +87,7 @@ int readSocket(PACKET *pkt, int sock){
 		}
     }
 
-	cout << "deserializing" << endl;
+	//cout << "deserializing" << endl;
 
 	deserialize(pkt, data);
 

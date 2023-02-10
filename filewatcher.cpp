@@ -97,7 +97,7 @@ void *input(void *arg)
 {
     while(command != "exit"){
         std::getline (std::cin,command);
-        cout << "command: " << command << endl;
+        cout << "command: " << command << endl << endl;
     }
     return 0;
 }
