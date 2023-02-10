@@ -3,7 +3,7 @@
 #define PORT 4000
 
 LoginManager *loginManager = new LoginManager();
-char user[256];
+char user[BUFFER_SIZE];
 int newSockfd,connectionSocket;
 bool END = false;
 vector<int> connections;
@@ -145,15 +145,19 @@ void *ThreadClient(void *arg)
     int sockfd = *(int *)arg;
     PACKET pkt;
     char resposta[40];
-    char user[256];
+    char user[BUFFER_SIZE];
     ofstream file_server;
-    int size=0;
+    uint32_t size=0;
     int received_fragments=0;
-    vector<vector<char>> fragments(10);
+    vector<vector<char>> fragments = {};
     string directory;
+
+    bool last_message_sync = false;
+    int last_message_size = BUFFER_SIZE;
+
     while (true)
     {
-        memset(pkt._payload, 0, 256);
+        memset(pkt._payload, 0, BUFFER_SIZE);
         cout << "read1" << endl;
         readSocket(&pkt, sockfd);
         strcpy(user, pkt.user);
@@ -179,7 +183,6 @@ void *ThreadClient(void *arg)
                  << endl;
 
             fragments.clear();
-            fragments.resize(size);
             received_fragments = 0;
 
             if(size == 0){
@@ -195,14 +198,17 @@ void *ThreadClient(void *arg)
                 }
             }
         }
+        if(pkt.type == MENSAGEM_ENVIO_PARTE_ARQUIVO_SYNC){
+            last_message_sync = true;
+        }
         if(pkt.type == MENSAGEM_ENVIO_PARTE_ARQUIVO || pkt.type == MENSAGEM_ENVIO_PARTE_ARQUIVO_SYNC)
         {
-            char buffer [256];
-            vector<char> bufferconvert(256);
+            char buffer [BUFFER_SIZE];
+            vector<char> bufferconvert(BUFFER_SIZE);
 
-            memset(buffer, 0, 256);
+            memset(buffer, 0, BUFFER_SIZE);
 
-            memcpy(buffer,pkt._payload, 256);
+            memcpy(buffer,pkt._payload, BUFFER_SIZE);
 
             //printf("%d",received_fragments);
 
@@ -213,44 +219,48 @@ void *ThreadClient(void *arg)
             cout << "received_fragments: " << received_fragments;
             cout << ". pkt.seqn: " << pkt.seqn;
             cout << ". fragments.size(): " << fragments.size() << endl;
-            fragments.at(pkt.seqn)=bufferconvert;
+            fragments.push_back(bufferconvert);
             received_fragments++;
 
-            if(received_fragments % 300 == 299){
+            /*if(received_fragments % 300 == 299){
                 cout << "write26" << endl;
 			    sendMessage("", 1, ACK, 1, user, sockfd);
-		    }
+		    }*/
             cout << "received_fragments: " << received_fragments << " & size: " << size << endl;
-            if(received_fragments == size)
-            {
-                cout << "reasembling file" << endl;
-                for (int i =0 ;i<fragments.size();i++){
-                    for(int j=0;j<fragments.at(i).size();j++){
-                        char* frag = &(fragments.at(i).at(j));
-                        //printf("%x ",(unsigned char)fragments.at(i).at(j));
-                        file_server.write(frag, sizeof(char));
-                    }
-                }
-                file_server.close();
-
-                vector<int> sync_dir_sockets = loginManager->get_active_sync_dir(user);
-
-                cout << "directory: " << directory << endl;
-
-                for(int i = 0; i < sync_dir_sockets.size(); i++){
-                    if(pkt.type == MENSAGEM_ENVIO_PARTE_ARQUIVO_SYNC){
-                        if(sync_dir_sockets[i] == loginManager->get_sender_sync_sock(sockfd)){
-                            cout << "sync_dir_sockets[" << i << "]: " << sync_dir_sockets[i] << " não recebe o arquivo." << endl;
-                            continue;
-                        }
-                    }
-                    cout << "sync_dir_sockets[" << i << "]: " << sync_dir_sockets[i] << endl;
-                    send_file_to_client(sync_dir_sockets[i],user,directory);
-                }
-            }
+            last_message_size = pkt.length;
         }
         if(pkt.type == MENSAGEM_ARQUIVO_LIDO){
+            cout << "reasembling file" << endl;
+            for (int i =0 ;i<fragments.size();i++){
+				for (int j = 0; j < fragments.at(i).size(); j++)
+				{
+					/*if(i == fragments.size()){
+						if(j == last_message_size){
+							break;
+						}
+					}*/
+					char *frag = &(fragments.at(i).at(j));
+					//printf("%x ", (unsigned char)fragments.at(i).at(j));
+					file_server.write(frag, sizeof(char));
+				}
+			}
+            file_server.close();
 
+            vector<int> sync_dir_sockets = loginManager->get_active_sync_dir(user);
+
+            cout << "directory: " << directory << endl;
+
+            for(int i = 0; i < sync_dir_sockets.size(); i++){
+                if(last_message_sync){
+                    if(sync_dir_sockets[i] == loginManager->get_sender_sync_sock(sockfd)){
+                        cout << "sync_dir_sockets[" << i << "]: " << sync_dir_sockets[i] << " não recebe o arquivo." << endl;
+                        continue;
+                    }
+                }
+                cout << "sync_dir_sockets[" << i << "]: " << sync_dir_sockets[i] << endl;
+                send_file_to_client(sync_dir_sockets[i],user,directory);
+            }
+            last_message_sync = false;
         }
         if (pkt.type == MENSAGEM_PEDIDO_LISTA_ARQUIVOS_SERVIDOR)
         {
@@ -312,7 +322,7 @@ void close_connections(){
 
 int send_file_to_client(int sock, char username[], std::string file_path)
 {
-	char buffer[256];
+	char buffer[BUFFER_SIZE];
     PACKET pktreceived;
 	ifstream file;
     cout<< "file_path: " << file_path << endl;
@@ -334,9 +344,9 @@ int send_file_to_client(int sock, char username[], std::string file_path)
 		file.clear();
 		file.seekg(0);
 
-        int max_fragments = file_size/256;
+        int max_fragments = file_size/BUFFER_SIZE;
 
-		if(file_size % 256 != 0){
+		if(file_size % BUFFER_SIZE != 0){
 			max_fragments++;
 		}
 
@@ -350,20 +360,20 @@ int send_file_to_client(int sock, char username[], std::string file_path)
 		{
             //cout << "i: " << i << endl;
             //cout << "counter: " << counter << endl;
-			memset(buffer, 0, 256);
+			memset(buffer, 0, BUFFER_SIZE);
 			file.read(buffer, sizeof(buffer));
-            for(int j =0;j<256; j++){
+            for(int j =0;j<BUFFER_SIZE; j++){
                 //printf("%x ", (unsigned char)buffer[i]);
             }
             
             cout << "write12" << endl;
-			sendMessage(buffer, i / 256, MENSAGEM_ENVIO_PARTE_ARQUIVO, max_fragments, username, sock);
+			sendMessage(buffer, i / BUFFER_SIZE, MENSAGEM_ENVIO_PARTE_ARQUIVO, max_fragments, username, sock);
             counter++;
             cout << "counter: " << counter << endl;
-            if(counter % 300 == 299){
+            /*if(counter % 300 == 299){
                 cout << "read30" << endl;
                 readSocket(&pktreceived,sock);
-            }
+            }*/
 		}
         cout << "write13" << endl;
         sendMessage(buffer, 1, MENSAGEM_ARQUIVO_LIDO, max_fragments, username, sock);

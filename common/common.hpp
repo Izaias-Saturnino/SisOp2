@@ -36,20 +36,19 @@ using namespace std;
 #define GET_SYNC_DIR 50
 #define FIRST_SYNC_END 51
 #define ACK 60
-// #define MENSAGEM_
-// #define MENSAGEM_
+#define BUFFER_SIZE 256
 
 typedef struct {
     uint16_t type; //Tipo do pacote (p.ex. DATA | CMD)
     uint16_t seqn; //Número de sequência
     uint32_t total_size; //Número total de fragmentos
     uint16_t length; //Comprimento do payload
-    char user[256];
-    char _payload[256]; //Dados do pacote
+    char user[BUFFER_SIZE];
+    char _payload[BUFFER_SIZE]; //Dados do pacote
 }PACKET;
 
 struct usuario{
-    char nome[256];
+    char nome[BUFFER_SIZE];
     bool sessaoAtiva1;
     bool sessaoAtiva2;
     int socketClient1;
@@ -59,7 +58,9 @@ struct usuario{
 };
 typedef struct usuario USUARIO;
 
+void serialize(PACKET *pkt, char data[sizeof(PACKET)]);
+void deserialize(PACKET *pkt, char data[sizeof(PACKET)]);
 int readSocket(PACKET *pkt, int sock);
-void sendMessage(char message[256], int seqn, int messageType,int fragmentos, char username[], int sockfd);
+void sendMessage(char message[BUFFER_SIZE], int seqn, int messageType,int fragmentos, char username[BUFFER_SIZE], int sockfd);
 
 
