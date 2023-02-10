@@ -91,12 +91,12 @@ int readSocket(PACKET *pkt, int sock){
 
 	deserialize(pkt, data);
 
-	if(pkt->type == 0 || pkt->type > 60 || n != sizeof(*pkt) || n != sizeof(PACKET)){
-		cout << "n: " << n << endl;
-		cout << "pkt.type: " << pkt->type << endl;
-		cout << "pkt._payload: " << pkt->_payload << endl;
-		sleep(60);
-	}
+	// if(pkt->type == 0 || pkt->type > 60 || n != sizeof(*pkt) || n != sizeof(PACKET)){
+	// 	cout << "n: " << n << endl;
+	// 	cout << "pkt.type: " << pkt->type << endl;
+	// 	cout << "pkt._payload: " << pkt->_payload << endl;
+	// 	sleep(60);
+	// }
 
 	cout << "pkt.type: " << pkt->type;
 	cout << ". readpktnum: " << readpktnum;
@@ -140,12 +140,12 @@ void sendMessage(char message[BUFFER_SIZE], uint32_t file_byte_size, int message
 		printf("ERROR writing to socket\n");
 	if (n != sizeof(pkt) || n != sizeof(PACKET)){
 		printf("ERROR writing all data to socket\n");
-		cout << "n: " << n << endl;
-		cout << "pkt.type: " << pkt.type << endl;
-		cout << "pkt._payload: " << pkt._payload << endl;
-		if(pkt.type == 0 || pkt.type > 60){
-			sleep(60);
-		}
+		// cout << "n: " << n << endl;
+		// cout << "pkt.type: " << pkt.type << endl;
+		// cout << "pkt._payload: " << pkt._payload << endl;
+		// if(pkt.type == 0 || pkt.type > 60){
+		// 	sleep(60);
+		//}
 	}
 
 	cout << "pkt.type: " << pkt.type;

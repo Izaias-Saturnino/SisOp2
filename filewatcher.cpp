@@ -20,7 +20,7 @@ using namespace std;
 int inotify_fd,watch_dir;
 
 string command ="get_sync_dir";
-bool command_complete;
+bool command_complete = true;
 
 vector<string> name;
 vector<int> action;
@@ -33,7 +33,7 @@ void *folderchecker(void *arg)
     if (fcntl(inotify_fd, F_SETFL, O_NONBLOCK) < 0)  // error checking for fcntl
        exit(2);
 
-    watch_dir = inotify_add_watch(inotify_fd, "./sync_dir", IN_MODIFY | IN_CREATE | IN_DELETE);
+    watch_dir = inotify_add_watch(inotify_fd, "./sync_dir", IN_MODIFY | IN_CREATE | IN_DELETE|IN_MOVED_TO|IN_MOVED_FROM);
     int run;
     if(watch_dir==-1){
         printf("erro");
@@ -73,13 +73,13 @@ void *folderchecker(void *arg)
                     name.push_back(s);
                     action.push_back(FILE_MODIFIED);
                 }
-                else if (event->mask & IN_MOVED_FROM)
+                else if (event->mask & IN_MOVED_TO)
                 {
                     string s = ((char*) &(event->name));
                     name.push_back(s);
                     action.push_back(FILE_CREATED);
                 }
-                else if (event->mask & IN_MOVED_TO)
+                else if (event->mask & IN_MOVED_FROM)
                 {
                     string s = ((char*) &(event->name));
                     name.push_back(s);
@@ -95,9 +95,10 @@ void *folderchecker(void *arg)
 
 void *input(void *arg)
 {
-    while(command != "exit"){
-        std::getline (std::cin,command);
-        cout << "command: " << command << endl << endl;
-    }
+    
+    std::getline (std::cin,command);
+    command_complete = true;
+    cout << "command: " << command << endl << endl;
+
     return 0;
 }
