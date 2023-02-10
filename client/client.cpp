@@ -94,6 +94,7 @@ int main(int argc, char *argv[])
 						sendMessage((char *)("./sync_dir/"+name[i]).c_str(), 1, MENSAGEM_DELETAR_NO_SERVIDOR, 1, username, sockfd);
 					}
 				}
+				latest_downloads.clear();
 				action.clear();
 				name.clear();
 				mtx_sync_update.unlock();
