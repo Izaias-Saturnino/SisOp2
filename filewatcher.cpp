@@ -86,7 +86,7 @@ void *folderchecker(void *arg)
             }
             i += EVENT_SIZE + event->len;
         }
-        sleep(1);
+        sleep(5);
     }
     return 0;
 }
