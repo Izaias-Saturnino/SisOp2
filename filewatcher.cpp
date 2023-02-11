@@ -88,7 +88,7 @@ void *folderchecker(void *arg)
             }
             i += EVENT_SIZE + event->len;
         }
-        sleep(1);
+        sleep(5);
     }
     return 0;
 }
@@ -96,11 +96,11 @@ void *folderchecker(void *arg)
 void *input(void *arg)
 {
     while(command!="exit"){
-    if(command_complete==false){
-    std::getline (std::cin,command);
-    command_complete = true;
-    cout << "command: " << command << endl << endl;
-    }
+        if(command_complete==false){
+            std::getline (std::cin,command);
+            command_complete = true;
+            cout << "command: " << command << endl << endl;
+        }
     }
     return 0;
 }
