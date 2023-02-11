@@ -215,7 +215,6 @@ int main(int argc, char *argv[])
 				}
 				command = "";
 				command_complete = false;
-				pthread_create(&thr2, NULL, input, (void *)&n2);
 			}
 		}
 		cout << "write5" << endl;
