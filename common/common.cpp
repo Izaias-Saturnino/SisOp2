@@ -14,8 +14,6 @@ void serialize(PACKET *pkt, char data[sizeof(PACKET)])
 	q += sizeof(pkt->type);
 	*q = pkt->seqn;
 	q += sizeof(pkt->seqn);
-	*q = pkt->total_size;
-	q += sizeof(pkt->total_size);
 	*q = pkt->file_byte_size;
 	q += sizeof(pkt->file_byte_size);
 
@@ -45,8 +43,6 @@ void deserialize(PACKET *pkt, char data[sizeof(PACKET)])
 	q += sizeof(pkt->type);
 	pkt->seqn = *q;
 	q += sizeof(pkt->seqn);
-	pkt->total_size = *q;
-	q += sizeof(pkt->total_size);
 	pkt->file_byte_size = *q;
 	q += sizeof(pkt->file_byte_size);
 
@@ -114,7 +110,6 @@ void sendMessage(char message[BUFFER_SIZE], uint32_t file_byte_size, int message
 	pkt_mtx.lock();
 	pkt.type = messageType;
 	pkt.seqn = sendpktnum;
-	pkt.total_size = fragmentos;
 	strcpy(pkt.user, username);
 	memcpy(pkt._payload, message, BUFFER_SIZE);
 	pkt.file_byte_size = file_byte_size;

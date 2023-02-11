@@ -47,9 +47,7 @@ void *folderchecker(void *arg)
         int length;
         int i = 0;
         char buffer[EVENT_BUF_LEN];
-        //mtx_sync_update.lock();
         length = read(inotify_fd, buffer, EVENT_BUF_LEN);
-        //mtx_sync_update.unlock();
         while (i < length)
         {
             struct inotify_event *event = (struct inotify_event *)&buffer[i];
@@ -88,7 +86,7 @@ void *folderchecker(void *arg)
             }
             i += EVENT_SIZE + event->len;
         }
-        sleep(5);
+        sleep(1);
     }
     return 0;
 }

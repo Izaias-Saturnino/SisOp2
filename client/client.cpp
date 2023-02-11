@@ -4,9 +4,8 @@ int socketCtrl = -1;
 int socketCtrl2 = -1;
 char username[BUFFER_SIZE];
 
+mutex mtx_file_manipulation;
 vector<string> latest_downloads = {};
-
-mutex mtx_sync_update;
 
 bool wait_for_first_sync = true;
 
@@ -77,7 +76,7 @@ int main(int argc, char *argv[])
 
 			if (action.size() > 0 && sync_dir_active)
 			{
-				mtx_sync_update.lock();
+				mtx_file_manipulation.lock();
 				cout << "action size: " << action.size() << endl;
 				for (int i = 0; i < action.size(); i++)
 				{
@@ -99,7 +98,7 @@ int main(int argc, char *argv[])
 				latest_downloads.clear();
 				action.clear();
 				name.clear();
-				mtx_sync_update.unlock();
+				mtx_file_manipulation.unlock();
 			}
 			//cout << "command before thread:" << command << endl;
 			if (command_complete)
@@ -140,10 +139,12 @@ int main(int argc, char *argv[])
 				{
 					sync_dir_active = true;
 
+					mtx_file_manipulation.lock();
 					// deleta o diretório caso ele exista
 					delete_file("./sync_dir");
 					// cria o diretório
 					create_folder("./sync_dir");
+					mtx_file_manipulation.unlock();
 
 					// cria novo socket para lidar com as atualizações recebidas do servidor pelo cliente
 
@@ -262,7 +263,8 @@ int upload_to_server(int sock, char username[], std::string file_path, bool sync
 		file.clear();
 		file.seekg(0);
 
-		int max_fragments = file_size / BUFFER_SIZE;
+		uint32_t max_fragments = 0;
+		max_fragments = file_size / BUFFER_SIZE;
 
 		if (file_size % BUFFER_SIZE != 0)
 		{
@@ -328,15 +330,15 @@ int download_file_from_server(int sock, char username[], std::string file_path)
 	directory = directory + "/" + receivedFilePath;
 	cout << directory;
 	ofstream file_download;
+	mtx_file_manipulation.lock();
 	file_download.open(directory, ios_base::binary);
-	uint32_t size = pkt.total_size;
 	int received_fragments = 0;
 	vector<vector<char>> fragments = {};
-	while (received_fragments != size)
+	memset(pkt._payload, 0, BUFFER_SIZE);
+	cout << "read7" << endl;
+	readSocket(&pkt, sock);
+	while (pkt.type == MENSAGEM_ENVIO_PARTE_ARQUIVO)
 	{
-		memset(pkt._payload, 0, BUFFER_SIZE);
-		cout << "read7" << endl;
-		readSocket(&pkt, sock);
 		char buffer[BUFFER_SIZE];
 		vector<char> bufferconvert(BUFFER_SIZE);
 
@@ -351,7 +353,11 @@ int download_file_from_server(int sock, char username[], std::string file_path)
 		}
 		fragments.push_back(bufferconvert);
 		received_fragments++;
-		cout << "received_fragments: " << received_fragments << " & size: " << size << endl;
+		cout << "received_fragments: " << received_fragments << endl;
+
+		memset(pkt._payload, 0, BUFFER_SIZE);
+		cout << "read77" << endl;
+		readSocket(&pkt, sock);
 	}
 	for (int i = 0; i < fragments.size(); i++)
 	{
@@ -373,8 +379,7 @@ int download_file_from_server(int sock, char username[], std::string file_path)
 	}
 	latest_downloads.push_back(receivedFilePath);
 	file_download.close();
-	cout << "read23" << endl;
-	readSocket(&pkt, sock);
+	mtx_file_manipulation.unlock();
 	if (pkt.type != MENSAGEM_ARQUIVO_LIDO)
 	{
 		cout << "expected msg type: " << MENSAGEM_ARQUIVO_LIDO << endl;
@@ -409,7 +414,6 @@ void *handle_updates(void *arg)
 	PACKET pkt;
 
 	ofstream file_client;
-	uint32_t size = 0;
 	int received_fragments = 0;
 	vector<vector<char>> fragments = {};
 	string receivedFilePath;
@@ -429,9 +433,9 @@ void *handle_updates(void *arg)
 			string file_path = "./";
 			file_path = file_path + "sync_dir" + "/" + toRemoveFilePath;
 
-			mtx_sync_update.lock();
+			mtx_file_manipulation.lock();
 			int result = delete_file(file_path);
-			mtx_sync_update.unlock();
+			mtx_file_manipulation.unlock();
 
 			if (result == -1)
 			{
@@ -448,9 +452,8 @@ void *handle_updates(void *arg)
 			receivedFilePath = receivedFilePath.substr(receivedFilePath.find_last_of("/") + 1);
 			string directory = "./";
 			directory = directory + "sync_dir" + "/" + receivedFilePath;
-			mtx_sync_update.lock();
+			mtx_file_manipulation.lock();
 			file_client.open(directory, ios_base::binary);
-			size = pkt.total_size;
 
 			cout << directory << "\n"
 				 << endl;
@@ -509,7 +512,7 @@ void *handle_updates(void *arg)
 			}
 			latest_downloads.push_back(receivedFilePath);
 			file_client.close();
-			mtx_sync_update.unlock();
+			mtx_file_manipulation.unlock();
 		}
 		if (pkt.type == FIRST_SYNC_END && wait_for_first_sync)
 		{

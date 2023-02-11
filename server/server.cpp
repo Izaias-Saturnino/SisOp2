@@ -181,7 +181,7 @@ void *ThreadClient(void *arg)
             directory = "./";
             directory = directory + pkt.user + "/" + receivedFilePath;
             file_server.open(directory, ios_base::binary);
-            size = pkt.total_size;
+            size = pkt.file_byte_size % BUFFER_SIZE;
 
             cout << directory << "\n"
                  << endl;
@@ -351,7 +351,8 @@ int send_file_to_client(int sock, char username[], std::string file_path)
 		file.clear();
 		file.seekg(0);
 
-        int max_fragments = file_size/BUFFER_SIZE;
+        uint32_t max_fragments = 0;
+        max_fragments = file_size/BUFFER_SIZE;
 
 		if(file_size % BUFFER_SIZE != 0){
 			max_fragments++;
@@ -382,10 +383,11 @@ int send_file_to_client(int sock, char username[], std::string file_path)
                 readSocket(&pktreceived,sock);
             }*/
 		}
+        cout << "max_fragments: " << max_fragments << endl;
         cout << "write13" << endl;
         sendMessage(buffer, 1, MENSAGEM_ARQUIVO_LIDO, max_fragments, username, sock);
 		file.close();
-		cout << " arquivo lido"
+		cout << "arquivo lido"
 			 << "\n"
 			 << endl;
 		return 1;
