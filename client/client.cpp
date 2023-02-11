@@ -320,7 +320,7 @@ int download_file_from_server(int sock, char username[], std::string file_path)
 		cout << "Arquivo nao existe no servidor\n";
 		return 0;
 	}
-	int file_byte_size = pkt.file_byte_size;
+	uint32_t remainder_file_size = pkt.file_byte_size % BUFFER_SIZE;
 	string receivedFilePath;
 	receivedFilePath = string(pkt._payload);
 	receivedFilePath = receivedFilePath.substr(receivedFilePath.find_last_of("/") + 1);
@@ -331,7 +331,7 @@ int download_file_from_server(int sock, char username[], std::string file_path)
 	file_download.open(directory, ios_base::binary);
 	uint32_t size = pkt.total_size;
 	int received_fragments = 0;
-	vector<vector<char>> fragments(size);
+	vector<vector<char>> fragments = {};
 	while (received_fragments != size)
 	{
 		memset(pkt._payload, 0, BUFFER_SIZE);
@@ -349,17 +349,23 @@ int download_file_from_server(int sock, char username[], std::string file_path)
 		{
 			bufferconvert[i] = buffer[i];
 		}
-		if (pkt.type == MENSAGEM_ENVIO_PARTE_ARQUIVO || pkt.type == MENSAGEM_ENVIO_PARTE_ARQUIVO_SYNC)
-		{
-			fragments.at(received_fragments) = bufferconvert;
-			received_fragments++;
-		}
+		fragments.push_back(bufferconvert);
+		received_fragments++;
 		cout << "received_fragments: " << received_fragments << " & size: " << size << endl;
 	}
 	for (int i = 0; i < fragments.size(); i++)
 	{
 		for (int j = 0; j < fragments.at(i).size(); j++)
 		{
+			if (i == fragments.size() - 1)
+			{
+				if (j == remainder_file_size)
+				{
+					cout << "remainder break" << endl;
+					cout << "remainder_file_size: " << remainder_file_size << endl;
+					break;
+				}
+			}
 			char *frag = &(fragments.at(i).at(j));
 			// printf("%x ", (unsigned char)fragments.at(i).at(j));
 			file_download.write(frag, sizeof(char));
@@ -436,6 +442,7 @@ void *handle_updates(void *arg)
 		if (pkt.type == MENSAGEM_ENVIO_NOME_ARQUIVO)
 		{
 			remainder_file_size = pkt.file_byte_size % BUFFER_SIZE;
+			cout << "remainder_file_size: " << remainder_file_size << endl;
 
 			receivedFilePath = string(pkt._payload);
 			receivedFilePath = receivedFilePath.substr(receivedFilePath.find_last_of("/") + 1);
@@ -490,6 +497,8 @@ void *handle_updates(void *arg)
 					{
 						if (j == remainder_file_size)
 						{
+							cout << "remainder break" << endl;
+							cout << "remainder_file_size: " << remainder_file_size << endl;
 							break;
 						}
 					}

@@ -172,6 +172,7 @@ void *ThreadClient(void *arg)
         if (pkt.type == MENSAGEM_ENVIO_NOME_ARQUIVO)
         {
             remainder_file_size = pkt.file_byte_size % BUFFER_SIZE;
+            cout << "remainder_file_size: " << remainder_file_size << endl;
 
             string receivedFilePath;
 
@@ -238,6 +239,8 @@ void *ThreadClient(void *arg)
 				{
                     if(i == fragments.size() - 1){
                         if(j == remainder_file_size){
+                            cout << "remainder break" << endl;
+                            cout << "remainder_file_size: " << remainder_file_size << endl;
                             break;
                         }
                     }
