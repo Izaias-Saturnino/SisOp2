@@ -4,7 +4,6 @@ int socketCtrl = -1;
 int socketCtrl2 = -1;
 char username[BUFFER_SIZE];
 
-mutex mtx_file_manipulation;
 vector<string> latest_downloads = {};
 
 bool wait_for_first_sync = true;
