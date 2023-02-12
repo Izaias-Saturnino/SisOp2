@@ -323,6 +323,7 @@ int download_file_from_server(int sock, char username[], std::string file_path)
 		return 0;
 	}
 	uint32_t remainder_file_size = pkt.file_byte_size % BUFFER_SIZE;
+	cout << "pkt.file_byte_size: " << pkt.file_byte_size << endl;
 	string receivedFilePath;
 	receivedFilePath = string(pkt._payload);
 	receivedFilePath = receivedFilePath.substr(receivedFilePath.find_last_of("/") + 1);
@@ -365,7 +366,7 @@ int download_file_from_server(int sock, char username[], std::string file_path)
 		{
 			if (i == fragments.size() - 1)
 			{
-				if (j == remainder_file_size)
+				if (j == remainder_file_size && remainder_file_size != 0)
 				{
 					cout << "remainder break" << endl;
 					cout << "remainder_file_size: " << remainder_file_size << endl;
@@ -498,7 +499,7 @@ void *handle_updates(void *arg)
 				{
 					if (i == fragments.size() - 1)
 					{
-						if (j == remainder_file_size)
+						if (j == remainder_file_size && remainder_file_size != 0)
 						{
 							cout << "remainder break" << endl;
 							cout << "remainder_file_size: " << remainder_file_size << endl;
