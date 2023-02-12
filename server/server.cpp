@@ -41,83 +41,80 @@ int main(int argc, char *argv[])
     serv_addr.sin_addr = *((struct in_addr *)server->h_addr);
     bzero(&(serv_addr.sin_zero), 8);
 
-    if (bind(connectionSocket, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
-    {
+    while(bind(connectionSocket, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0){
         printf("ERROR on binding\n");
-        exit(0);
+        sleep(1);
     }
-    else
+    printf("server started\n");
+    while (true)
     {
-        printf("server started\n");
-        while (true)
+
+        /*listen to clients*/
+        listen(connectionSocket, 5);
+        clilen = sizeof(struct sockaddr_in);
+
+        newSockfd = accept(connectionSocket, (struct sockaddr *)&cli_addr, &clilen);
+
+        sigaction(SIGINT, &sigIntHandler, NULL);
+        if(END){
+            break;
+        }
+
+        if (newSockfd == -1){
+            cout << "ERROR on accept" << endl;
+        }
+        else
         {
+            connections.push_back(newSockfd);
 
-            /*listen to clients*/
-            listen(connectionSocket, 5);
-            clilen = sizeof(struct sockaddr_in);
+            /*inicio login*/
+            cout << "read0" << endl;
+            readSocket(&pkt, newSockfd);
+            strcpy(user, pkt.user);
+            if(pkt.type == MENSAGEM_LOGIN){
+                usuarioValido = loginManager->login(newSockfd, user);
 
-            newSockfd = accept(connectionSocket, (struct sockaddr *)&cli_addr, &clilen);
-
-            sigaction(SIGINT, &sigIntHandler, NULL);
-            if(END){
-                break;
-            }
-
-            if (newSockfd == -1){
-                cout << "ERROR on accept" << endl;
-            }
-            else
-            {
-                connections.push_back(newSockfd);
-
-                /*inicio login*/
-                cout << "read0" << endl;
-                readSocket(&pkt, newSockfd);
-                strcpy(user, pkt.user);
-                if(pkt.type == MENSAGEM_LOGIN){
-                    usuarioValido = loginManager->login(newSockfd, user);
-
-                    if (usuarioValido)
+                if (usuarioValido)
+                {
+                    string path = "./" + string(user);
+                    cout << path << "\n";
+                    if (!filesystem::is_directory(path))
                     {
-                        string path = "./" + string(user);
                         cout << path << "\n";
-                        if (!filesystem::is_directory(path))
-                        {
-                            cout << path << "\n";
-                            create_folder(path);
-                        }
-                        cout << "write1" << endl;
-                        sendMessage("OK", 1, MENSAGEM_USUARIO_VALIDO, 1, user, newSockfd); // Mensagem de usuario Valido
-
-                        while(pthread_create(&clientThread, NULL, ThreadClient, &newSockfd) != 0){ // CUIDADO: newSocket e não socket
-                            cout << "ERROR creating first input thread. retrying..." << endl;
-                        }
+                        create_folder(path);
                     }
-                    else
-                    {
-                        cout << "write2" << endl;
-                        sendMessage("Excedido numero de sessoes", 1, MENSAGEM_USUARIO_INVALIDO, 1, user, newSockfd); // Mensagem de usuario invalido
+                    cout << "write1" << endl;
+                    sendMessage("OK", 1, MENSAGEM_USUARIO_VALIDO, 1, user, newSockfd); // Mensagem de usuario Valido
+
+                    while(pthread_create(&clientThread, NULL, ThreadClient, &newSockfd) != 0){ // CUIDADO: newSocket e não socket
+                        cout << "ERROR creating first input thread. retrying..." << endl;
                     }
                 }
-                else if(pkt.type == GET_SYNC_DIR){
-                    //baixar todos os arquivos do syncdir do servidor
-                    vector<string> file_paths = get_file_list("./" + string(user));
-
-                    for(int i = 0; i < file_paths.size(); i++){
-                        send_file_to_client(newSockfd, user, file_paths[i]);
-                    }
-
-                    cout << "write3" << endl;
-                    sendMessage("", 1, FIRST_SYNC_END, 1, user, newSockfd);
-            
-                    //salvar o socket que pediu atualizações de sync dir
-                    loginManager->activate_sync_dir(user, newSockfd);
-
-                    cout << "active sync dir confirmed" << endl;
+                else
+                {
+                    cout << "write2" << endl;
+                    sendMessage("Excedido numero de sessoes", 1, MENSAGEM_USUARIO_INVALIDO, 1, user, newSockfd); // Mensagem de usuario invalido
                 }
+            }
+            else if(pkt.type == GET_SYNC_DIR){
+                //baixar todos os arquivos do syncdir do servidor
+                vector<string> file_paths = get_file_list("./" + string(user));
+
+                for(int i = 0; i < file_paths.size(); i++){
+                    send_file_to_client(newSockfd, user, file_paths[i]);
+                }
+
+                cout << "write3" << endl;
+                sendMessage("", 1, FIRST_SYNC_END, 1, user, newSockfd);
+        
+                //salvar o socket que pediu atualizações de sync dir
+                loginManager->activate_sync_dir(user, newSockfd);
+
+                cout << "active sync dir confirmed" << endl;
             }
         }
     }
+    
 
     cout << endl << "closing connections" << endl;
     close_connections();
@@ -147,7 +144,6 @@ void *ThreadClient(void *arg)
     char resposta[40];
     char user[BUFFER_SIZE];
     ofstream file_server;
-    uint32_t size=0;
     int received_fragments=0;
     vector<vector<char>> fragments = {};
     string directory;
@@ -181,26 +177,12 @@ void *ThreadClient(void *arg)
             directory = "./";
             directory = directory + pkt.user + "/" + receivedFilePath;
             file_server.open(directory, ios_base::binary);
-            size = pkt.file_byte_size % BUFFER_SIZE;
 
             cout << directory << "\n"
                  << endl;
 
             fragments.clear();
             received_fragments = 0;
-
-            if(size == 0){
-                file_server.close();
-
-                vector<int> sync_dir_sockets = loginManager->get_active_sync_dir(user);
-
-                cout << "directory: " << directory << endl;
-
-                for(int i = 0; i < sync_dir_sockets.size(); i++){
-                    cout << "sync_dir_sockets[" << i << "]: " << sync_dir_sockets[i] << endl;
-                    send_file_to_client(sync_dir_sockets[i],user,directory);
-                }
-            }
         }
         if(pkt.type == MENSAGEM_ENVIO_PARTE_ARQUIVO_SYNC){
             last_message_sync = true;
@@ -230,7 +212,7 @@ void *ThreadClient(void *arg)
                 cout << "write26" << endl;
 			    sendMessage("", 1, ACK, 1, user, sockfd);
 		    }*/
-            cout << "received_fragments: " << received_fragments << " & size: " << size << endl;
+            cout << "received_fragments: " << received_fragments << endl;
         }
         if(pkt.type == MENSAGEM_ARQUIVO_LIDO){
             cout << "reasembling file" << endl;
@@ -238,7 +220,7 @@ void *ThreadClient(void *arg)
 				for (int j = 0; j < fragments.at(i).size(); j++)
 				{
                     if(i == fragments.size() - 1){
-                        if(j == remainder_file_size){
+                        if(j == remainder_file_size && remainder_file_size != 0){
                             cout << "remainder break" << endl;
                             cout << "remainder_file_size: " << remainder_file_size << endl;
                             break;

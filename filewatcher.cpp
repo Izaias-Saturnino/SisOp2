@@ -7,6 +7,7 @@
 #include <fcntl.h> 
 #include <string>
 #include <vector>
+#include <mutex>
 
 #define FILE_CREATED 1
 #define FILE_DELETED 2
@@ -24,6 +25,7 @@ bool command_complete = true;
 
 vector<string> name;
 vector<int> action;
+mutex mtx_file_manipulation;
 
 void *folderchecker(void *arg)
 {
@@ -47,6 +49,7 @@ void *folderchecker(void *arg)
         int length;
         int i = 0;
         char buffer[EVENT_BUF_LEN];
+        mtx_file_manipulation.lock();
         length = read(inotify_fd, buffer, EVENT_BUF_LEN);
         while (i < length)
         {
@@ -86,7 +89,8 @@ void *folderchecker(void *arg)
             }
             i += EVENT_SIZE + event->len;
         }
-        sleep(5);
+        mtx_file_manipulation.unlock();
+        usleep(20 * 1000);
     }
     return 0;
 }
