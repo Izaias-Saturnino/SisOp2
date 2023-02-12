@@ -47,7 +47,7 @@ int main(int argc, char *argv[])
         //printf("ERROR on binding\n");
         sleep(1);
     }
-    printf("server started\n");
+    printf("server started\n\n");
     while (true)
     {
 
@@ -275,7 +275,7 @@ void *ThreadClient(void *arg)
             toRemoveFilePath = string(pkt._payload);
             toRemoveFilePath = toRemoveFilePath.substr(toRemoveFilePath.find_last_of("/") + 1);
             cout << "removing file" << endl;
-            cout << "file name: " << toRemoveFilePath << endl;
+            cout << "file name: " << toRemoveFilePath << endl<< endl;
             string file_path = "./";
             file_path = file_path + pkt.user + "/" + toRemoveFilePath;
 
