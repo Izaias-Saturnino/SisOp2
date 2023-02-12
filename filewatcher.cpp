@@ -89,9 +89,8 @@ void *folderchecker(void *arg)
             }
             i += EVENT_SIZE + event->len;
         }
-        sleep(1);
         mtx_file_manipulation.unlock();
-
+        usleep(20 * 1000);
     }
     return 0;
 }
