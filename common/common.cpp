@@ -94,10 +94,10 @@ int readSocket(PACKET *pkt, int sock){
 	// 	sleep(60);
 	// }
 
-	cout << "pkt.type: " << pkt->type;
-	cout << ". readpktnum: " << readpktnum;
-	cout << ". pkt.seqn: " << pkt->seqn;
-	cout << ". sock: " << sock << endl;
+	//cout << "pkt.type: " << pkt->type;
+	//cout << ". readpktnum: " << readpktnum;
+	//cout << ". pkt.seqn: " << pkt->seqn;
+	//cout << ". sock: " << sock << endl;
 	readpktnum++;
 
 	return n;
@@ -143,9 +143,9 @@ void sendMessage(char message[BUFFER_SIZE], uint32_t file_byte_size, int message
 		//}
 	}
 
-	cout << "pkt.type: " << pkt.type;
-	cout << ". sendpktnum: " << sendpktnum;
-	cout << ". sock: " << sockfd << endl;
+	//cout << "pkt.type: " << pkt.type;
+	//cout << ". sendpktnum: " << sendpktnum;
+	//cout << ". sock: " << sockfd << endl;
 	sendpktnum++;
 	pkt_mtx.unlock();
 }

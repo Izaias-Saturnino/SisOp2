@@ -31,8 +31,10 @@ int main(int argc, char *argv[])
         imprimeServerError();
     }
 
-    if ((connectionSocket = socket(AF_INET, SOCK_STREAM, 0)) == -1) /// Verifica IP valido
+    if ((connectionSocket = socket(AF_INET, SOCK_STREAM, 0)) == -1){ /// Verifica IP valido
         printf("ERROR opening socket\n");
+        return 0;
+    }
 
     connections.push_back(connectionSocket);
 
@@ -42,7 +44,7 @@ int main(int argc, char *argv[])
     bzero(&(serv_addr.sin_zero), 8);
 
     while(bind(connectionSocket, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0){
-        printf("ERROR on binding\n");
+        //printf("ERROR on binding\n");
         sleep(1);
     }
     printf("server started\n");
@@ -68,7 +70,7 @@ int main(int argc, char *argv[])
             connections.push_back(newSockfd);
 
             /*inicio login*/
-            cout << "read0" << endl;
+            //cout << "read0" << endl;
             readSocket(&pkt, newSockfd);
             strcpy(user, pkt.user);
             if(pkt.type == MENSAGEM_LOGIN){
@@ -77,22 +79,23 @@ int main(int argc, char *argv[])
                 if (usuarioValido)
                 {
                     string path = "./" + string(user);
-                    cout << path << "\n";
+                    //cout << path << "\n";
+                    cout << "user " + string(user) + " logged in" << endl;
                     if (!filesystem::is_directory(path))
                     {
-                        cout << path << "\n";
+                        //cout << path << "\n";
                         create_folder(path);
                     }
-                    cout << "write1" << endl;
+                    //cout << "write1" << endl;
                     sendMessage("OK", 1, MENSAGEM_USUARIO_VALIDO, 1, user, newSockfd); // Mensagem de usuario Valido
 
                     while(pthread_create(&clientThread, NULL, ThreadClient, &newSockfd) != 0){ // CUIDADO: newSocket e não socket
-                        cout << "ERROR creating first input thread. retrying..." << endl;
+                        //cout << "ERROR creating client thread. retrying..." << endl;
                     }
                 }
                 else
                 {
-                    cout << "write2" << endl;
+                    //cout << "write2" << endl;
                     sendMessage("Excedido numero de sessoes", 1, MENSAGEM_USUARIO_INVALIDO, 1, user, newSockfd); // Mensagem de usuario invalido
                 }
             }
@@ -104,18 +107,17 @@ int main(int argc, char *argv[])
                     send_file_to_client(newSockfd, user, file_paths[i]);
                 }
 
-                cout << "write3" << endl;
+                //cout << "write3" << endl;
                 sendMessage("", 1, FIRST_SYNC_END, 1, user, newSockfd);
         
                 //salvar o socket que pediu atualizações de sync dir
                 loginManager->activate_sync_dir(user, newSockfd);
 
-                cout << "active sync dir confirmed" << endl;
+                cout << string(user) << " actived sync dir" << endl;
             }
         }
     }
     
-
     cout << endl << "closing connections" << endl;
     close_connections();
 
@@ -155,31 +157,33 @@ void *ThreadClient(void *arg)
     while (true)
     {
         memset(pkt._payload, 0, BUFFER_SIZE);
-        cout << "read1" << endl;
+        //cout << "read1" << endl;
         readSocket(&pkt, sockfd);
         strcpy(user, pkt.user);
-        cout << "pkt.type: " << pkt.type << ". ";
+        //cout << "pkt.type: " << pkt.type << ". ";
  
         if (pkt.type == MENSAGEM_LOGOUT)
         {
+            cout << string(user) << " logout" << endl;
             loginManager->Logout(user, sockfd, resposta);
             break;
         }
         if (pkt.type == MENSAGEM_ENVIO_NOME_ARQUIVO)
         {
             remainder_file_size = pkt.file_byte_size % BUFFER_SIZE;
-            cout << "remainder_file_size: " << remainder_file_size << endl;
+            //cout << "remainder_file_size: " << remainder_file_size << endl;
 
             string receivedFilePath;
 
             receivedFilePath = string(pkt._payload);
             receivedFilePath = receivedFilePath.substr(receivedFilePath.find_last_of("/") + 1);
+            cout << "receiving file" << endl;
+            cout << "file name: " << receivedFilePath << endl;
             directory = "./";
             directory = directory + pkt.user + "/" + receivedFilePath;
             file_server.open(directory, ios_base::binary);
 
-            cout << directory << "\n"
-                 << endl;
+            //cout << directory << "\n" << endl;
 
             fragments.clear();
             received_fragments = 0;
@@ -202,9 +206,9 @@ void *ThreadClient(void *arg)
                 bufferconvert[i] = buffer[i];
             }
             
-            cout << "received_fragments: " << received_fragments;
-            cout << ". pkt.file_byte_size: " << pkt.file_byte_size;
-            cout << ". fragments.size(): " << fragments.size() << endl;
+            //cout << "received_fragments: " << received_fragments;
+            //cout << ". pkt.file_byte_size: " << pkt.file_byte_size;
+            //cout << ". fragments.size(): " << fragments.size() << endl;
             fragments.push_back(bufferconvert);
             received_fragments++;
 
@@ -212,7 +216,7 @@ void *ThreadClient(void *arg)
                 cout << "write26" << endl;
 			    sendMessage("", 1, ACK, 1, user, sockfd);
 		    }*/
-            cout << "received_fragments: " << received_fragments << endl;
+            //cout << "received_fragments: " << received_fragments << endl;
         }
         if(pkt.type == MENSAGEM_ARQUIVO_LIDO){
             cout << "reasembling file" << endl;
@@ -221,8 +225,8 @@ void *ThreadClient(void *arg)
 				{
                     if(i == fragments.size() - 1){
                         if(j == remainder_file_size && remainder_file_size != 0){
-                            cout << "remainder break" << endl;
-                            cout << "remainder_file_size: " << remainder_file_size << endl;
+                            //cout << "remainder break" << endl;
+                            //cout << "remainder_file_size: " << remainder_file_size << endl;
                             break;
                         }
                     }
@@ -232,31 +236,35 @@ void *ThreadClient(void *arg)
 				}
 			}
             file_server.close();
+            cout << "file reasembled" << endl;
 
             vector<int> sync_dir_sockets = loginManager->get_active_sync_dir(user);
 
-            cout << "directory: " << directory << endl;
+            cout << "file location: " << directory << endl;
 
-            cout << "sync_dir_sockets.size(): " << sync_dir_sockets.size() << endl;
+            //cout << "sync_dir_sockets.size(): " << sync_dir_sockets.size() << endl;
 
+            cout << "propagating file" << endl;
             for(int i = 0; i < sync_dir_sockets.size(); i++){
                 if(last_message_sync){
                     if(sync_dir_sockets[i] == loginManager->get_sender_sync_sock(sockfd)){
-                        cout << "sync_dir_sockets[" << i << "]: " << sync_dir_sockets[i] << " não recebe o arquivo." << endl;
+                        //cout << "sync_dir_sockets[" << i << "]: " << sync_dir_sockets[i] << " não recebe o arquivo." << endl;
                         continue;
                     }
                 }
-                cout << "sync_dir_sockets[" << i << "]: " << sync_dir_sockets[i] << endl;
+                //cout << "sync_dir_sockets[" << i << "]: " << sync_dir_sockets[i] << endl;
                 send_file_to_client(sync_dir_sockets[i],user,directory);
             }
+            cout << "file propagated" << endl;
             last_message_sync = false;
         }
         if (pkt.type == MENSAGEM_PEDIDO_LISTA_ARQUIVOS_SERVIDOR)
         {
+            cout << "sending " << string(user) << " file list" << endl;
             vector<string> infos = print_file_list("./" + string(user));
             for (int i = 0; i < infos.size(); i++)
             {
-                cout << "write6" << endl;
+                //cout << "write6" << endl;
                 sendMessage((char*)infos.at(i).c_str(), 1, MENSAGEM_ITEM_LISTA_DE_ARQUIVOS , 1, user, sockfd);
             }
             sendMessage("", 1, ACK , 1, user, sockfd);
@@ -266,24 +274,26 @@ void *ThreadClient(void *arg)
 
             toRemoveFilePath = string(pkt._payload);
             toRemoveFilePath = toRemoveFilePath.substr(toRemoveFilePath.find_last_of("/") + 1);
+            cout << "removing file" << endl;
+            cout << "file name: " << toRemoveFilePath << endl;
             string file_path = "./";
             file_path = file_path + pkt.user + "/" + toRemoveFilePath;
 
             int result = delete_file(file_path);
 
             if(result == -1){
-				cout << "could not delete file" << endl;
-                cout << "file path:" << endl;
-			    cout << file_path << endl;
+				//cout << "could not delete file" << endl;
+                //cout << "file path:" << endl;
+			    //cout << file_path << endl;
 			}
 
             vector<int> sync_dir_sockets = loginManager->get_active_sync_dir(user);
 
-            cout << "toRemoveFilePath: " << toRemoveFilePath << endl;
+            //cout << "toRemoveFilePath: " << toRemoveFilePath << endl;
 
             for(int i = 0; i < sync_dir_sockets.size(); i++){
-                cout << "sync_dir_sockets[" << i << "]: " << sync_dir_sockets[i] << endl;
-                cout << "write8" << endl;
+                //cout << "sync_dir_sockets[" << i << "]: " << sync_dir_sockets[i] << endl;
+                //cout << "write8" << endl;
                 sendMessage((char *)toRemoveFilePath.c_str(), 1, MENSAGEM_DELETAR_NOS_CLIENTES, 1, user, sync_dir_sockets[i]); // pedido de delete enviado para o cliente
             }
         }
@@ -314,14 +324,13 @@ int send_file_to_client(int sock, char username[], std::string file_path)
 	char buffer[BUFFER_SIZE];
     PACKET pktreceived;
 	ifstream file;
-    cout<< "file_path: " << file_path << endl;
+    cout << "sending file" << endl;
+    cout << "file path: " << file_path << endl;
 	file.open(file_path, ios_base::binary);
 	if (!file.is_open())
 	{
-		cout << " falha ao abrir"
-			 << "\n"
-			 << endl;
-        cout << "write10" << endl;
+		cout << "error opening file" << "\n" << endl;
+        //cout << "write10" << endl;
         sendMessage("", 1, MENSAGEM_FALHA_ENVIO, 1, username, sock);
 		return 0;
 	}
@@ -329,7 +338,7 @@ int send_file_to_client(int sock, char username[], std::string file_path)
 	{
 		file.seekg(0, file.end);
 		uint32_t file_size = file.tellg();
-		cout << file_size << "\n";
+		//cout << "file_size: " << file_size << "\n";
 		file.clear();
 		file.seekg(0);
 
@@ -340,9 +349,9 @@ int send_file_to_client(int sock, char username[], std::string file_path)
 			max_fragments++;
 		}
 
-        cout << "max_fragments: " << max_fragments << endl;
+        //cout << "max_fragments: " << max_fragments << endl;
 
-        cout << "write11" << endl;
+        //cout << "write11" << endl;
 		sendMessage((char *)file_path.c_str(), file_size, MENSAGEM_ENVIO_NOME_ARQUIVO, max_fragments, username, sock);
         int i;
         int counter = 0;
@@ -356,20 +365,20 @@ int send_file_to_client(int sock, char username[], std::string file_path)
                 //printf("%x ", (unsigned char)buffer[i]);
             }
             
-            cout << "write12" << endl;
+            //cout << "write12" << endl;
 			sendMessage(buffer, 1, MENSAGEM_ENVIO_PARTE_ARQUIVO, max_fragments, username, sock);
             counter++;
-            cout << "counter: " << counter << endl;
+            //cout << "counter: " << counter << endl;
             /*if(counter % 300 == 299){
                 cout << "read30" << endl;
                 readSocket(&pktreceived,sock);
             }*/
 		}
-        cout << "max_fragments: " << max_fragments << endl;
-        cout << "write13" << endl;
+        //cout << "max_fragments: " << max_fragments << endl;
+        //cout << "write13" << endl;
         sendMessage(buffer, 1, MENSAGEM_ARQUIVO_LIDO, max_fragments, username, sock);
 		file.close();
-		cout << "arquivo lido"
+		cout << "file received"
 			 << "\n"
 			 << endl;
 		return 1;

@@ -23,5 +23,4 @@ class LoginManager{
         int get_sender_sync_sock(int sock);
     private:
         void criarNovoUsuario(char nome[],int socketCli);
-        bool verificaQuantidadeUsuarios(char nome[],int socketCli);
 };

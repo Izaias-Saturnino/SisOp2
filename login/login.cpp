@@ -30,7 +30,7 @@ void LoginManager::criarNovoUsuario(char nome[],int socketCli){
 
     mtx_list.lock();
     this->listaDeUsuarios.push_back(conta);
-    this->printListaUsuario();
+    //this->printListaUsuario();
     mtx_list.unlock();
 }
 
@@ -79,12 +79,12 @@ bool LoginManager::login(int socketCli, char nome[]){
             {
                 (*it).sessaoAtiva1 = true;
                 (*it).socketClient1 = socketCli;
-                cout << "Conta da pos 1 ativada. socket: " << socketCli << endl;
+                //cout << "Conta da pos 1 ativada. socket: " << socketCli << endl;
             }
             else if((*it).sessaoAtiva2 == false){
                 (*it).sessaoAtiva2 = true;
                 (*it).socketClient2 = socketCli;
-                cout << "Conta da pos 2 ativada. socket: " << socketCli << endl;
+                //cout << "Conta da pos 2 ativada. socket: " << socketCli << endl;
             }
             else{
                 cout << "Excedido o número de sessoes possiveis\n" << endl;
@@ -96,7 +96,7 @@ bool LoginManager::login(int socketCli, char nome[]){
     mtx_sessoes.unlock();
 
     if(achou != true){
-        cout<<"Usuário não encontrado!"<<endl<< "Criando um novo usuario...\n"<<endl;
+        //cout<<"Usuário não encontrado!"<<endl<< "Criando um novo usuario...\n"<<endl;
         this->criarNovoUsuario(nome,socketCli);
     }
 
@@ -112,11 +112,11 @@ void LoginManager::activate_sync_dir(char user[], int socketCli){
         if(strcmp(user, (*it).nome) == 0){
             if((*it).sync1 == -1){
                 (*it).sync1 = socketCli;
-                cout << "socket: " << socketCli << " foi guardado em sync1" << endl;
+                //cout << "socket: " << socketCli << " foi guardado em sync1" << endl;
             }
             else if((*it).sync2 == -1){
                 (*it).sync2 = socketCli;
-                cout << "socket: " << socketCli << " foi guardado em sync2" << endl;
+                //cout << "socket: " << socketCli << " foi guardado em sync2" << endl;
             }
             break;
         }
@@ -132,11 +132,11 @@ vector<int> LoginManager::get_active_sync_dir(char user[]){
         if(strcmp(user, (*it).nome) == 0){
             if((*it).sync1 != -1){
                 sockets.push_back((*it).sync1);
-                cout << "sync1 tem o valor: " << (*it).sync1 << endl;
+                //cout << "sync1 tem o valor: " << (*it).sync1 << endl;
             }
             if((*it).sync2 != -1){
                 sockets.push_back((*it).sync2);
-                cout << "sync2 tem o valor: " << (*it).sync2 << endl;
+                //cout << "sync2 tem o valor: " << (*it).sync2 << endl;
             }
             break;
         }
@@ -150,11 +150,11 @@ int LoginManager::get_sender_sync_sock(int sock){
     for(it = this->listaDeUsuarios.begin(); it != this->listaDeUsuarios.end(); it++){
         if((*it).socketClient1 == sock){
             sync_sock = (*it).sync1;
-            cout << "sync1 não recebe o arquivo. sock: " << (*it).sync1 << endl;
+            //cout << "sync1 não recebe o arquivo. sock: " << (*it).sync1 << endl;
         }
         else if((*it).socketClient2 == sock){
             sync_sock = (*it).sync2;
-            cout << "sync2 não recebe o arquivo. sock: " << (*it).sync2 << endl;
+            //cout << "sync2 não recebe o arquivo. sock: " << (*it).sync2 << endl;
         }
         break;
     }
