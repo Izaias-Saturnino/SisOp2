@@ -28,9 +28,8 @@ using namespace std;
 #define MENSAGEM_RESPOSTA_LOGOUT 5
 #define MENSAGEM_ENVIO_NOME_ARQUIVO 10
 #define MENSAGEM_ENVIO_PARTE_ARQUIVO 11
-#define MENSAGEM_ARQUIVO_LIDO 12
-#define MENSAGEM_ENVIO_SYNC 13
-#define MENSAGEM_ENVIO_TAMANHO_ARQUIVO 14
+#define MENSAGEM_ENVIO_SYNC 12
+#define MENSAGEM_ENVIO_TAMANHO_ARQUIVO 13
 #define MENSAGEM_PEDIDO_LISTA_ARQUIVOS_SERVIDOR 20
 #define MENSAGEM_ITEM_LISTA_DE_ARQUIVOS 21
 #define MENSAGEM_DELETAR_NO_SERVIDOR 30
@@ -45,7 +44,7 @@ using namespace std;
 #define BUFFER_SIZE 256
 
 typedef struct {
-    uint16_t type; //Tipo do pacote (p.ex. DATA | CMD)
+    uint16_t type; //Tipo do pacote
     uint16_t seqn; //Número de sequência
     char _payload[BUFFER_SIZE]; //Dados do pacote
 }PACKET;

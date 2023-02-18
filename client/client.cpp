@@ -133,7 +133,7 @@ int main(int argc, char *argv[])
 					}
 					cout << "listing ended" << endl;
 				}
-				else if (command.find("upload ") != string::npos)
+				else if (command.find("upload ") == 0)
 				{
 					cout << "uploading file" << endl;
 					string path = command.substr(command.find("upload ") + 7);
@@ -145,7 +145,7 @@ int main(int argc, char *argv[])
 					mtx_file_manipulation.unlock();
 					cout << "file uploaded" << endl;
 				}
-				else if (command == ("get_sync_dir") && !sync_dir_active)
+				else if (command == "get_sync_dir" && !sync_dir_active)
 				{
 					sync_dir_active = true;
 
@@ -214,7 +214,7 @@ int main(int argc, char *argv[])
 					}
 					cout << "sync_dir active" << endl;
 				}
-				else if (command.find("download ") != string::npos)
+				else if (command.find("download ") == 0)
 				{
 					string path = command.substr(command.find("download ") + 9);
 					cout << "downloading file" << endl;
@@ -222,7 +222,7 @@ int main(int argc, char *argv[])
 					download_file_from_server(sockfd, path);
 					cout << "file downloaded" << endl;
 				}
-				else if (command.find("delete ") != string::npos)
+				else if (command.find("delete ") == 0)
 				{
 					string path = command.substr(command.find("delete ") + 7);
 					cout << "sending delete request" << endl;

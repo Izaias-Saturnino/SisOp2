@@ -236,7 +236,7 @@ void sendFile(int sock, string file_path){
 		sendMessage(buffer, MENSAGEM_ENVIO_PARTE_ARQUIVO, sock);
 	}
 	cout << "write13" << endl;
-	sendMessage(buffer, MENSAGEM_ARQUIVO_LIDO, sock);
+	sendMessage(buffer, ACK, sock);
 	file.close();
 	cout << "file received"
 			<< "\n"
