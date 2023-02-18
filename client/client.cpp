@@ -71,7 +71,7 @@ int main(int argc, char *argv[])
 			 << endl;
 		while (true)
 		{
-			cout<<"size of packet: "<<sizeof(PACKET)<<endl;
+			//cout<<"size of packet: " << sizeof(PACKET) << endl;
 			sigaction(SIGINT, &sigIntHandler, NULL);
 
 			if (action.size() > 0 && sync_dir_active)
@@ -88,7 +88,7 @@ int main(int argc, char *argv[])
 							continue;
 						}
 						cout << "write111" << endl;
-						sendMessage((char*)true, MENSAGEM_ENVIO_SYNC, sockfd);
+						sendMessage("", MENSAGEM_ENVIO_SYNC, sockfd);
 						upload_to_server(sockfd, "./sync_dir/" + name[i]);
 					}
 					if (action[i] == FILE_DELETED)
@@ -102,7 +102,7 @@ int main(int argc, char *argv[])
 				name.clear();
 				mtx_file_manipulation.unlock();
 			}
-			cout << "command before thread:" << command << endl;
+			//cout << "command before thread:" << command << endl;
 			if (command_complete)
 			{
 				cout << "command inside main thread:" << command << endl;
@@ -140,7 +140,9 @@ int main(int argc, char *argv[])
 					cout << "file path: " << path << endl;
 					cout << path << "\n";
 					cout << "write112" << endl;
+					mtx_file_manipulation.lock();
 					upload_to_server(sockfd, path);
+					mtx_file_manipulation.unlock();
 					cout << "file uploaded" << endl;
 				}
 				else if (command == ("get_sync_dir") && !sync_dir_active)
@@ -188,7 +190,7 @@ int main(int argc, char *argv[])
 
 					// informa o servidor que se está recebendo atualizações
 					cout << "write3" << endl;
-					sendMessage("", GET_SYNC_DIR, sockfd_sync);
+					sendMessage(username, GET_SYNC_DIR, sockfd_sync);
 
 					// cria nova thread para lidar com atualizações
 					int i = pthread_create(&thr1, NULL, handle_updates, &sockfd_sync) != 0;
@@ -257,9 +259,7 @@ void verificaRecebimentoParametros(int argc)
 
 void upload_to_server(int sock, string file_path)
 {
-	mtx_file_manipulation.lock();
 	sendFile(sock, file_path);
-	mtx_file_manipulation.unlock();
 }
 
 int download_file_from_server(int sock, string file_path)
@@ -276,7 +276,7 @@ int download_file_from_server(int sock, string file_path)
 	}
 
 	string file_name = getFileName(file_path);
-	string directory = "./sync_dir/" + file_name;
+	string directory = "./" + file_name;
 	mtx_file_manipulation.lock();
 	receiveFile(sock, directory, &pkt);
 	latest_downloads.push_back(file_name);

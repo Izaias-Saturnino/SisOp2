@@ -45,6 +45,7 @@ void LoginManager::Logout(char user[],int socket, char resposta[]){
                 (*it).sessaoAtiva1 = false;
                 close((*it).socketClient1);
                 close((*it).sync1);
+                (*it).socketClient1 = -1;
                 (*it).sync1 = -1;
                 strcpy(resposta,"Sessao 1 desconectada");
             }
@@ -52,6 +53,7 @@ void LoginManager::Logout(char user[],int socket, char resposta[]){
                 (*it).sessaoAtiva2 = false;
                 close((*it).socketClient2);
                 close((*it).sync2);
+                (*it).socketClient2 = -1;
                 (*it).sync2 = -1;
                 strcpy(resposta,"Sessao 2 desconectada");
             }

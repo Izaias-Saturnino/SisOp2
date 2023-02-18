@@ -155,7 +155,7 @@ void *ThreadClient(void *arg)
     int sockfd = sock_user.sock;
     char user[BUFFER_SIZE];
     strcpy(user, sock_user.user);
-    
+
     PACKET pkt;
     char resposta[40];
     ofstream file_server;
@@ -181,7 +181,7 @@ void *ThreadClient(void *arg)
             break;
         }
         if (pkt.type == MENSAGEM_ENVIO_SYNC){
-            file_received_from_sync = (bool)pkt._payload;
+            file_received_from_sync = true;
         }
         if (pkt.type == MENSAGEM_ENVIO_NOME_ARQUIVO)
         {

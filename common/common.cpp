@@ -135,7 +135,7 @@ vector<vector<char>> receiveFileData(int sock){
 	{
 		vector<char> buffer(BUFFER_SIZE);
 
-		for (int i = 0; i < buffer.size(); i++)
+		for (int i = 0; i < BUFFER_SIZE; i++)
 		{
 			buffer[i] = pkt._payload[i];
 		}
@@ -184,7 +184,6 @@ void receiveFile(int sock, string file_path, PACKET *pkt_addr){
 	uint32_t file_size = *file_size_addr;
 
 	cout << "file_size: " << file_size << endl;
-	sleep(10);
 
 	vector<vector<char>> file_data = receiveFileData(sock);
 
@@ -221,7 +220,6 @@ void sendFile(int sock, string file_path){
 	cout << "write122" << endl;
 	sendMessage((char*)&file_size, MENSAGEM_ENVIO_TAMANHO_ARQUIVO, sock);
 	cout << "file_size: " << file_size << endl;
-	sleep(10);
 
 	//send file pkts
 	char buffer[BUFFER_SIZE];
