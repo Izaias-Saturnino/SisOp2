@@ -15,34 +15,40 @@
 #include <signal.h>
 #include <ctime>
 #include <mutex>
+#include <fstream>
+#include <vector>
 
 using namespace std;
 
+//messages
 #define MENSAGEM_LOGIN 1
 #define MENSAGEM_LOGOUT 2
 #define MENSAGEM_USUARIO_INVALIDO 3
 #define MENSAGEM_USUARIO_VALIDO 4
 #define MENSAGEM_RESPOSTA_LOGOUT 5
+#define MENSAGEM_NOME_USUARIO 6
 #define MENSAGEM_ENVIO_NOME_ARQUIVO 10
 #define MENSAGEM_ENVIO_PARTE_ARQUIVO 11
 #define MENSAGEM_ARQUIVO_LIDO 12
-#define MENSAGEM_ENVIO_PARTE_ARQUIVO_SYNC 13
+#define MENSAGEM_ENVIO_SYNC 13
+#define MENSAGEM_ENVIO_TAMANHO_ARQUIVO 14
 #define MENSAGEM_PEDIDO_LISTA_ARQUIVOS_SERVIDOR 20
 #define MENSAGEM_ITEM_LISTA_DE_ARQUIVOS 21
 #define MENSAGEM_DELETAR_NO_SERVIDOR 30
 #define MENSAGEM_DELETAR_NOS_CLIENTES 31
-#define MENSAGEM_DOWNLOAD_NO_SERVIDOR 40
+#define MENSAGEM_DOWNLOAD_FROM_SERVER 40
 #define MENSAGEM_FALHA_ENVIO 41
 #define GET_SYNC_DIR 50
 #define FIRST_SYNC_END 51
 #define ACK 60
+
+//consts
 #define BUFFER_SIZE 256
+typedef uint32_t file_byte_size;
 
 typedef struct {
     uint16_t type; //Tipo do pacote (p.ex. DATA | CMD)
     uint16_t seqn; //Número de sequência
-    uint32_t file_byte_size; //Comprimento do payload
-    char user[BUFFER_SIZE];
     char _payload[BUFFER_SIZE]; //Dados do pacote
 }PACKET;
 
@@ -60,6 +66,8 @@ typedef struct usuario USUARIO;
 void serialize(PACKET *pkt, char data[sizeof(PACKET)]);
 void deserialize(PACKET *pkt, char data[sizeof(PACKET)]);
 int readSocket(PACKET *pkt, int sock);
-void sendMessage(char message[BUFFER_SIZE], uint32_t file_byte_size, int messageType, int fragmentos, char username[BUFFER_SIZE], int sockfd);
-
-
+void sendMessage(char message[BUFFER_SIZE], int messageType, int sockfd);
+//returns the amount of bytes written
+void receiveFile(int sock, string file_path, PACKET *pkt_addr);
+void sendFile(int sock, string file_path);
+string getFileName(string file_path);
