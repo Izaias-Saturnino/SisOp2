@@ -72,10 +72,10 @@ int readSocket(PACKET *pkt, int sock){
 	// 	sleep(60);
 	// }
 
-	//cout << "pkt.type: " << pkt->type;
-	//cout << ". readpktnum: " << readpktnum;
-	//cout << ". pkt.seqn: " << pkt->seqn;
-	//cout << ". sock: " << sock << endl;
+	cout << "pkt.type: " << pkt->type;
+	cout << ". readpktnum: " << readpktnum;
+	cout << ". pkt.seqn: " << pkt->seqn;
+	cout << ". sock: " << sock << endl;
 	readpktnum++;
 
 	return n;
@@ -119,9 +119,9 @@ void sendMessage(char message[BUFFER_SIZE], int messageType, int sockfd)
 		//}
 	}
 
-	//cout << "pkt.type: " << pkt.type;
-	//cout << ". sendpktnum: " << sendpktnum;
-	//cout << ". sock: " << sockfd << endl;
+	cout << "pkt.type: " << pkt.type;
+	cout << ". sendpktnum: " << sendpktnum;
+	cout << ". sock: " << sockfd << endl;
 	sendpktnum++;
 	pkt_mtx.unlock();
 }
@@ -129,7 +129,7 @@ void sendMessage(char message[BUFFER_SIZE], int messageType, int sockfd)
 vector<vector<char>> receiveFileData(int sock){
 	PACKET pkt;
 	vector<vector<char>> file_data = {};
-	//cout << "read7" << endl;
+	cout << "read7" << endl;
 	readSocket(&pkt, sock);
 	while (pkt.type == MENSAGEM_ENVIO_PARTE_ARQUIVO)
 	{
@@ -141,7 +141,8 @@ vector<vector<char>> receiveFileData(int sock){
 		}
 		file_data.push_back(buffer);
 
-		//cout << "read77" << endl;
+		
+		cout << "read77" << endl;
 		readSocket(&pkt, sock);
 	}
 
@@ -159,8 +160,8 @@ void writeFileData(vector<vector<char>> file_data, string directory, int remaind
 			{
 				if (j == remainder_file_size && remainder_file_size != 0)
 				{
-					//cout << "remainder break" << endl;
-					//cout << "remainder_file_size: " << remainder_file_size << endl;
+					cout << "remainder break" << endl;
+					cout << "remainder_file_size: " << remainder_file_size << endl;
 					break;
 				}
 			}
@@ -177,10 +178,13 @@ void receiveFile(int sock, string file_path, PACKET *pkt_addr){
 
 	string file_name = string(pkt._payload);
 
-	//cout << "read77" << endl;
+	cout << "read77" << endl;
 	readSocket(&pkt, sock);
-	file_byte_size* file_size_addr = (file_byte_size *) &(pkt._payload);
-	file_byte_size file_size = *file_size_addr;
+	uint32_t* file_size_addr = (uint32_t *) &(pkt._payload);
+	uint32_t file_size = *file_size_addr;
+
+	cout << "file_size: " << file_size << endl;
+	sleep(10);
 
 	vector<vector<char>> file_data = receiveFileData(sock);
 
@@ -199,23 +203,25 @@ void sendFile(int sock, string file_path){
 	if (!file.is_open())
 	{
 		cout << "error opening file" << "\n" << endl;
-        //cout << "write10" << endl;
+        cout << "write10" << endl;
         sendMessage(nullptr, MENSAGEM_FALHA_ENVIO, sock);
 		return;
 	}
 
-	//cout << "write11" << endl;
+	cout << "write11" << endl;
 	sendMessage((char *)file_path.c_str(), MENSAGEM_ENVIO_NOME_ARQUIVO, sock);
 
 	//get file size
 	file.seekg(0, file.end);
-	file_byte_size file_size = file.tellg();
-	//cout << "file_size: " << file_size << "\n";
+	uint32_t file_size = file.tellg();
+	cout << "file_size: " << file_size << "\n";
 	file.clear();
 	file.seekg(0);
 
-	//cout << "write122" << endl;
+	cout << "write122" << endl;
 	sendMessage((char*)&file_size, MENSAGEM_ENVIO_TAMANHO_ARQUIVO, sock);
+	cout << "file_size: " << file_size << endl;
+	sleep(10);
 
 	//send file pkts
 	char buffer[BUFFER_SIZE];
@@ -228,10 +234,10 @@ void sendFile(int sock, string file_path){
 			//printf("%x ", (unsigned char)buffer[i]);
 		//}
 		
-		//cout << "write12" << endl;
+		cout << "write12" << endl;
 		sendMessage(buffer, MENSAGEM_ENVIO_PARTE_ARQUIVO, sock);
 	}
-	//cout << "write13" << endl;
+	cout << "write13" << endl;
 	sendMessage(buffer, MENSAGEM_ARQUIVO_LIDO, sock);
 	file.close();
 	cout << "file received"

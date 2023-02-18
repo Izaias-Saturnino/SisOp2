@@ -45,13 +45,15 @@ int main(int argc, char *argv[])
 
 	if (connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
 	{
-		printf("ERROR connecting\n");
+		cout << "ERROR connecting" << endl;
 		exit(0);
 	}
 
 	bzero(buffer, BUFFER_SIZE);
 
-	sendMessage("", MENSAGEM_LOGIN, sockfd); // login message
+	cout << "send login" << endl;
+	sendMessage(username, MENSAGEM_LOGIN, sockfd); // login message
+	cout << "read login" << endl;
 	readSocket(&receivedPkt, sockfd);
 
 	if (receivedPkt.type == MENSAGEM_USUARIO_VALIDO)
@@ -62,36 +64,36 @@ int main(int argc, char *argv[])
 
 		while (pthread_create(&thr2, NULL, input, (void *)&n2) != 0)
 		{
-			//cout << "ERROR creating input thread. retrying..." << endl;
+			cout << "ERROR creating input thread. retrying..." << endl;
 		}
 
 		cout << "type exit to end your session \n"
 			 << endl;
 		while (true)
 		{
-			//cout<<"size of packet: "<<sizeof(PACKET)<<endl;
+			cout<<"size of packet: "<<sizeof(PACKET)<<endl;
 			sigaction(SIGINT, &sigIntHandler, NULL);
 
 			if (action.size() > 0 && sync_dir_active)
 			{
 				mtx_file_manipulation.lock();
-				//cout << "action size: " << action.size() << endl;
+				cout << "action size: " << action.size() << endl;
 				for (int i = 0; i < action.size(); i++)
 				{
-					//cout << "action: " << action[i] << " & name: " << name[i] << "\n";
+					cout << "action: " << action[i] << " & name: " << name[i] << "\n";
 					if (action[i] == FILE_CREATED || action[i] == FILE_MODIFIED)
 					{
 						if (find(latest_downloads.begin(), latest_downloads.end(), name[i]) != latest_downloads.end())
 						{
 							continue;
 						}
-						//cout << "write111" << endl;
+						cout << "write111" << endl;
 						sendMessage((char*)true, MENSAGEM_ENVIO_SYNC, sockfd);
 						upload_to_server(sockfd, "./sync_dir/" + name[i]);
 					}
 					if (action[i] == FILE_DELETED)
 					{
-						//cout << "write1" << endl;
+						cout << "write1" << endl;
 						sendMessage((char *)("./sync_dir/" + name[i]).c_str(), MENSAGEM_DELETAR_NO_SERVIDOR, sockfd);
 					}
 				}
@@ -100,10 +102,10 @@ int main(int argc, char *argv[])
 				name.clear();
 				mtx_file_manipulation.unlock();
 			}
-			//cout << "command before thread:" << command << endl;
+			cout << "command before thread:" << command << endl;
 			if (command_complete)
 			{
-				//cout << "command inside main thread:" << command << endl;
+				cout << "command inside main thread:" << command << endl;
 				if (command == "exit" || Logout == true)
 				{
 					cout << "exiting application..." << endl;
@@ -120,13 +122,13 @@ int main(int argc, char *argv[])
 					cout << "sending list request" << endl;
 					sendMessage("", MENSAGEM_PEDIDO_LISTA_ARQUIVOS_SERVIDOR, sockfd);
 
-					//cout << "read2" << endl;
+					cout << "read2" << endl;
 					int result = readSocket(&receivedPkt, sockfd);
 
 					while (receivedPkt.type == MENSAGEM_ITEM_LISTA_DE_ARQUIVOS && result > 0)
 					{
 						cout << receivedPkt._payload;
-						//cout << "read3" << endl;
+						cout << "read3" << endl;
 						result = readSocket(&receivedPkt, sockfd);
 					}
 					cout << "listing ended" << endl;
@@ -136,8 +138,8 @@ int main(int argc, char *argv[])
 					cout << "uploading file" << endl;
 					string path = command.substr(command.find("upload ") + 7);
 					cout << "file path: " << path << endl;
-					//cout << path << "\n";
-					//cout << "write112" << endl;
+					cout << path << "\n";
+					cout << "write112" << endl;
 					upload_to_server(sockfd, path);
 					cout << "file uploaded" << endl;
 				}
@@ -182,20 +184,20 @@ int main(int argc, char *argv[])
 						exit(0);
 					}
 
-					//cout << "sockfd_sync: " << sockfd_sync << endl;
+					cout << "sockfd_sync: " << sockfd_sync << endl;
 
 					// informa o servidor que se está recebendo atualizações
-					//cout << "write3" << endl;
+					cout << "write3" << endl;
 					sendMessage("", GET_SYNC_DIR, sockfd_sync);
 
 					// cria nova thread para lidar com atualizações
 					int i = pthread_create(&thr1, NULL, handle_updates, &sockfd_sync) != 0;
-					//cout << "thread created to handle_update" << endl;
+					cout << "thread created to handle_update" << endl;
 					while (i != 0)
 					{
 						i = pthread_create(&thr1, NULL, handle_updates, &sockfd_sync);
-						//cout << "ERROR creating handle_updates thread. retrying..." << endl;
-						//cout << "ERROR number: " << i << endl;
+						cout << "ERROR creating handle_updates thread. retrying..." << endl;
+						cout << "ERROR number: " << i << endl;
 					}
 
 					while (wait_for_first_sync)
@@ -206,7 +208,7 @@ int main(int argc, char *argv[])
 					// cria nova thread para lidar com modificações na pasta sync_dir
 					while (pthread_create(&thr3, NULL, folderchecker, (void *)&n1) != 0)
 					{
-						//cout << "ERROR creating folderchecker thread. retrying..." << endl;
+						cout << "ERROR creating folderchecker thread. retrying..." << endl;
 					}
 					cout << "sync_dir active" << endl;
 				}
@@ -223,7 +225,7 @@ int main(int argc, char *argv[])
 					string path = command.substr(command.find("delete ") + 7);
 					cout << "sending delete request" << endl;
 					cout << "file path: " << path << endl;
-					//cout << "write4" << endl;
+					cout << "write4" << endl;
 					sendMessage((char *)path.c_str(), MENSAGEM_DELETAR_NO_SERVIDOR, sockfd);
 					cout << "file deleted" << endl;
 				}
@@ -231,7 +233,7 @@ int main(int argc, char *argv[])
 				command_complete = false;
 			}
 		}
-		//cout << "write5" << endl;
+		cout << "write5" << endl;
 		sendMessage("", MENSAGEM_LOGOUT, sockfd); // logout message
 	}
 	else
@@ -263,9 +265,10 @@ void upload_to_server(int sock, string file_path)
 int download_file_from_server(int sock, string file_path)
 {
 	PACKET pkt;
-	//cout << "download file from server function" << endl;
+	cout << "download file from server function" << endl;
 	sendMessage((char *)file_path.c_str(), MENSAGEM_DOWNLOAD_FROM_SERVER, sock);
 
+	cout << "read download name" << endl;
 	readSocket(&pkt, sock);
 	if(pkt.type == MENSAGEM_FALHA_ENVIO){
 		cout << "file does not exist on server\n";
@@ -288,10 +291,10 @@ void handle_ctrlc(int s)
 	Logout = true;
 	cout << endl
 		 << "Caught signal" << endl;
-	//cout << "write12" << endl;
+	cout << "write12" << endl;
 	sendMessage("", MENSAGEM_LOGOUT, socketCtrl); // logout message
 
-	//cout << endl << Pkt._payload << endl;
+	cout << endl << Pkt._payload << endl;
 
 	close(socketCtrl);
 	close(socketCtrl2);
@@ -313,9 +316,9 @@ void *handle_updates(void *arg)
 
 	while (true)
 	{
-		//cout << "handleUpdates function" << endl;
+		cout << "handleUpdates function" << endl;
 		readSocket(&pkt, sockfd);
-		//cout << "pkt.type: " << pkt.type << ". ";
+		cout << "pkt.type: " << pkt.type << ". ";
 		if (pkt.type == MENSAGEM_DELETAR_NOS_CLIENTES)
 		{
 			string file_name = getFileName(string(pkt._payload));

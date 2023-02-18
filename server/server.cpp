@@ -8,6 +8,11 @@ int newSockfd,connectionSocket;
 bool END = false;
 vector<int> connections;
 
+typedef struct sock_and_user{
+    int sock;
+    char user[BUFFER_SIZE];
+}SOCK_USER;
+
 int main(int argc, char *argv[])
 {
     struct sockaddr_in serv_addr, cli_addr;
@@ -43,11 +48,12 @@ int main(int argc, char *argv[])
     serv_addr.sin_addr = *((struct in_addr *)server->h_addr);
     bzero(&(serv_addr.sin_zero), 8);
 
+    cout << "starting server" << endl;
     while(bind(connectionSocket, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0){
-        //printf("ERROR on binding\n");
+        //cout << "ERROR on binding" << endl;
         sleep(1);
     }
-    printf("server started\n\n");
+    cout << "server started" << endl << endl;
     while (true)
     {
 
@@ -70,33 +76,36 @@ int main(int argc, char *argv[])
             connections.push_back(newSockfd);
 
             /*inicio login*/
-            //cout << "read0" << endl;
+            cout << "read0" << endl;
             readSocket(&pkt, newSockfd);
             strcpy(user, pkt._payload);
-            readSocket(&pkt, newSockfd);
             if(pkt.type == MENSAGEM_LOGIN){
                 usuarioValido = loginManager->login(newSockfd, user);
 
                 if (usuarioValido)
                 {
                     string path = "./" + string(user);
-                    //cout << path << "\n";
+                    cout << path << "\n";
                     cout << "user " + string(user) + " logged in" << endl;
                     if (!filesystem::is_directory(path))
                     {
-                        //cout << path << "\n";
+                        cout << path << "\n";
                         create_folder(path);
                     }
-                    //cout << "write1" << endl;
+                    cout << "write1" << endl;
                     sendMessage("", MENSAGEM_USUARIO_VALIDO, newSockfd); // Mensagem de usuario Valido
 
-                    while(pthread_create(&clientThread, NULL, ThreadClient, &newSockfd) != 0){ // CUIDADO: newSocket e não socket
-                        //cout << "ERROR creating client thread. retrying..." << endl;
+                    SOCK_USER sock_and_user;
+                    sock_and_user.sock = newSockfd;
+                    strcpy(sock_and_user.user, user);
+
+                    while(pthread_create(&clientThread, NULL, ThreadClient, &sock_and_user) != 0){ // CUIDADO: newSocket e não socket
+                        cout << "ERROR creating client thread. retrying..." << endl;
                     }
                 }
                 else
                 {
-                    //cout << "write2" << endl;
+                    cout << "write2" << endl;
                     sendMessage((char*)"Excedido numero de sessoes", MENSAGEM_USUARIO_INVALIDO, newSockfd); // Mensagem de usuario invalido
                 }
             }
@@ -108,7 +117,7 @@ int main(int argc, char *argv[])
                     send_file_to_client(newSockfd, file_paths[i]);
                 }
 
-                //cout << "write3" << endl;
+                cout << "write3" << endl;
                 sendMessage("", FIRST_SYNC_END, newSockfd);
         
                 //salvar o socket que pediu atualizações de sync dir
@@ -142,10 +151,13 @@ void imprimeServerError(void)
 
 void *ThreadClient(void *arg)
 {
-    int sockfd = *(int *)arg;
+    SOCK_USER sock_user = *(SOCK_USER *)arg;
+    int sockfd = sock_user.sock;
+    char user[BUFFER_SIZE];
+    strcpy(user, sock_user.user);
+    
     PACKET pkt;
     char resposta[40];
-    char user[BUFFER_SIZE];
     ofstream file_server;
     int received_fragments=0;
     vector<vector<char>> fragments = {};
@@ -158,9 +170,9 @@ void *ThreadClient(void *arg)
     while (true)
     {
         memset(pkt._payload, 0, BUFFER_SIZE);
-        //cout << "read1" << endl;
+        cout << "read1" << endl;
         readSocket(&pkt, sockfd);
-        //cout << "pkt.type: " << pkt.type << ". ";
+        cout << "pkt.type: " << pkt.type << ". ";
  
         if (pkt.type == MENSAGEM_LOGOUT)
         {
@@ -178,7 +190,7 @@ void *ThreadClient(void *arg)
             cout << "file name: " << file_name << endl;
             string directory = "./";
             directory = directory + user + "/" + file_name;
-            //cout << directory << "\n" << endl;
+            cout << directory << "\n" << endl;
 
             receiveFile(sockfd, directory, &pkt);
 
@@ -188,17 +200,17 @@ void *ThreadClient(void *arg)
 
             cout << "file location: " << directory << endl;
 
-            //cout << "sync_dir_sockets.size(): " << sync_dir_sockets.size() << endl;
+            cout << "sync_dir_sockets.size(): " << sync_dir_sockets.size() << endl;
 
             cout << "propagating file" << endl;
             for(int i = 0; i < sync_dir_sockets.size(); i++){
                 if(file_received_from_sync){
                     if(sync_dir_sockets[i] == loginManager->get_sender_sync_sock(sockfd)){
-                        //cout << "sync_dir_sockets[" << i << "]: " << sync_dir_sockets[i] << " não recebe o arquivo." << endl;
+                        cout << "sync_dir_sockets[" << i << "]: " << sync_dir_sockets[i] << " não recebe o arquivo." << endl;
                         continue;
                     }
                 }
-                //cout << "sync_dir_sockets[" << i << "]: " << sync_dir_sockets[i] << endl;
+                cout << "sync_dir_sockets[" << i << "]: " << sync_dir_sockets[i] << endl;
                 send_file_to_client(sync_dir_sockets[i], directory);
             }
             cout << "file propagated" << endl;
@@ -210,9 +222,10 @@ void *ThreadClient(void *arg)
             vector<string> infos = print_file_list("./" + string(user));
             for (int i = 0; i < infos.size(); i++)
             {
-                //cout << "write6" << endl;
+                cout << "write6" << endl;
                 sendMessage((char*)infos.at(i).c_str(), MENSAGEM_ITEM_LISTA_DE_ARQUIVOS, sockfd);
             }
+            cout << "ack MENSAGEM_PEDIDO_LISTA_ARQUIVOS_SERVIDOR" << endl;
             sendMessage("", ACK, sockfd);
         }
         if (pkt.type == MENSAGEM_DELETAR_NO_SERVIDOR){
@@ -225,18 +238,18 @@ void *ThreadClient(void *arg)
             int result = delete_file(file_path);
 
             if(result == -1){
-				//cout << "could not delete file" << endl;
-                //cout << "file path:" << endl;
-			    //cout << file_path << endl;
+				cout << "could not delete file" << endl;
+                cout << "file path:" << endl;
+			    cout << file_path << endl;
 			}
 
             vector<int> sync_dir_sockets = loginManager->get_active_sync_dir(user);
 
-            //cout << "file_name: " << file_name << endl;
+            cout << "file_name: " << file_name << endl;
 
             for(int i = 0; i < sync_dir_sockets.size(); i++){
-                //cout << "sync_dir_sockets[" << i << "]: " << sync_dir_sockets[i] << endl;
-                //cout << "write8" << endl;
+                cout << "sync_dir_sockets[" << i << "]: " << sync_dir_sockets[i] << endl;
+                cout << "write8" << endl;
                 sendMessage((char *)file_name.c_str(), MENSAGEM_DELETAR_NOS_CLIENTES, sync_dir_sockets[i]); // pedido de delete enviado para o cliente
             }
         }

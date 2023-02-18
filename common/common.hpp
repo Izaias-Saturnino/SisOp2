@@ -26,7 +26,6 @@ using namespace std;
 #define MENSAGEM_USUARIO_INVALIDO 3
 #define MENSAGEM_USUARIO_VALIDO 4
 #define MENSAGEM_RESPOSTA_LOGOUT 5
-#define MENSAGEM_NOME_USUARIO 6
 #define MENSAGEM_ENVIO_NOME_ARQUIVO 10
 #define MENSAGEM_ENVIO_PARTE_ARQUIVO 11
 #define MENSAGEM_ARQUIVO_LIDO 12
@@ -44,7 +43,6 @@ using namespace std;
 
 //consts
 #define BUFFER_SIZE 256
-typedef uint32_t file_byte_size;
 
 typedef struct {
     uint16_t type; //Tipo do pacote (p.ex. DATA | CMD)
