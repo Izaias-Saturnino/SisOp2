@@ -17,6 +17,7 @@
 #include <mutex>
 #include <fstream>
 #include <vector>
+#include <sys/ioctl.h>
 
 using namespace std;
 
@@ -39,6 +40,7 @@ using namespace std;
 #define GET_SYNC_DIR 50
 #define FIRST_SYNC_END 51
 #define ACK 60
+#define LIST_SERVER_ITEM 70
 
 //consts
 #define BUFFER_SIZE 256
@@ -60,6 +62,11 @@ struct usuario{
 };
 typedef struct usuario USUARIO;
 
+typedef struct server_copy{
+    int id;
+    char* ip;
+}SERVER_COPY;
+
 void serialize(PACKET *pkt, char data[sizeof(PACKET)]);
 void deserialize(PACKET *pkt, char data[sizeof(PACKET)]);
 int readSocket(PACKET *pkt, int sock);
@@ -68,3 +75,6 @@ void sendMessage(char message[BUFFER_SIZE], int messageType, int sockfd);
 void receiveFile(int sock, string file_path, PACKET *pkt_addr);
 void sendFile(int sock, string file_path);
 string getFileName(string file_path);
+//returns server socket
+bool has_received_message(int sock);
+int connect_to_server(char* ip);

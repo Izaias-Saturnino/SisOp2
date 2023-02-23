@@ -126,6 +126,16 @@ void sendMessage(char message[BUFFER_SIZE], int messageType, int sockfd)
 	pkt_mtx.unlock();
 }
 
+int connect_to_server(char* ip){
+    
+}
+
+bool has_received_message(int sock){
+	int bytesAv = ioctl(sock,FIONREAD,&bytesAv);
+
+	return bytesAv >= sizeof(PACKET);
+}
+
 vector<vector<char>> receiveFileData(int sock){
 	PACKET pkt;
 	vector<vector<char>> file_data = {};

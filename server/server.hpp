@@ -22,6 +22,10 @@ void send_file_to_client(int sock, std::string file_path);
 
 void *ThreadClient(void *arg);
 
-void close_connections();
+void close_client_connections();
 
 void handle_ctrlc(int s);
+
+void check_main_server_up(int server_socket);
+
+int request_id(int server_socket);

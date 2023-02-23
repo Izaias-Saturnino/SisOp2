@@ -6,7 +6,12 @@ LoginManager *loginManager = new LoginManager();
 char user[BUFFER_SIZE];
 int newSockfd,connectionSocket;
 bool END = false;
-vector<int> connections;
+vector<int> client_connections;
+
+bool main_server;
+SERVER_COPY this_server;
+
+vector<SERVER_COPY> servers;
 
 typedef struct sock_and_user{
     int sock;
@@ -15,6 +20,31 @@ typedef struct sock_and_user{
 
 int main(int argc, char *argv[])
 {
+    this_server.ip = argv[1];
+    servers.push_back(this_server);
+    if(argc > 2){
+        char* other_server_ip = argv[2];
+        int other_server_socket = connect_to_server(other_server_ip);
+        if(other_server_socket == -1){
+            cout << "ERROR opening server socket\n";
+        }
+        send_list_of_servers(other_server_socket);
+        receive_list_of_servers(other_server_socket);
+        close(other_server_socket);
+
+        broadcast_new_server(this_server);
+
+        int main_server_socket = connect_to_main_server();
+
+        if(!main_server){
+            this_server.id = request_id(main_server_socket);
+            check_main_server_up(main_server_socket);//create thread for this update
+        }
+        else{
+            this_server.id = rand();
+        }
+    }
+
     struct sockaddr_in serv_addr, cli_addr;
     struct hostent *server;
     struct sigaction sigIntHandler;
@@ -29,7 +59,7 @@ int main(int argc, char *argv[])
 
     verificaRecebimentoIP(argc, argv);
 
-    server = gethostbyname(argv[1]);
+    server = gethostbyname(this_server.ip);
 
     if (server == NULL)
     {
@@ -37,11 +67,11 @@ int main(int argc, char *argv[])
     }
 
     if ((connectionSocket = socket(AF_INET, SOCK_STREAM, 0)) == -1){ /// Verifica IP valido
-        printf("ERROR opening socket\n");
+        cout << "ERROR opening socket\n";
         return 0;
     }
 
-    connections.push_back(connectionSocket);
+    client_connections.push_back(connectionSocket);
 
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_port = htons(PORT);
@@ -73,7 +103,7 @@ int main(int argc, char *argv[])
         }
         else
         {
-            connections.push_back(newSockfd);
+            client_connections.push_back(newSockfd);
 
             /*inicio login*/
             cout << "read0" << endl;
@@ -128,10 +158,135 @@ int main(int argc, char *argv[])
         }
     }
     
-    cout << endl << "closing connections" << endl;
-    close_connections();
+    cout << endl << "closing client_connections" << endl;
+    close_client_connections();
 
     return 0;
+}
+
+void handle_client_packet(PACKET pkt, int socket){
+    //bring the handling from the switch here
+}
+
+char* server_copy_to_buffer(SERVER_COPY server_copy){
+    char server_copy_buffer[BUFFER_SIZE];
+
+	char *q = (char*)server_copy_buffer;
+    *q = server_copy.id;
+	q += sizeof(server_copy.id);
+
+    int i = sizeof(server_copy.id);
+    while(i < BUFFER_SIZE){
+        *q = server_copy.ip[i];
+        q++;
+        i++;
+    }
+
+    return server_copy_buffer;
+}
+
+SERVER_COPY server_copy_from_buffer(char* server_copy_buffer){
+    SERVER_COPY server_copy;
+
+	char *q = (char*)server_copy_buffer;
+    server_copy.id = *q;
+	q += sizeof(server_copy.id);
+
+    int i = sizeof(server_copy.id);
+    while(i < BUFFER_SIZE){
+        server_copy.ip[i] = *q;
+        q++;
+        i++;
+    }
+
+    return server_copy;
+}
+
+void broadcast_new_server(SERVER_COPY server_copy){
+    vector<int> server_connections;
+    for (int i = 0; i < servers.size(); i++)
+    {
+        if(!host_equals(servers[i].ip, this_server.ip)){
+            int socket = connect_to_server(servers[i].ip);
+            server_connections.push_back(socket);
+        }
+    }
+
+    char* server_copy_buffer = server_copy_to_buffer(server_copy);
+    for (int i = 0; i < server_connections.size(); i++)
+    {
+        sendMessage(server_copy_buffer, LIST_SERVER_ITEM, server_connections[i]);
+    }
+
+    for (int i = 0; i < server_connections.size(); i++)
+    {
+        close(server_connections[i]);
+    }
+}
+
+void send_list_of_servers(int server_socket){
+    for(int i = 0; i < servers.size(); i++){
+        char* server_copy_buffer = server_copy_to_buffer(servers[i]);
+        sendMessage(server_copy_buffer, LIST_SERVER_ITEM, server_socket);
+    }
+    sendMessage("", ACK, server_socket);
+}
+
+void receive_list_of_servers(int server_socket){
+    PACKET pkt;
+    readSocket(&pkt, server_socket);
+    while(pkt.type == LIST_SERVER_ITEM){
+        SERVER_COPY server_copy = server_copy_from_buffer(pkt._payload);
+        servers.push_back(server_copy);
+        readSocket(&pkt, server_socket);
+    }
+}
+
+bool host_equals(char* ip, char* other_ip){
+    struct hostent *server = gethostbyname(ip);
+    struct hostent *other_server = gethostbyname(other_ip);
+    return server->h_name == other_server->h_name;
+}
+
+int connect_to_main_server(){
+    int socket = -1;
+
+    SERVER_COPY main_server_copy = this_server;
+    for (int i = 0; i < servers.size(); i++)
+    {
+        if(main_server_copy.id < servers[i].id){
+            main_server_copy = servers[i];
+        }
+    }
+    if(main_server_copy.id == this_server.id){
+        main_server = true;
+    }
+    else{
+        socket = connect_to_server(main_server_copy.ip);
+    }
+    return socket;
+}
+
+void handle_server_down(int server_socket){
+    
+}
+
+void check_main_server_up(int server_socket){
+    int fail_counter = 0;
+    while(true){
+        sendMessage("", ACK, server_socket);
+        bool message_received = has_received_message(server_socket);
+        while(message_received == 0 && fail_counter != 10){
+            fail_counter++;
+            usleep(20 * 1000);
+            message_received = has_received_message(server_socket);
+        }
+        if(fail_counter == 10){
+            handle_server_down(server_socket);
+            break;
+        }
+        fail_counter = 0;
+    }
 }
 
 void verificaRecebimentoIP(int argc, char *argv[])
@@ -264,15 +419,15 @@ void *ThreadClient(void *arg)
 }
 
 void handle_ctrlc(int s){
-    close_connections();
+    close_client_connections();
     END = true;
 }
 
-void close_connections(){
-    for(int i = 0; i < connections.size(); i++){
-        close(connections[i]);
+void close_client_connections(){
+    for(int i = 0; i < client_connections.size(); i++){
+        close(client_connections[i]);
     }
-    connections = {};
+    client_connections = {};
 }
 
 void send_file_to_client(int sock, string file_path)
