@@ -1,72 +1,67 @@
 #include "./server.hpp"
 
-#define PORT 4000
-
 LoginManager *loginManager = new LoginManager();
 char user[BUFFER_SIZE];
-int newSockfd,connectionSocket;
+
 bool END = false;
+
 vector<int> client_connections;
 
-bool main_server;
+int main_server_socket;
+bool main_server = true;
+bool election;
 SERVER_COPY this_server;
-
+int PORT = DEFAULT_PORT;
 vector<SERVER_COPY> servers;
+//vector<int> server_connections;//TO DO
 
-typedef struct sock_and_user{
-    int sock;
-    char user[BUFFER_SIZE];
-}SOCK_USER;
+int upnumber = 0;
+mutex mutex_timer;
+mutex mutex_connection_timer;
+bool server_possibly_down = true;
+
+//args this_ip other_server_ip this_port other_server_port
 
 int main(int argc, char *argv[])
 {
-    this_server.ip = argv[1];
-    servers.push_back(this_server);
-    if(argc > 2){
-        char* other_server_ip = argv[2];
-        int other_server_socket = connect_to_server(other_server_ip);
-        if(other_server_socket == -1){
-            cout << "ERROR opening server socket\n";
-        }
-        send_list_of_servers(other_server_socket);
-        receive_list_of_servers(other_server_socket);
-        close(other_server_socket);
+    //arguments test
+    verificaRecebimentoIP(argc, argv);
 
-        broadcast_new_server(this_server);
+    //host verification
+    struct hostent *server;
+    server = gethostbyname(argv[1]);
 
-        int main_server_socket = connect_to_main_server();
-
-        if(!main_server){
-            this_server.id = request_id(main_server_socket);
-            check_main_server_up(main_server_socket);//create thread for this update
-        }
-        else{
-            this_server.id = rand();
-        }
+    if (server == NULL)
+    {
+        fprintf(stderr, "ERROR, no such host\n");
+        exit(0);
     }
 
-    struct sockaddr_in serv_addr, cli_addr;
-    struct hostent *server;
-    struct sigaction sigIntHandler;
-    pthread_t clientThread;
-    socklen_t clilen;
-    bool usuarioValido;
-    PACKET pkt;
+    srand(time(NULL));
 
+    if(argc > 3){
+        PORT = atoi(argv[3]);
+    }
+
+    this_server.ip = argv[1];
+    this_server.id = -1;
+    int other_server_PORT = DEFAULT_PORT;
+    if(argc > 4){
+        other_server_PORT = atoi(argv[4]);
+    }
+    this_server.PORT = PORT;
+
+    //handle_ctrlc
+    struct sigaction sigIntHandler;
     sigIntHandler.sa_handler = handle_ctrlc;
 	sigemptyset(&sigIntHandler.sa_mask);
 	sigIntHandler.sa_flags = 0;
 
-    verificaRecebimentoIP(argc, argv);
+    //
+    struct sockaddr_in serv_addr;
 
-    server = gethostbyname(this_server.ip);
-
-    if (server == NULL)
-    {
-        imprimeServerError();
-    }
-
-    if ((connectionSocket = socket(AF_INET, SOCK_STREAM, 0)) == -1){ /// Verifica IP valido
+    int connectionSocket = socket(AF_INET, SOCK_STREAM, 0);
+    if (connectionSocket == -1){ /// Verifica IP valido
         cout << "ERROR opening socket\n";
         return 0;
     }
@@ -83,14 +78,31 @@ int main(int argc, char *argv[])
         //cout << "ERROR on binding" << endl;
         sleep(1);
     }
-    cout << "server started" << endl << endl;
+
+    if(argc > 3){
+        char* other_server_ip = argv[2];
+        hostent *other_server_host = gethostbyname(other_server_ip);
+        main_server = false;
+        pthread_t between_server;
+        cout << "between server sync starting" << endl;
+        int other_server_socket = connect_to_server(*other_server_host, other_server_PORT);
+        create_thread(&between_server, NULL, between_server_sync, &other_server_socket);
+    }
+    if(main_server){
+        this_server.id = get_new_id(servers);
+    }
+    servers.push_back(this_server);
+
+    cout << "server started on port " << PORT << endl << endl;
     while (true)
     {
-
         /*listen to clients*/
-        listen(connectionSocket, 5);
-        clilen = sizeof(struct sockaddr_in);
+        listen(connectionSocket, 30);
 
+        socklen_t clilen;
+        clilen = sizeof(struct sockaddr_in);
+        sockaddr_in cli_addr;
+        int newSockfd;
         newSockfd = accept(connectionSocket, (struct sockaddr *)&cli_addr, &clilen);
 
         sigaction(SIGINT, &sigIntHandler, NULL);
@@ -100,61 +112,117 @@ int main(int argc, char *argv[])
 
         if (newSockfd == -1){
             cout << "ERROR on accept" << endl;
+            continue;
         }
-        else
-        {
-            client_connections.push_back(newSockfd);
-
-            /*inicio login*/
-            cout << "read0" << endl;
-            readSocket(&pkt, newSockfd);
-            strcpy(user, pkt._payload);
-            if(pkt.type == MENSAGEM_LOGIN){
-                usuarioValido = loginManager->login(newSockfd, user);
-
-                if (usuarioValido)
-                {
-                    string path = "./" + string(user);
-                    cout << path << "\n";
-                    cout << "user " + string(user) + " logged in" << endl;
-                    if (!filesystem::is_directory(path))
-                    {
-                        cout << path << "\n";
-                        create_folder(path);
-                    }
-                    cout << "write1" << endl;
-                    sendMessage("", MENSAGEM_USUARIO_VALIDO, newSockfd); // Mensagem de usuario Valido
-
-                    SOCK_USER sock_and_user;
-                    sock_and_user.sock = newSockfd;
-                    strcpy(sock_and_user.user, user);
-
-                    while(pthread_create(&clientThread, NULL, ThreadClient, &sock_and_user) != 0){ // CUIDADO: newSocket e não socket
-                        cout << "ERROR creating client thread. retrying..." << endl;
-                    }
-                }
-                else
-                {
-                    cout << "write2" << endl;
-                    sendMessage((char*)"Excedido numero de sessoes", MENSAGEM_USUARIO_INVALIDO, newSockfd); // Mensagem de usuario invalido
-                }
-            }
-            else if(pkt.type == GET_SYNC_DIR){
-                //baixar todos os arquivos do syncdir do servidor
-                vector<string> file_paths = get_file_list("./" + string(user));
-
-                for(int i = 0; i < file_paths.size(); i++){
-                    send_file_to_client(newSockfd, file_paths[i]);
-                }
-
-                cout << "write3" << endl;
-                sendMessage("", FIRST_SYNC_END, newSockfd);
         
-                //salvar o socket que pediu atualizações de sync dir
-                loginManager->activate_sync_dir(user, newSockfd);
+        client_connections.push_back(newSockfd);
 
-                cout << string(user) << " actived sync dir" << endl;
+        cout << "read0" << endl;
+        PACKET pkt;
+        peekSocket(&pkt, newSockfd);
+        if(pkt.type == MENSAGEM_LOGIN){
+            pthread_t clientThread;
+            cout << "creating client thread" << endl;
+            create_thread(&clientThread, NULL, ThreadClient, &newSockfd);
+        }
+        else if(pkt.type == GET_SYNC_DIR){
+            cout << "reading GET_SYNC_DIR" << endl;
+            readSocket(&pkt, newSockfd);
+            char user[BUFFER_SIZE];
+            strcpy(user, pkt._payload);
+
+            //baixar todos os arquivos do syncdir do servidor
+            vector<string> file_paths = get_file_list("./" + string(user));
+
+            for(int i = 0; i < file_paths.size(); i++){
+                send_file_to_client(newSockfd, file_paths[i]);
             }
+
+            cout << "sending FIRST_SYNC_END" << endl;
+            sendMessage("", FIRST_SYNC_END, newSockfd);
+    
+            //salvar o socket que pediu atualizações de sync dir
+            loginManager->activate_sync_dir(user, newSockfd);
+
+            cout << string(user) << " actived sync dir" << endl;
+        }
+        else if(pkt.type == LIVENESS_CHECK){
+            if(!main_server){
+                cout << "ERROR: non main server answering for liveness" << endl;
+            }
+            pthread_t server_up;
+            create_thread(&server_up, NULL, answer_server_up, &newSockfd);
+        }
+        else if(pkt.type == LIST_SERVERS){
+            send_list_of_servers(newSockfd);
+            cout << "reading SERVER_ITEMs msg" << endl;
+            receive_list_of_servers(newSockfd);
+        }
+        else if(pkt.type == ID_REQUEST){
+            if(!main_server){
+                cout << "ERROR: non main server receiving ID_REQUESTS" << endl;
+            }
+            cout << "reading ID_REQUEST" << endl;
+            SERVER_COPY server_copy = receive_server_copy(newSockfd);
+            server_copy.id = get_new_id(servers);
+            send_server_copy(newSockfd, server_copy, SERVER_ITEM);
+            readSocket(&pkt, newSockfd);
+            broadcast_new_server(server_copy, SERVER_ITEM);
+            if(server_copy.id > this_server.id){
+                send_election();
+            }
+        }
+        else if(pkt.type == SERVER_ITEM){
+            SERVER_COPY server_copy = receive_server_copy(newSockfd);
+            insert_in_server_list(server_copy);
+        }
+        else if(pkt.type == ELECTION){
+            cout << "reading ELECTION" << endl;
+            readSocket(&pkt, newSockfd);
+            cout << "sending ELECTION ACK" << endl;
+            sendMessage("", ACK, newSockfd);
+            send_election();
+        }
+        else if(pkt.type == ELECTED){
+            cout << "reading ELECTED" << endl;
+            election = false;
+            SERVER_COPY server_copy = receive_server_copy(newSockfd);
+            if(this_server.id == server_copy.id){
+                main_server = true;
+            }
+            else{
+                main_server = false;
+            }
+            if(main_server){
+                cout << "this is the main server" << endl;   
+            }
+            else{
+                cout << "this is not the main server" << endl;
+                cout << "this_server.id: " << this_server.id << endl;
+                cout << "server_copy.id: " << server_copy.id << endl;
+            }
+            if(this_server.id > server_copy.id){
+                cout << "ERROR: this_server.id > server_copy.id should not happen on elected" << endl;
+                cout << "this_server.id: " << this_server.id << endl;
+                cout << "server_copy.id: " << server_copy.id << endl;
+                send_election();
+                continue;
+            }
+            if(this_server.id < server_copy.id){
+                close(main_server_socket);
+                main_server = false;
+                main_server_socket = connect_to_server(server_copy.ip, server_copy.PORT);
+                if(main_server_socket == -1){
+                    cout << "ERROR: could not connect to main server" << endl;
+                    continue;
+                }
+                
+                pthread_t check_main_server_up_thr;
+                create_thread(&check_main_server_up_thr, NULL, check_main_server_up, &main_server_socket);
+            }
+        }
+        else{
+            readSocket(&pkt, newSockfd);
         }
     }
     
@@ -164,135 +232,356 @@ int main(int argc, char *argv[])
     return 0;
 }
 
-void handle_client_packet(PACKET pkt, int socket){
-    //bring the handling from the switch here
+bool str_equals(char* str1, int str1_size, char* str2, int str2_size){
+    if(str1_size != str2_size){
+        return false;
+    }
+    bool equals = true;
+    for(int i = 0; i < str1_size; i++){
+        if(str1[i] != str2[i]){
+            equals = false;
+            break;
+        }
+    }
+    return equals;
 }
 
-char* server_copy_to_buffer(SERVER_COPY server_copy){
-    char server_copy_buffer[BUFFER_SIZE];
-
-	char *q = (char*)server_copy_buffer;
-    *q = server_copy.id;
-	q += sizeof(server_copy.id);
-
-    int i = sizeof(server_copy.id);
-    while(i < BUFFER_SIZE){
-        *q = server_copy.ip[i];
-        q++;
-        i++;
+void insert_in_server_list(SERVER_COPY server_copy){
+    bool found_server = false;
+    for(int i = 0; i < servers.size(); i++){
+        bool ip_equals = str_equals((char*) (server_copy.ip).c_str(), server_copy.ip.size(), (char*) (servers[i].ip).c_str(), servers[i].ip.size());
+        bool port_equals = server_copy.PORT == servers[i].PORT;
+        if(ip_equals && port_equals){
+            found_server = true;
+            servers[i].id = server_copy.id;
+            break;
+        }
     }
 
-    return server_copy_buffer;
+    bool ip_equals = str_equals((char*) (server_copy.ip).c_str(), server_copy.ip.size(), (char*) (this_server.ip).c_str(), this_server.ip.size());
+    bool port_equals = server_copy.PORT == this_server.PORT;
+    if(ip_equals && port_equals){
+        this_server.id = server_copy.id;
+    }
+    
+    if(!found_server){
+        servers.push_back(server_copy);
+    }
 }
 
-SERVER_COPY server_copy_from_buffer(char* server_copy_buffer){
+void *between_server_sync(void *arg){
+    int other_server_socket = *(int *)arg;
+
+    if(other_server_socket == -1){
+        cout << "ERROR opening other server socket\n";
+        return 0;
+    }
+    send_list_of_servers(other_server_socket);
+    PACKET pkt;
+    cout << "reading LIST_SERVER msg again" << endl;
+    receive_list_of_servers(other_server_socket);
+
+    while(main_server_socket == -1){
+        cout << "ERROR: could not connect to main server" << endl;
+        return 0;
+    }
+
+    main_server_socket = connect_to_main_server();
+
+    if(main_server_socket == -1){
+        cout << "ERROR: could not connect to main server" << endl;
+        return 0;
+    }
+
+    //request_id
+    cout << "sending ID_REQUEST" << endl;
+    send_server_copy(main_server_socket, this_server, ID_REQUEST);
+    insert_in_server_list(receive_server_copy(main_server_socket));
+    sendMessage("", ACK, main_server_socket);
+    cout << "new server id: " << this_server.id << endl;
+    if(has_bigger_id(this_server)){
+        send_election();
+    }
+    
+    return 0;
+}
+
+SERVER_COPY receive_server_copy(int socket){
     SERVER_COPY server_copy;
 
-	char *q = (char*)server_copy_buffer;
-    server_copy.id = *q;
-	q += sizeof(server_copy.id);
+    PACKET pkt;
 
-    int i = sizeof(server_copy.id);
-    while(i < BUFFER_SIZE){
-        server_copy.ip[i] = *q;
-        q++;
-        i++;
-    }
+    readSocket(&pkt, socket);
+    memcpy((char*) &(server_copy.id), pkt._payload, sizeof(server_copy.id));
+    readSocket(&pkt, socket);
+    memcpy((char*) &(server_copy.PORT), pkt._payload, sizeof(server_copy.PORT));
+    int str_size;
+    readSocket(&pkt, socket);
+    memcpy((char*) &(str_size), pkt._payload, sizeof(str_size));
+    readSocket(&pkt, socket);
+    server_copy.ip = (string) (pkt._payload);
+    cout << "received server_copy.id: " << server_copy.id << endl;
 
     return server_copy;
 }
 
-void broadcast_new_server(SERVER_COPY server_copy){
+void send_server_copy(int socket, SERVER_COPY server_copy, int msg_type){
+    char buffer[BUFFER_SIZE];
+    memcpy(buffer, (char*) &(server_copy.id), sizeof(server_copy.id));
+    sendMessage(buffer, msg_type, socket);
+    memcpy(buffer, (char*) &(server_copy.PORT), sizeof(server_copy.PORT));
+    sendMessage(buffer, msg_type, socket);
+    int str_size = server_copy.ip.size();
+    memcpy(buffer, (char*) &(str_size), sizeof(str_size));
+    sendMessage(buffer, msg_type, socket);
+    bzero(buffer, BUFFER_SIZE);
+    memcpy(buffer, (char*) (server_copy.ip).c_str(), str_size);
+    sendMessage(buffer, msg_type, socket);
+    cout << "sended server_copy.id: " << server_copy.id << endl;
+}
+
+vector<int> open_broadcast(){
     vector<int> server_connections;
     for (int i = 0; i < servers.size(); i++)
     {
-        if(!host_equals(servers[i].ip, this_server.ip)){
-            int socket = connect_to_server(servers[i].ip);
+        int socket = connect_to_server(servers[i].ip, servers[i].PORT);
+        if(socket != -1){
             server_connections.push_back(socket);
         }
     }
+    return server_connections;
+}
 
-    char* server_copy_buffer = server_copy_to_buffer(server_copy);
-    for (int i = 0; i < server_connections.size(); i++)
-    {
-        sendMessage(server_copy_buffer, LIST_SERVER_ITEM, server_connections[i]);
-    }
-
+void close_broadcast(vector<int> server_connections){
     for (int i = 0; i < server_connections.size(); i++)
     {
         close(server_connections[i]);
     }
 }
 
-void send_list_of_servers(int server_socket){
-    for(int i = 0; i < servers.size(); i++){
-        char* server_copy_buffer = server_copy_to_buffer(servers[i]);
-        sendMessage(server_copy_buffer, LIST_SERVER_ITEM, server_socket);
+void broadcast_new_server(SERVER_COPY server_copy, int msg_type){
+    vector<int> server_connections = open_broadcast();
+
+    //cout << "broadcast type: " << msg_type << endl;
+    for (int i = 0; i < server_connections.size(); i++)
+    {
+        send_server_copy(server_connections[i], server_copy, msg_type);
     }
+
+    close_broadcast(server_connections);
+}
+
+void send_list_of_servers(int server_socket){
+    cout << "sending LIST_SERVERS msg" << endl;
+    sendMessage("", LIST_SERVERS, server_socket);
+    for(int i = 0; i < servers.size(); i++){
+        cout << "sending SERVER_ITEM" << endl;
+        send_server_copy(server_socket, servers[i], SERVER_ITEM);
+    }
+    cout << "LIST_SERVER end ACK" << endl;
     sendMessage("", ACK, server_socket);
 }
 
 void receive_list_of_servers(int server_socket){
+    cout << "receive_list_of_servers" << endl;
     PACKET pkt;
-    readSocket(&pkt, server_socket);
-    while(pkt.type == LIST_SERVER_ITEM){
-        SERVER_COPY server_copy = server_copy_from_buffer(pkt._payload);
-        servers.push_back(server_copy);
+    peekSocket(&pkt, server_socket);
+    if(pkt.type == LIST_SERVERS){
         readSocket(&pkt, server_socket);
     }
+    while(pkt.type == SERVER_ITEM);{
+        cout << "reading SERVER_ITEM" << endl;
+        SERVER_COPY server_copy = receive_server_copy(server_socket);
+        insert_in_server_list(server_copy);
+        cout << "peeking SERVER_ITEM" << endl;
+        peekSocket(&pkt, server_socket);
+    }
+    cout << "LIST_SERVER_ITEM end" << endl;
+    readSocket(&pkt, server_socket);
 }
 
-bool host_equals(char* ip, char* other_ip){
+int host_cmp(char* ip, char* other_ip){
     struct hostent *server = gethostbyname(ip);
     struct hostent *other_server = gethostbyname(other_ip);
-    return server->h_name == other_server->h_name;
+    return strcmp(server->h_name, other_server->h_name);
+}
+
+bool has_bigger_id(SERVER_COPY main_server_copy){
+    
 }
 
 int connect_to_main_server(){
     int socket = -1;
 
     SERVER_COPY main_server_copy = this_server;
+
     for (int i = 0; i < servers.size(); i++)
     {
         if(main_server_copy.id < servers[i].id){
             main_server_copy = servers[i];
         }
     }
-    if(main_server_copy.id == this_server.id){
-        main_server = true;
+    
+    if(main_server_copy.id > this_server.id){
+        socket = connect_to_server(main_server_copy.ip, main_server_copy.PORT);
     }
-    else{
-        socket = connect_to_server(main_server_copy.ip);
-    }
+
     return socket;
 }
 
-void handle_server_down(int server_socket){
-    
+bool compare_id(SERVER_COPY copy1, SERVER_COPY copy2){
+    return copy1.id < copy2.id;
 }
 
-void check_main_server_up(int server_socket){
-    int fail_counter = 0;
-    while(true){
-        sendMessage("", ACK, server_socket);
-        bool message_received = has_received_message(server_socket);
-        while(message_received == 0 && fail_counter != 10){
-            fail_counter++;
-            usleep(20 * 1000);
-            message_received = has_received_message(server_socket);
-        }
-        if(fail_counter == 10){
-            handle_server_down(server_socket);
+void send_election(){
+    if(election){
+        return;
+    }
+    cout << "election started" << endl;
+    election = true;
+    sort(servers.begin(), servers.end(), compare_id);
+    bool possible_main_server = true;
+    for (int i = servers.size() - 1; i >= 0; i--){
+        
+        cout << "send_election servers[i].id: " << servers[i].id << endl;
+
+        if(servers[i].id <= this_server.id){
             break;
         }
-        fail_counter = 0;
+
+        cout << "send_election servers[i].id 2: " << servers[i].id << endl;
+
+        pthread_t timer_thr;
+        create_thread(&timer_thr, NULL, connection_timer, &servers[i]);
+
+        bool server_possibly_down = true;
+        int socket = connect_to_server(servers[i].ip, servers[i].PORT);
+        if(socket == -1){
+            continue;
+        }
+
+        cout << "sending ELECTION msg" << endl;
+        sendMessage("", ELECTION, socket);
+        bool message_received = has_received_message(socket);
+        while(message_received == false){
+            usleep(WAIT_TIME_BETWEEN_RETRIES);
+            message_received = has_received_message(socket);
+        }
+        if(message_received){
+            mutex_connection_timer.unlock();
+            pthread_cancel(timer_thr);
+            possible_main_server = false;
+            PACKET pkt;
+            readSocket(&pkt, socket);
+            break;
+        }
+        close(socket);
     }
+    if(possible_main_server){
+        broadcast_new_server(this_server, ELECTED);
+    }
+}
+
+void remove_from_server_list(SERVER_COPY server_copy){
+    for(int i = 0; i < servers.size(); i++){
+        bool ip_equals = str_equals((char*) (server_copy.ip).c_str(), server_copy.ip.size(), (char*) (servers[i].ip).c_str(), servers[i].ip.size());
+        bool port_equals = server_copy.PORT == servers[i].PORT;
+        if(ip_equals && port_equals){
+            servers.erase(servers.begin()+i-1);
+            break;
+        }
+    }
+}
+
+void* connection_timer(void *arg){
+    SERVER_COPY server_copy = *(SERVER_COPY *)arg;
+    int timer_countdown = MAX_TIMER;
+    while(true){
+        usleep(WAIT_TIME_BETWEEN_RETRIES);
+        if(timer_countdown == 0){
+            cout << "timeout" << endl;
+            mutex_connection_timer.lock();
+            remove_from_server_list(server_copy);
+            send_election();
+            mutex_connection_timer.unlock();
+            break;
+        }
+        else{
+            timer_countdown--;
+        }
+        
+    }
+}
+
+void* timer(void *arg){
+    int* timer_countdown = (int *)arg;
+    while(true){
+        usleep(WAIT_TIME_BETWEEN_RETRIES);
+        mutex_timer.lock();
+        if(*timer_countdown == 0){
+            cout << "timeout" << endl;
+            send_election();
+            break;
+        }
+        else{
+            *timer_countdown--;
+        }
+        mutex_timer.unlock();
+    }
+}
+
+void* check_main_server_up(void *arg){
+    int server_socket = *(int *)arg;
+
+    PACKET pkt;
+
+    pthread_t timer_thr;
+    int timer_countdown;
+    create_thread(&timer_thr, NULL, timer, &timer_countdown);
+
+    while(!election){
+        cout << "sending LIVENESS_CHECK msg" << endl;
+        sendMessage("", LIVENESS_CHECK, server_socket);
+        bool message_received = has_received_message(server_socket);
+        while(message_received == false){
+            usleep(WAIT_TIME_BETWEEN_RETRIES);
+            message_received = has_received_message(server_socket);
+        }
+        if(message_received){
+            mutex_timer.lock();
+            timer_countdown = MAX_TIMER;
+            mutex_timer.unlock();
+            readSocket(&pkt, server_socket);
+        }
+        cout << "main server is up " << upnumber << endl;
+        upnumber++;
+        usleep(WAIT_TIME_BETWEEN_RETRIES);
+    }
+    if(election){
+        cout << "check_main_server_up ended because of election" << endl;
+    }
+    else{
+        cout << "check_main_server_up ended" << endl;
+    }
+}
+
+void *answer_server_up(void *arg){
+    int server_socket = *(int *)arg;
+    PACKET pkt;
+    while(!election){
+        cout << "reading LIVENESS_CHECK msg" << endl;
+        readSocket(&pkt, server_socket);
+        cout << "sending ACK for LIVENESS_CHECK msg " << upnumber << endl;
+        upnumber++;
+        sendMessage("", ACK, server_socket);
+    }
+    cout << "answer_server_up ended because of election" << endl;
 }
 
 void verificaRecebimentoIP(int argc, char *argv[])
 {
     if (argc < 2)
-    { // Verifica se recebeu o IP como parametro
+    {
         fprintf(stderr, "usage %s hostname\n", argv[0]);
         exit(0);
     }
@@ -304,12 +593,47 @@ void imprimeServerError(void)
     exit(0);
 }
 
+bool client_login(int newSockfd){
+    PACKET pkt;
+    cout << "reading client login" << endl;
+    readSocket(&pkt, newSockfd);
+    strcpy(user, pkt._payload);
+
+    bool login_successful = loginManager->login(newSockfd, user);
+
+    if (login_successful)
+    {
+        string path = "./" + string(user);
+        cout << path << "\n";
+        cout << "user " + string(user) + " logged in" << endl;
+        if (!filesystem::is_directory(path))
+        {
+            cout << path << "\n";
+            create_folder(path);
+        }
+        cout << "sending MENSAGEM_USUARIO_VALIDO" << endl;
+        sendMessage("", MENSAGEM_USUARIO_VALIDO, newSockfd); // Mensagem de usuario Valido
+    }
+    else
+    {
+        cout << "sending MENSAGEM_USUARIO_INVALIDO" << endl;
+        sendMessage((char*)"Excedido numero de sessoes", MENSAGEM_USUARIO_INVALIDO, newSockfd); // Mensagem de usuario invalido
+    }
+
+    return login_successful;
+}
+
 void *ThreadClient(void *arg)
 {
-    SOCK_USER sock_user = *(SOCK_USER *)arg;
-    int sockfd = sock_user.sock;
-    char user[BUFFER_SIZE];
-    strcpy(user, sock_user.user);
+    int sockfd = *(int *)arg;
+
+    bool login_successful = client_login(sockfd);
+
+    void* end_function;
+
+    if(!login_successful){
+        return 0;
+    }
 
     PACKET pkt;
     char resposta[40];
@@ -325,7 +649,7 @@ void *ThreadClient(void *arg)
     while (true)
     {
         memset(pkt._payload, 0, BUFFER_SIZE);
-        cout << "read1" << endl;
+        cout << "reading client msg" << endl;
         readSocket(&pkt, sockfd);
         cout << "pkt.type: " << pkt.type << ". ";
  
@@ -377,7 +701,7 @@ void *ThreadClient(void *arg)
             vector<string> infos = print_file_list("./" + string(user));
             for (int i = 0; i < infos.size(); i++)
             {
-                cout << "write6" << endl;
+                cout << "sending MENSAGEM_ITEM_LISTA_DE_ARQUIVOS" << endl;
                 sendMessage((char*)infos.at(i).c_str(), MENSAGEM_ITEM_LISTA_DE_ARQUIVOS, sockfd);
             }
             cout << "ack MENSAGEM_PEDIDO_LISTA_ARQUIVOS_SERVIDOR" << endl;
@@ -404,7 +728,7 @@ void *ThreadClient(void *arg)
 
             for(int i = 0; i < sync_dir_sockets.size(); i++){
                 cout << "sync_dir_sockets[" << i << "]: " << sync_dir_sockets[i] << endl;
-                cout << "write8" << endl;
+                cout << "sending MENSAGEM_DELETAR_NOS_CLIENTES" << endl;
                 sendMessage((char *)file_name.c_str(), MENSAGEM_DELETAR_NOS_CLIENTES, sync_dir_sockets[i]); // pedido de delete enviado para o cliente
             }
         }
@@ -419,12 +743,15 @@ void *ThreadClient(void *arg)
 }
 
 void handle_ctrlc(int s){
-    close_client_connections();
     END = true;
 }
 
 void close_client_connections(){
+    PACKET pkt;
     for(int i = 0; i < client_connections.size(); i++){
+        while(has_received_message(client_connections[i])){
+            readSocket(&pkt, client_connections[i]);
+        }
         close(client_connections[i]);
     }
     client_connections = {};
@@ -433,4 +760,20 @@ void close_client_connections(){
 void send_file_to_client(int sock, string file_path)
 {
 	sendFile(sock, file_path);
+}
+
+int get_new_id(vector<SERVER_COPY> servers){
+    int id = rand() % 100;
+    bool unique_id;
+    do{
+        unique_id = true;
+        for(int i = 0; i < servers.size(); i++){
+            if(servers[i].id == id){
+                unique_id = false;
+                id = rand() % 100;
+                break;
+            }
+        }
+    }while(!unique_id);
+    return id;
 }

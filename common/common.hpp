@@ -18,6 +18,7 @@
 #include <fstream>
 #include <vector>
 #include <sys/ioctl.h>
+#include <fcntl.h>
 
 using namespace std;
 
@@ -40,10 +41,19 @@ using namespace std;
 #define GET_SYNC_DIR 50
 #define FIRST_SYNC_END 51
 #define ACK 60
-#define LIST_SERVER_ITEM 70
+#define LIST_SERVERS 70
+#define SERVER_ITEM 72
+#define ID_REQUEST 73
+#define LIVENESS_CHECK 74
+#define ELECTION 80
+#define ELECTED 81
 
 //consts
+#define MAX_RETRIES 10
+#define WAIT_TIME_BETWEEN_RETRIES 20 * 1000
 #define BUFFER_SIZE 256
+#define DEFAULT_PORT 4000
+#define MAX_TIMER 4*MAX_RETRIES
 
 typedef struct {
     uint16_t type; //Tipo do pacote
@@ -64,12 +74,14 @@ typedef struct usuario USUARIO;
 
 typedef struct server_copy{
     int id;
-    char* ip;
+    int PORT;
+    string ip;
 }SERVER_COPY;
 
 void serialize(PACKET *pkt, char data[sizeof(PACKET)]);
 void deserialize(PACKET *pkt, char data[sizeof(PACKET)]);
 int readSocket(PACKET *pkt, int sock);
+void peekSocket(PACKET *pkt, int sock);
 void sendMessage(char message[BUFFER_SIZE], int messageType, int sockfd);
 //returns the amount of bytes written
 void receiveFile(int sock, string file_path, PACKET *pkt_addr);
@@ -77,4 +89,13 @@ void sendFile(int sock, string file_path);
 string getFileName(string file_path);
 //returns server socket
 bool has_received_message(int sock);
-int connect_to_server(char* ip);
+int connect_to_server(hostent server_host);
+int connect_to_server(string server_ip, int PORT);
+int connect_to_server(hostent server_host, int PORT);
+void create_thread(
+    pthread_t *__restrict thr1,
+	const pthread_attr_t *__restrict attr,
+	void *(*handle_updates) (void *),
+	void *__restrict sockfd_sync);
+SERVER_COPY receive_server_copy(int socket);
+void send_server_copy(int socket, SERVER_COPY server_copy, int msg_type);

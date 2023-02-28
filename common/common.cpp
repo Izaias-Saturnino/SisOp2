@@ -72,13 +72,22 @@ int readSocket(PACKET *pkt, int sock){
 	// 	sleep(60);
 	// }
 
-	cout << "pkt.type: " << pkt->type;
-	cout << ". readpktnum: " << readpktnum;
-	cout << ". pkt.seqn: " << pkt->seqn;
-	cout << ". sock: " << sock << endl;
+	//cout << "pkt.type: " << pkt->type << ". readpktnum: " << readpktnum << ". pkt.seqn: " << pkt->seqn << ". sock: " << sock << endl;
 	readpktnum++;
 
 	return n;
+}
+
+void peekSocket(PACKET *pkt, int sock){
+	char buffer[sizeof(PACKET)];
+
+	int n = 0;
+
+	while(n < sizeof(PACKET)){
+		n = recv(sock, buffer, sizeof(PACKET), MSG_PEEK);
+	}
+
+	deserialize(pkt, buffer);
 }
 
 void sendMessage(char message[BUFFER_SIZE], int messageType, int sockfd)
@@ -119,21 +128,64 @@ void sendMessage(char message[BUFFER_SIZE], int messageType, int sockfd)
 		//}
 	}
 
-	cout << "pkt.type: " << pkt.type;
-	cout << ". sendpktnum: " << sendpktnum;
-	cout << ". sock: " << sockfd << endl;
+	//cout << "pkt.type: " << pkt.type << ". sendpktnum: " << sendpktnum << ". sock: " << sockfd << endl;
 	sendpktnum++;
 	pkt_mtx.unlock();
 }
 
-int connect_to_server(char* ip){
-    
+int connect_to_server(string server_ip, int PORT){
+
+	hostent *server_host = gethostbyname((char*) server_ip.c_str());
+
+	return connect_to_server(*server_host, PORT);
 }
 
-bool has_received_message(int sock){
-	int bytesAv = ioctl(sock,FIONREAD,&bytesAv);
+int connect_to_server(hostent server_host){
+	return connect_to_server(server_host, DEFAULT_PORT);
+}
 
-	return bytesAv >= sizeof(PACKET);
+int connect_to_server(hostent server_host, int PORT){
+	int sockfd = -1;
+    struct sockaddr_in serv_addr;
+
+	sockfd = socket(AF_INET, SOCK_STREAM, 0);
+
+	int counter = 0;
+	while (sockfd == -1 && counter < MAX_RETRIES)
+	{
+		usleep(WAIT_TIME_BETWEEN_RETRIES);
+		sockfd = socket(AF_INET, SOCK_STREAM, 0);
+		counter++;
+	}
+	if(counter == MAX_RETRIES){
+		cout << "ERROR opening socket" << endl;
+		return sockfd;
+	}
+
+	serv_addr.sin_family = AF_INET;
+	serv_addr.sin_port = htons(PORT);
+	inet_aton(server_host.h_name, &serv_addr.sin_addr);
+	bzero(&(serv_addr.sin_zero), 8);
+
+	counter = 0;
+	while (connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0 && counter < MAX_RETRIES)
+	{
+		usleep(WAIT_TIME_BETWEEN_RETRIES);
+		counter++;
+	}
+	if(counter == MAX_RETRIES){
+		close(sockfd);
+		sockfd = -1;
+		cout << "ERROR connecting" << endl;
+	}
+	return sockfd;
+}
+
+//checks for PACKET in socket
+bool has_received_message(int sock){
+	char buffer[sizeof(PACKET)];
+	int n = recv(sock, buffer, sizeof(PACKET), MSG_PEEK);
+	return n >= sizeof(PACKET);
 }
 
 vector<vector<char>> receiveFileData(int sock){
@@ -218,7 +270,7 @@ void sendFile(int sock, string file_path){
 	}
 
 	cout << "write11" << endl;
-	sendMessage((char *)file_path.c_str(), MENSAGEM_ENVIO_NOME_ARQUIVO, sock);
+	sendMessage((char*) file_path.c_str(), MENSAGEM_ENVIO_NOME_ARQUIVO, sock);
 
 	//get file size
 	file.seekg(0, file.end);
@@ -264,4 +316,19 @@ string getFileName(string file_path){
 		file_name = file_path.substr(last_pos);
 	}
 	return file_name;
+}
+
+void create_thread(
+	pthread_t *__restrict thr1,
+	const pthread_attr_t *__restrict attr,
+	void *(*handle_updates) (void *),
+	void *__restrict sockfd_sync)
+{
+	int i = pthread_create(thr1, attr, handle_updates, sockfd_sync);
+	while (i != 0)
+	{
+		i = pthread_create(thr1, attr, handle_updates, sockfd_sync);
+		cout << "ERROR creating thread. retrying..." << endl;
+		cout << "ERROR number: " << i << endl;
+	}
 }

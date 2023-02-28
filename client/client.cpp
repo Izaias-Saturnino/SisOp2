@@ -2,7 +2,6 @@
 bool Logout = false;
 int socketCtrl = -1;
 int socketCtrl2 = -1;
-char username[BUFFER_SIZE];
 
 vector<string> latest_downloads = {};
 
@@ -12,13 +11,10 @@ int main(int argc, char *argv[])
 {
 	bool sync_dir_active = false;
 
-	int sockfd, PORT, newSocket, sockfd_sync;
+	int sockfd_sync;
 	socklen_t clilen;
-	char buffer[BUFFER_SIZE];
-	struct sockaddr_in serv_addr, cli_addr;
 	struct sigaction sigIntHandler;
 	PACKET receivedPkt;
-	string message, servAddr;
 
 	sigIntHandler.sa_handler = handle_ctrlc;
 	sigemptyset(&sigIntHandler.sa_mask);
@@ -26,30 +22,20 @@ int main(int argc, char *argv[])
 
 	verificaRecebimentoParametros(argc);
 
-	strcpy(username, argv[1]);
-	PORT = atoi(argv[3]);
-	servAddr = string(argv[2]);
-
-	if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1)
+	char* server_ip = argv[2];
+	hostent *server_host = gethostbyname(server_ip);
+	int PORT = atoi(argv[3]);
+	int sockfd = connect_to_server(*server_host, PORT);
+	
+	if (sockfd == -1)
 	{
-		printf("ERROR opening socket");
 		exit(0);
 	}
 
 	socketCtrl = sockfd;
 
-	serv_addr.sin_family = AF_INET;
-	serv_addr.sin_port = htons(PORT);
-	inet_aton(servAddr.c_str(), &serv_addr.sin_addr);
-	bzero(&(serv_addr.sin_zero), 8);
-
-	if (connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
-	{
-		cout << "ERROR connecting" << endl;
-		exit(0);
-	}
-
-	bzero(buffer, BUFFER_SIZE);
+	char username[BUFFER_SIZE];
+	strcpy(username, argv[1]);
 
 	cout << "send login" << endl;
 	sendMessage(username, MENSAGEM_LOGIN, sockfd); // login message
@@ -62,10 +48,8 @@ int main(int argc, char *argv[])
 		int n1 = 1;
 		int n2 = 2;
 
-		while (pthread_create(&thr2, NULL, input, (void *)&n2) != 0)
-		{
-			cout << "ERROR creating input thread. retrying..." << endl;
-		}
+		cout << "creating input thread" << endl;
+		create_thread(&thr2, NULL, input, (void *)&n2);
 
 		cout << "type exit to end your session \n"
 			 << endl;
@@ -157,35 +141,12 @@ int main(int argc, char *argv[])
 					mtx_file_manipulation.unlock();
 
 					// cria novo socket para lidar com as atualizações recebidas do servidor pelo cliente
-
-					struct sockaddr_in serv_addr;
-					struct sigaction sigIntHandler;
-
-					sigIntHandler.sa_handler = handle_ctrlc;
-					sigemptyset(&sigIntHandler.sa_mask);
-					sigIntHandler.sa_flags = 0;
-
-					verificaRecebimentoParametros(argc);
-
-					if ((sockfd_sync = socket(AF_INET, SOCK_STREAM, 0)) == -1)
-					{
-						printf("ERROR opening socket");
-						exit(0);
+					sockfd_sync = connect_to_server(*server_host);
+					if(sockfd_sync == -1){
+						cout << "ERROR creating sync socket" << endl;
+						command = "";
+						command_complete = false;
 					}
-
-					socketCtrl2 = sockfd_sync;
-
-					serv_addr.sin_family = AF_INET;
-					serv_addr.sin_port = htons(PORT);
-					inet_aton(servAddr.c_str(), &serv_addr.sin_addr);
-					bzero(&(serv_addr.sin_zero), 8);
-
-					if (connect(sockfd_sync, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
-					{
-						printf("ERROR connecting\n");
-						exit(0);
-					}
-
 					cout << "sockfd_sync: " << sockfd_sync << endl;
 
 					// informa o servidor que se está recebendo atualizações
@@ -193,14 +154,8 @@ int main(int argc, char *argv[])
 					sendMessage(username, GET_SYNC_DIR, sockfd_sync);
 
 					// cria nova thread para lidar com atualizações
-					int i = pthread_create(&thr1, NULL, handle_updates, &sockfd_sync) != 0;
-					cout << "thread created to handle_update" << endl;
-					while (i != 0)
-					{
-						i = pthread_create(&thr1, NULL, handle_updates, &sockfd_sync);
-						cout << "ERROR creating handle_updates thread. retrying..." << endl;
-						cout << "ERROR number: " << i << endl;
-					}
+					cout << "creating thread to handle_updates" << endl;
+					create_thread(&thr1, NULL, handle_updates, &sockfd_sync);
 
 					while (wait_for_first_sync)
 					{
@@ -208,10 +163,8 @@ int main(int argc, char *argv[])
 					}
 
 					// cria nova thread para lidar com modificações na pasta sync_dir
-					while (pthread_create(&thr3, NULL, folderchecker, (void *)&n1) != 0)
-					{
-						cout << "ERROR creating folderchecker thread. retrying..." << endl;
-					}
+					cout << "creating folderchecker thread" << endl;
+					create_thread(&thr3, NULL, folderchecker, (void *)&n1);
 					cout << "sync_dir active" << endl;
 				}
 				else if (command.find("download ") == 0)
@@ -289,17 +242,14 @@ void handle_ctrlc(int s)
 	PACKET Pkt;
 
 	Logout = true;
-	cout << endl
-		 << "Caught signal" << endl;
-	cout << "write12" << endl;
-	sendMessage("", MENSAGEM_LOGOUT, socketCtrl); // logout message
+	cout << endl << "Caught signal" << endl;
+	//cout << "write12" << endl;
+	//sendMessage("", MENSAGEM_LOGOUT, socketCtrl); // logout message
 
-	cout << endl << Pkt._payload << endl;
+	//cout << endl << Pkt._payload << endl;
 
-	close(socketCtrl);
-	close(socketCtrl2);
-
-	exit(0);
+	//close(socketCtrl);
+	//close(socketCtrl2);
 }
 
 void *handle_updates(void *arg)
