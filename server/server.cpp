@@ -16,9 +16,13 @@ vector<SERVER_COPY> servers;
 //vector<int> server_connections;//TO DO
 
 int upnumber = 0;
-mutex mutex_timer;
-mutex mutex_connection_timer;
 bool server_possibly_down = true;
+
+mutex mutex_timer;
+mutex mutex_timer_countdown;
+mutex mutex_connection_timer_countdown;
+int timer_countdown = MAX_TIMER;
+int connection_timer_countdown = MAX_TIMER;
 
 //args this_ip other_server_ip this_port other_server_port
 
@@ -79,6 +83,8 @@ int main(int argc, char *argv[])
         sleep(1);
     }
 
+    cout << "server started on port " << PORT << endl << endl;
+
     if(argc > 3){
         char* other_server_ip = argv[2];
         hostent *other_server_host = gethostbyname(other_server_ip);
@@ -93,22 +99,23 @@ int main(int argc, char *argv[])
     }
     servers.push_back(this_server);
 
-    cout << "server started on port " << PORT << endl << endl;
+    cout << "server sync ended" << endl << endl;
+
     while (true)
     {
         /*listen to clients*/
         listen(connectionSocket, 30);
+
+        sigaction(SIGINT, &sigIntHandler, NULL);
+        if(END){
+            break;
+        }
 
         socklen_t clilen;
         clilen = sizeof(struct sockaddr_in);
         sockaddr_in cli_addr;
         int newSockfd;
         newSockfd = accept(connectionSocket, (struct sockaddr *)&cli_addr, &clilen);
-
-        sigaction(SIGINT, &sigIntHandler, NULL);
-        if(END){
-            break;
-        }
 
         if (newSockfd == -1){
             cout << "ERROR on accept" << endl;
@@ -151,6 +158,7 @@ int main(int argc, char *argv[])
                 cout << "ERROR: non main server answering for liveness" << endl;
             }
             pthread_t server_up;
+            readSocket(&pkt, newSockfd);
             create_thread(&server_up, NULL, answer_server_up, &newSockfd);
         }
         else if(pkt.type == LIST_SERVERS){
@@ -168,13 +176,14 @@ int main(int argc, char *argv[])
             send_server_copy(newSockfd, server_copy, SERVER_ITEM);
             readSocket(&pkt, newSockfd);
             broadcast_new_server(server_copy, SERVER_ITEM);
-            if(server_copy.id > this_server.id){
-                send_election();
-            }
         }
         else if(pkt.type == SERVER_ITEM){
+            int aux = this_server.id;
             SERVER_COPY server_copy = receive_server_copy(newSockfd);
             insert_in_server_list(server_copy);
+            if(aux != this_server.id && has_bigger_id(this_server) && !main_server){
+                send_election();
+            }
         }
         else if(pkt.type == ELECTION){
             cout << "reading ELECTION" << endl;
@@ -198,8 +207,8 @@ int main(int argc, char *argv[])
             }
             else{
                 cout << "this is not the main server" << endl;
-                cout << "this_server.id: " << this_server.id << endl;
-                cout << "server_copy.id: " << server_copy.id << endl;
+                //cout << "this_server.id: " << this_server.id << endl;
+                //cout << "server_copy.id: " << server_copy.id << endl;
             }
             if(this_server.id > server_copy.id){
                 cout << "ERROR: this_server.id > server_copy.id should not happen on elected" << endl;
@@ -299,9 +308,7 @@ void *between_server_sync(void *arg){
     insert_in_server_list(receive_server_copy(main_server_socket));
     sendMessage("", ACK, main_server_socket);
     cout << "new server id: " << this_server.id << endl;
-    if(has_bigger_id(this_server)){
-        send_election();
-    }
+    send_election();
     
     return 0;
 }
@@ -406,8 +413,14 @@ int host_cmp(char* ip, char* other_ip){
     return strcmp(server->h_name, other_server->h_name);
 }
 
-bool has_bigger_id(SERVER_COPY main_server_copy){
-    
+bool has_bigger_id(SERVER_COPY server_copy){
+    SERVER_COPY main_server_copy = server_copy;
+    for(int i = 0; i < servers.size(); i++){
+        if(main_server_copy.id < servers[i].id){
+            main_server_copy = servers[i];
+        }
+    }
+    return server_copy.id == main_server_copy.id;
 }
 
 int connect_to_main_server(){
@@ -452,6 +465,9 @@ void send_election(){
         cout << "send_election servers[i].id 2: " << servers[i].id << endl;
 
         pthread_t timer_thr;
+        mutex_connection_timer_countdown.lock();
+        connection_timer_countdown = MAX_TIMER;
+        mutex_connection_timer_countdown.unlock();
         create_thread(&timer_thr, NULL, connection_timer, &servers[i]);
 
         bool server_possibly_down = true;
@@ -468,8 +484,8 @@ void send_election(){
             message_received = has_received_message(socket);
         }
         if(message_received){
-            mutex_connection_timer.unlock();
             pthread_cancel(timer_thr);
+            mutex_connection_timer_countdown.unlock();
             possible_main_server = false;
             PACKET pkt;
             readSocket(&pkt, socket);
@@ -495,87 +511,94 @@ void remove_from_server_list(SERVER_COPY server_copy){
 
 void* connection_timer(void *arg){
     SERVER_COPY server_copy = *(SERVER_COPY *)arg;
-    int timer_countdown = MAX_TIMER;
+    if(connection_timer_countdown != MAX_TIMER){
+        return 0;
+    }
+    //cout << "mutex_connection_timer_countdown.lock(); 1" << endl;
+    mutex_connection_timer_countdown.lock();
     while(true){
+        cout << "connection_timer_countdown: " << connection_timer_countdown << endl;
         usleep(WAIT_TIME_BETWEEN_RETRIES);
-        if(timer_countdown == 0){
-            cout << "timeout" << endl;
-            mutex_connection_timer.lock();
+        if(connection_timer_countdown == 0){
+            cout << "timeout 1" << endl;
             remove_from_server_list(server_copy);
             send_election();
-            mutex_connection_timer.unlock();
+            break;
+        }
+        else{
+            connection_timer_countdown--;
+        }
+        
+    }
+    mutex_connection_timer_countdown.unlock();
+    return 0;
+}
+
+void* timer(void *arg){
+    if(timer_countdown != MAX_TIMER){
+        return 0;
+    }
+    //cout << "mutex_timer_countdown.lock(); 2" << endl;
+    mutex_timer_countdown.lock();
+    while(true){
+        usleep(WAIT_TIME_BETWEEN_RETRIES);
+        //cout << "mutex_timer.lock(); 3" << endl;
+        mutex_timer.lock();
+        cout << "timer_countdown: " << timer_countdown << endl;
+        if(timer_countdown == 0){
+            mutex_timer.unlock();
+            cout << "timeout 2" << endl;
+            send_election();
             break;
         }
         else{
             timer_countdown--;
         }
-        
-    }
-}
-
-void* timer(void *arg){
-    int* timer_countdown = (int *)arg;
-    while(true){
-        usleep(WAIT_TIME_BETWEEN_RETRIES);
-        mutex_timer.lock();
-        if(*timer_countdown == 0){
-            cout << "timeout" << endl;
-            send_election();
-            break;
-        }
-        else{
-            *timer_countdown--;
-        }
         mutex_timer.unlock();
     }
+    mutex_timer_countdown.unlock();
+    return 0;
 }
 
 void* check_main_server_up(void *arg){
+    return 0;
+    if(main_server){
+        cout << "ERROR main_server should not check for liveness" << endl;
+        return 0;
+    }
     int server_socket = *(int *)arg;
 
-    PACKET pkt;
-
     pthread_t timer_thr;
-    int timer_countdown;
-    create_thread(&timer_thr, NULL, timer, &timer_countdown);
+    mutex_timer.lock();
+    cout << "timer_countdown == MAX_TIMER" << endl;
+    mutex_timer.unlock();
+    create_thread(&timer_thr, NULL, timer, NULL);
 
-    while(!election){
-        cout << "sending LIVENESS_CHECK msg" << endl;
+    PACKET pkt;
+    while(true){
+        cout << "sending LIVENESS_CHECK" << endl;
         sendMessage("", LIVENESS_CHECK, server_socket);
-        bool message_received = has_received_message(server_socket);
-        while(message_received == false){
-            usleep(WAIT_TIME_BETWEEN_RETRIES);
-            message_received = has_received_message(server_socket);
-        }
-        if(message_received){
-            mutex_timer.lock();
-            timer_countdown = MAX_TIMER;
-            mutex_timer.unlock();
-            readSocket(&pkt, server_socket);
-        }
-        cout << "main server is up " << upnumber << endl;
-        upnumber++;
-        usleep(WAIT_TIME_BETWEEN_RETRIES);
+        cout << "reading LIVENESS_CHECK ack" << endl;
+        readSocket(&pkt, server_socket);
+        mutex_timer.lock();
+        cout << "timer_countdown == MAX_TIMER" << endl;
+        timer_countdown = MAX_TIMER;
+        mutex_timer.unlock();
     }
-    if(election){
-        cout << "check_main_server_up ended because of election" << endl;
-    }
-    else{
-        cout << "check_main_server_up ended" << endl;
-    }
+    return 0;
 }
 
 void *answer_server_up(void *arg){
+    return 0;
     int server_socket = *(int *)arg;
     PACKET pkt;
-    while(!election){
-        cout << "reading LIVENESS_CHECK msg" << endl;
+    while(true){
+        cout << "reading LIVENESS_CHECK" << endl;
         readSocket(&pkt, server_socket);
-        cout << "sending ACK for LIVENESS_CHECK msg " << upnumber << endl;
-        upnumber++;
+        cout << "sending LIVENESS_CHECK ack" << endl;
         sendMessage("", ACK, server_socket);
     }
-    cout << "answer_server_up ended because of election" << endl;
+    return 0;
 }
 
 void verificaRecebimentoIP(int argc, char *argv[])
