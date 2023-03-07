@@ -49,9 +49,9 @@ using namespace std;
 #define ELECTED 81
 
 //consts
+#define BUFFER_SIZE 256
 #define MAX_RETRIES 10
 #define WAIT_TIME_BETWEEN_RETRIES 20 * 1000
-#define BUFFER_SIZE 256
 #define DEFAULT_PORT 4000
 #define MAX_TIMER 4*MAX_RETRIES
 
