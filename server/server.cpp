@@ -456,9 +456,7 @@ void send_election(){
         cout << "send_election servers[i].id 2: " << servers[i].id << endl;
 
         //pthread_t timer_thr;
-        //mutex_connection_timer.lock();
         //connection_timer_countdown = MAX_TIMER;
-        //mutex_connection_timer.unlock();
         //create_thread(&timer_thr, NULL, connection_timer, &servers[i]);
 
         bool server_possibly_down = true;
@@ -497,7 +495,6 @@ void* connection_timer(void *arg){
     if(connection_timer_countdown != MAX_TIMER){
         return 0;
     }
-    //cout << "mutex_connection_timer.lock(); 1" << endl;
     while(true){
         cout << "connection_timer_countdown: " << connection_timer_countdown << endl;
         usleep(WAIT_TIME_BETWEEN_RETRIES);
