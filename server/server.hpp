@@ -42,7 +42,9 @@ int connect_to_main_server();
 
 bool has_bigger_id(SERVER_COPY server_copy);
 void broadcast_new_server(SERVER_COPY server_copy, int msg_type);
+void *send_election(void *arg);
 void send_election();
+void send_election(vector<SERVER_COPY> servers);
 int host_cmp(char* ip, char* other_ip);
 void* between_server_sync(void *arg);
 void* timer(void *arg);

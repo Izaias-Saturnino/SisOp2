@@ -10,6 +10,10 @@ vector<int> client_connections;
 int main_server_socket;
 bool main_server = true;
 bool election;
+vector<SERVER_COPY> election_servers;
+bool thr_send_election_init = false;
+pthread_t thr_send_election;
+
 SERVER_COPY this_server;
 int PORT = DEFAULT_PORT;
 vector<SERVER_COPY> servers;
@@ -89,6 +93,9 @@ int main(int argc, char *argv[])
         pthread_t between_server;
         cout << "between server sync starting" << endl;
         int other_server_socket = connect_to_server(*other_server_host, other_server_PORT);
+        if(other_server_socket == -1){
+            return 0;
+        }
         create_thread(&between_server, NULL, between_server_sync, &other_server_socket);
     }
     if(main_server){
@@ -437,30 +444,30 @@ bool compare_id(SERVER_COPY copy1, SERVER_COPY copy2){
     return copy1.id < copy2.id;
 }
 
-void send_election(){
+void *send_election(void *arg){
+    thr_send_election_init = true;
     if(election){
-        return;
+        return 0;
     }
     cout << "election started" << endl;
     election = true;
-    sort(servers.begin(), servers.end(), compare_id);
+    sort(election_servers.begin(), election_servers.end(), compare_id);
     bool possible_main_server = true;
-    for (int i = servers.size() - 1; i >= 0; i--){
+    for (int i = election_servers.size() - 1; i >= 0; i--){
         
-        cout << "send_election servers[i].id: " << servers[i].id << endl;
+        cout << "send_election election_servers[i].id: " << election_servers[i].id << endl;
 
-        if(servers[i].id <= this_server.id){
+        if(election_servers[i].id <= this_server.id){
             break;
         }
 
-        cout << "send_election servers[i].id 2: " << servers[i].id << endl;
+        cout << "send_election election_servers[i].id 2: " << election_servers[i].id << endl;
 
-        //pthread_t timer_thr;
-        //connection_timer_countdown = MAX_TIMER;
-        //create_thread(&timer_thr, NULL, connection_timer, &servers[i]);
+        pthread_t timer_thr;
+        create_thread(&timer_thr, NULL, connection_timer, &election_servers[i]);
 
         bool server_possibly_down = true;
-        int socket = connect_to_server(servers[i].ip, servers[i].PORT);
+        int socket = connect_to_server(election_servers[i].ip, election_servers[i].PORT);
         if(socket == -1){
             continue;
         }
@@ -468,8 +475,10 @@ void send_election(){
         cout << "sending ELECTION msg" << endl;
         sendMessage("", ELECTION, socket);
         bool message_received = has_received_message(socket);
-        //make timer instead
+        
         if(message_received){
+            cout << "message received" << endl;
+            pthread_cancel(timer_thr);
             break;
         }
         close(socket);
@@ -477,31 +486,54 @@ void send_election(){
     if(possible_main_server){
         broadcast_new_server(this_server, ELECTED);
     }
+    return 0;
 }
 
-void remove_from_server_list(SERVER_COPY server_copy){
+void send_election(){
+    if(thr_send_election_init){
+        pthread_cancel(thr_send_election);
+    }
+    election_servers = servers;
+    create_thread(&thr_send_election, NULL, send_election, NULL);
+}
+
+void send_election(vector<SERVER_COPY> servers){
+    if(thr_send_election_init){
+        pthread_cancel(thr_send_election);
+    }
+    election = false;
+    election_servers = servers;
+    create_thread(&thr_send_election, NULL, send_election, NULL);
+}
+
+vector<SERVER_COPY> remove_from_server_list(SERVER_COPY server_copy, vector<SERVER_COPY> servers){
     for(int i = 0; i < servers.size(); i++){
         bool ip_equals = str_equals((char*) (server_copy.ip).c_str(), server_copy.ip.size(), (char*) (servers[i].ip).c_str(), servers[i].ip.size());
         bool port_equals = server_copy.PORT == servers[i].PORT;
         if(ip_equals && port_equals){
+            cout << "servers[i].id" << servers[i].id << endl;
             servers.erase(servers.begin()+i-1);
             break;
         }
     }
+    return servers;
+}
+
+void remove_from_server_list(SERVER_COPY server_copy){
+    servers = remove_from_server_list(server_copy, servers);
 }
 
 void* connection_timer(void *arg){
+    cout << "connection_timer started" << endl;
+    connection_timer_countdown = MAX_TIMER;
     SERVER_COPY server_copy = *(SERVER_COPY *)arg;
-    if(connection_timer_countdown != MAX_TIMER){
-        return 0;
-    }
     while(true){
         cout << "connection_timer_countdown: " << connection_timer_countdown << endl;
         usleep(WAIT_TIME_BETWEEN_RETRIES);
         if(connection_timer_countdown <= 0){
-            cout << "timeout 1" << endl;
-            remove_from_server_list(server_copy);
-            send_election();
+            cout << "connection timeout" << endl;
+            vector<SERVER_COPY> new_servers = remove_from_server_list(server_copy, servers);
+            send_election(new_servers);
             break;
         }
         else{
@@ -525,14 +557,13 @@ SERVER_COPY get_main_server_copy(){
 }
 
 void* timer(void *arg){
-    if(timer_countdown != MAX_TIMER){
-        return 0;
-    }
+    cout << "timer started" << endl;
+    timer_countdown = MAX_TIMER;
     while(true){
         usleep(WAIT_TIME_BETWEEN_RETRIES);
-        cout << "timer_countdown: " << timer_countdown << endl;
+        //cout << "timer_countdown: " << timer_countdown << endl;
         if(timer_countdown <= 0){
-            cout << "timeout 2" << endl;
+            cout << "main server timeout" << endl;
             send_election();
             break;
         }
@@ -551,16 +582,16 @@ void* check_main_server_up(void *arg){
     int server_socket = *(int *)arg;
 
     pthread_t timer_thr;
-    cout << "timer_countdown == MAX_TIMER" << endl;
     create_thread(&timer_thr, NULL, timer, NULL);
 
     PACKET pkt;
+    cout << "check_main_server_up running" << endl;
     while(true){
-        cout << "sending LIVENESS_CHECK" << endl;
+        //cout << "sending LIVENESS_CHECK" << endl;
         sendMessage("", LIVENESS_CHECK, server_socket);
-        cout << "reading LIVENESS_CHECK ack" << endl;
+        //cout << "reading LIVENESS_CHECK ack" << endl;
         readSocket(&pkt, server_socket);
-        cout << "timer_countdown == MAX_TIMER" << endl;
+        //cout << "timer_countdown == MAX_TIMER" << endl;
         timer_countdown = MAX_TIMER;
     }
     return 0;
@@ -569,10 +600,11 @@ void* check_main_server_up(void *arg){
 void *answer_server_up(void *arg){
     int server_socket = *(int *)arg;
     PACKET pkt;
+    cout << "answer_server_up running" << endl;
     while(true){
-        cout << "sending LIVENESS_CHECK ack" << endl;
+        //cout << "sending LIVENESS_CHECK ack" << endl;
         sendMessage("", ACK, server_socket);
-        cout << "reading LIVENESS_CHECK" << endl;
+        //cout << "reading LIVENESS_CHECK" << endl;
         readSocket(&pkt, server_socket);
     }
     return 0;
