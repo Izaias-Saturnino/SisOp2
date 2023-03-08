@@ -9,6 +9,7 @@ vector<int> client_connections;
 
 int main_server_socket;
 bool main_server = true;
+//talvez remover esse boleano de eleição
 bool election;
 vector<SERVER_COPY> election_servers;
 bool thr_send_election_init = false;
@@ -445,7 +446,6 @@ bool compare_id(SERVER_COPY copy1, SERVER_COPY copy2){
 }
 
 void *send_election(void *arg){
-    thr_send_election_init = true;
     if(election){
         return 0;
     }
@@ -455,13 +455,13 @@ void *send_election(void *arg){
     bool possible_main_server = true;
     for (int i = election_servers.size() - 1; i >= 0; i--){
         
-        cout << "send_election election_servers[i].id: " << election_servers[i].id << endl;
+        //cout << "send_election election_servers[i].id: " << election_servers[i].id << endl;
 
         if(election_servers[i].id <= this_server.id){
             break;
         }
 
-        cout << "send_election election_servers[i].id 2: " << election_servers[i].id << endl;
+        //cout << "send_election election_servers[i].id 2: " << election_servers[i].id << endl;
 
         pthread_t timer_thr;
         create_thread(&timer_thr, NULL, connection_timer, &election_servers[i]);
@@ -490,20 +490,18 @@ void *send_election(void *arg){
 }
 
 void send_election(){
-    if(thr_send_election_init){
-        pthread_cancel(thr_send_election);
-    }
-    election_servers = servers;
-    create_thread(&thr_send_election, NULL, send_election, NULL);
+    send_election(servers);
 }
 
 void send_election(vector<SERVER_COPY> servers){
+    election_servers = servers;
+    pthread_t new_thr_send_election;
+    create_thread(&new_thr_send_election, NULL, send_election, NULL);
     if(thr_send_election_init){
         pthread_cancel(thr_send_election);
     }
-    election = false;
-    election_servers = servers;
-    create_thread(&thr_send_election, NULL, send_election, NULL);
+    thr_send_election_init = true;
+    thr_send_election = new_thr_send_election;
 }
 
 vector<SERVER_COPY> remove_from_server_list(SERVER_COPY server_copy, vector<SERVER_COPY> servers){
@@ -511,7 +509,7 @@ vector<SERVER_COPY> remove_from_server_list(SERVER_COPY server_copy, vector<SERV
         bool ip_equals = str_equals((char*) (server_copy.ip).c_str(), server_copy.ip.size(), (char*) (servers[i].ip).c_str(), servers[i].ip.size());
         bool port_equals = server_copy.PORT == servers[i].PORT;
         if(ip_equals && port_equals){
-            cout << "servers[i].id" << servers[i].id << endl;
+            //cout << "servers[i].id" << servers[i].id << endl;
             servers.erase(servers.begin()+i-1);
             break;
         }
@@ -528,10 +526,11 @@ void* connection_timer(void *arg){
     connection_timer_countdown = MAX_TIMER;
     SERVER_COPY server_copy = *(SERVER_COPY *)arg;
     while(true){
-        cout << "connection_timer_countdown: " << connection_timer_countdown << endl;
+        //cout << "connection_timer_countdown: " << connection_timer_countdown << endl;
         usleep(WAIT_TIME_BETWEEN_RETRIES);
         if(connection_timer_countdown <= 0){
             cout << "connection timeout" << endl;
+            election = false;
             vector<SERVER_COPY> new_servers = remove_from_server_list(server_copy, servers);
             send_election(new_servers);
             break;
