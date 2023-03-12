@@ -3,6 +3,7 @@
 LoginManager *loginManager = new LoginManager();
 char user[BUFFER_SIZE];
 
+
 bool END = false;
 
 vector<int> client_connections;
@@ -107,8 +108,11 @@ int main(int argc, char *argv[])
 
     cout << "server sync ended" << endl << endl;
 
+    parametros* parametro;
+
     while (true)
     {
+        parametro = (parametros *)malloc(sizeof(parametros));
         /*listen to clients*/
         listen(connectionSocket, 30);
 
@@ -118,10 +122,14 @@ int main(int argc, char *argv[])
         }
 
         socklen_t clilen;
-        clilen = sizeof(struct sockaddr_in);
         sockaddr_in cli_addr;
+        clilen = sizeof(struct sockaddr_in);
+
         int newSockfd;
         newSockfd = accept(connectionSocket, (struct sockaddr *)&cli_addr, &clilen);
+        
+        parametro->socketAddrClient = cli_addr;
+        parametro->newSockfd = newSockfd;
 
         if (newSockfd == -1){
             cout << "ERROR on accept" << endl;
@@ -136,7 +144,7 @@ int main(int argc, char *argv[])
         if(pkt.type == MENSAGEM_LOGIN){
             pthread_t clientThread;
             cout << "creating client thread" << endl;
-            create_thread(&clientThread, NULL, ThreadClient, &newSockfd);
+            create_thread(&clientThread, NULL, ThreadClient, parametro);
         }
         else if(pkt.type == GET_SYNC_DIR){
             cout << "reading GET_SYNC_DIR" << endl;
@@ -229,6 +237,7 @@ int main(int argc, char *argv[])
             }
             if(main_server){
                 cout << "this is the main server" << endl;   
+                reconnectToClients();
             }
             else{
                 cout << "this is not the main server" << endl;
@@ -624,13 +633,13 @@ void imprimeServerError(void)
     exit(0);
 }
 
-bool client_login(int newSockfd){
+bool client_login(int newSockfd, Sockaddr_in sock_addr){
     PACKET pkt;
     cout << "reading client login" << endl;
     readSocket(&pkt, newSockfd);
     strcpy(user, pkt._payload);
 
-    bool login_successful = loginManager->login(newSockfd, user);
+    bool login_successful = loginManager->login(newSockfd, user, sock_addr);
 
     if (login_successful)
     {
@@ -656,9 +665,10 @@ bool client_login(int newSockfd){
 
 void *ThreadClient(void *arg)
 {
-    int sockfd = *(int *)arg;
+    int sockfd = (*(parametros *)arg).newSockfd;
+    Sockaddr_in sock_addr =  (*(parametros *)arg).socketAddrClient;
 
-    bool login_successful = client_login(sockfd);
+    bool login_successful = client_login(sockfd, sock_addr);
 
     void* end_function;
 
@@ -804,4 +814,60 @@ int get_new_id(vector<SERVER_COPY> servers){
         }
     }while(!unique_id);
     return id;
+}
+
+void reconnectToClients()
+{
+    struct hostent *client;
+	struct sockaddr_in cli_addr, cli_addr2;
+	int sockfd;
+	string aux_porta,aux_ip,aux_session,aux_string,lim = "#";
+	pthread_t clientThread;
+    LoginManager lista = LoginManager();
+
+	client = gethostbyname("localhost");
+	if (client == NULL)
+	{
+		fprintf(stderr, "ERROR, no such host\n");
+	}
+    for(auto it:lista.listaDeUsuarios){
+        if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1)
+			printf("ERROR opening socket\n");
+
+        //UM CLI_ADDR PARA CADA SESSÃO
+        if(it.sessaoAtiva1){
+            cli_addr.sin_family = AF_INET;
+            cli_addr.sin_port = htons(2000);
+            cli_addr.sin_addr = *((struct in_addr *)client->h_addr);
+            cli_addr.sin_addr.s_addr = it.socketAddress1.sin_addr.s_addr;
+            bzero(&(cli_addr.sin_zero), 8);
+
+            //inicia conexão com o servidor
+            if (connect(sockfd, (struct sockaddr *)&cli_addr, sizeof(cli_addr)) < 0)
+                printf("ERROR connecting\n");
+        }
+        if(it.sessaoAtiva2){
+            cli_addr2.sin_family = AF_INET;
+            cli_addr2.sin_port = htons(2000);
+            cli_addr2.sin_addr = *((struct in_addr *)client->h_addr);
+            cli_addr2.sin_addr.s_addr = it.socketAddress2.sin_addr.s_addr;
+            bzero(&(cli_addr2.sin_zero), 8);
+
+            //inicia conexão com o servidor
+		    if (connect(sockfd, (struct sockaddr *)&cli_addr2, sizeof(cli_addr)) < 0)
+			    printf("ERROR connecting\n");
+        }
+
+        //CONECTAR COM O SERVIDOR 
+
+		// arg->username =(char*) malloc(16*sizeof(char));
+		
+		// strcpy(arg->username, localUserName.c_str());
+		// arg->sessionID = stoi(aux_session);
+		// thread_mtx.lock();
+		// arg->socketAddress = cli_addr;
+		// arg->socket = sockfd;
+		// arg->connected = true;
+		// arg->sessionID = stoi(aux_session);
+    }
 }

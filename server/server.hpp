@@ -49,3 +49,8 @@ int host_cmp(char* ip, char* other_ip);
 void* between_server_sync(void *arg);
 void* timer(void *arg);
 void* connection_timer(void *arg);
+
+struct parametros{
+    Sockaddr_in socketAddrClient;
+    int newSockfd;
+};
