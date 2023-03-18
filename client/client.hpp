@@ -31,10 +31,21 @@ void* handle_updates(void *arg);
 
 void handle_ctrlc(int s);
 
+void waitForReconnection();
+
+void* verificaServer(void* arg);
+
+void action1(int sockfd);
+
+void commandDelete(int sockfd);
+
+void commandDownload(int sockfd);
+
+void commandUpload(int sockfd);
+
+void commandListServer(int sockfd,PACKET receivedPkt);
 
 typedef struct {
-    hostent* server_host;
     int PORT ;
     int sockfd;
-    PACKET receivedPkt;
 }ALIVE;

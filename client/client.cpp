@@ -18,6 +18,8 @@ int main(int argc, char *argv[])
 	struct sigaction sigIntHandler;
 	PACKET receivedPkt;
 
+	servAlive= (ALIVE *)malloc(sizeof(ALIVE));
+
 	sigIntHandler.sa_handler = handle_ctrlc;
 	sigemptyset(&sigIntHandler.sa_mask);
 	sigIntHandler.sa_flags = 0;
@@ -58,11 +60,9 @@ int main(int argc, char *argv[])
 
 
 		servAlive->PORT = PORT;
-		servAlive->receivedPkt = receivedPkt;
-		servAlive->server_host = server_host;
 		servAlive->sockfd = sockfd;
            
-		create_thread(&thr, NULL, verificaServer, servAlive);
+		create_thread(&thr, NULL, verificaServer,&receivedPkt);
 
 		while (true)
 		{
@@ -171,7 +171,7 @@ void waitForReconnection()
 	// listen to the clients
 	n = listen(servAlive->sockfd, 5);
 	clilen = sizeof(struct sockaddr_in);
-	if ((newsockfd = accept(servAlive->sockfd, (struct sockaddr *)&serv_addr, &clilen)) == -1)
+	if ((newsockfd = accept(servAlive->sockfd, (struct sockaddr *)&serv_addr, &clilen)) == -1) // INCLUIR PASSOS ANTERIORES AO ACCEPT
 		printf("ERROR on accept");
 	memset(&localPkt, 0, sizeof(localPkt));
 
@@ -182,16 +182,16 @@ void waitForReconnection()
 
 void* verificaServer(void* arg){
 
-	ALIVE *serverAlive = (ALIVE*)arg;
+	PACKET* pack = (PACKET*)arg;
 	int result ;
 
 	while (connected)
 	{
 		cout << "send verificacao" << endl;
-		sendMessage("Servidor vivo?", MENSAGEM_VERIFICACAO, serverAlive->sockfd); // login message
+		sendMessage("Servidor vivo?", MENSAGEM_VERIFICACAO, servAlive->sockfd); // login message
 
 		cout << "read confirmacao" << endl;
-		result = read(serverAlive->sockfd, &serverAlive->receivedPkt, sizeof(PACKET));
+		result = read(servAlive->sockfd, &pack, sizeof(PACKET));
 
 		if (result == 0) { //<=
 			connected = false;
@@ -200,8 +200,6 @@ void* verificaServer(void* arg){
 	}
 
 	waitForReconnection();
-
-	//serverAlive->sockfd = connect_to_server(*serverAlive->server_host, serverAlive->PORT);
 
 }
 
