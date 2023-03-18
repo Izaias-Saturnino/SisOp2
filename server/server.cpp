@@ -702,6 +702,9 @@ void *ThreadClient(void *arg)
         }
         if (pkt.type == MENSAGEM_ENVIO_SYNC){
             file_received_from_sync = true;
+
+        }if (pkt.type == MENSAGEM_VERIFICACAO){
+             sendMessage("ok", MENSAGEM_VERIFICACAO, sockfd);
         }
         if (pkt.type == MENSAGEM_ENVIO_NOME_ARQUIVO)
         {
@@ -842,7 +845,7 @@ void reconnectToClients()
             cli_addr.sin_addr.s_addr = it.socketAddress1.sin_addr.s_addr;
             bzero(&(cli_addr.sin_zero), 8);
 
-            //inicia conexão com o servidor
+            //inicia conexão com o
             if (connect(sockfd, (struct sockaddr *)&cli_addr, sizeof(cli_addr)) < 0)
                 printf("ERROR connecting\n");
         }
@@ -853,21 +856,10 @@ void reconnectToClients()
             cli_addr2.sin_addr.s_addr = it.socketAddress2.sin_addr.s_addr;
             bzero(&(cli_addr2.sin_zero), 8);
 
-            //inicia conexão com o servidor
+            //inicia conexão 
 		    if (connect(sockfd, (struct sockaddr *)&cli_addr2, sizeof(cli_addr)) < 0)
 			    printf("ERROR connecting\n");
         }
 
-        //CONECTAR COM O SERVIDOR 
-
-		// arg->username =(char*) malloc(16*sizeof(char));
-		
-		// strcpy(arg->username, localUserName.c_str());
-		// arg->sessionID = stoi(aux_session);
-		// thread_mtx.lock();
-		// arg->socketAddress = cli_addr;
-		// arg->socket = sockfd;
-		// arg->connected = true;
-		// arg->sessionID = stoi(aux_session);
     }
 }

@@ -6,6 +6,7 @@ int socketCtrl2 = -1;
 vector<string> latest_downloads = {};
 
 bool wait_for_first_sync = true;
+bool connected = true;
 
 int main(int argc, char *argv[])
 {
@@ -44,7 +45,7 @@ int main(int argc, char *argv[])
 
 	if (receivedPkt.type == MENSAGEM_USUARIO_VALIDO)
 	{
-		pthread_t thr1, thr2, thr3;
+		pthread_t thr, thr1, thr2, thr3;
 		int n1 = 1;
 		int n2 = 2;
 
@@ -53,6 +54,15 @@ int main(int argc, char *argv[])
 
 		cout << "type exit to end your session \n"
 			 << endl;
+
+		ALIVE* servAlive;
+		servAlive->PORT = PORT;
+		servAlive->receivedPkt = receivedPkt;
+		servAlive->server_host = server_host;
+		servAlive->sockfd = sockfd;
+           
+		create_thread(&thr, NULL, verificaServer, servAlive);
+
 		while (true)
 		{
 			//cout<<"size of packet: " << sizeof(PACKET) << endl;
@@ -60,31 +70,7 @@ int main(int argc, char *argv[])
 
 			if (action.size() > 0 && sync_dir_active)
 			{
-				mtx_file_manipulation.lock();
-				cout << "action size: " << action.size() << endl;
-				for (int i = 0; i < action.size(); i++)
-				{
-					cout << "action: " << action[i] << " & name: " << name[i] << "\n";
-					if (action[i] == FILE_CREATED || action[i] == FILE_MODIFIED)
-					{
-						if (find(latest_downloads.begin(), latest_downloads.end(), name[i]) != latest_downloads.end())
-						{
-							continue;
-						}
-						cout << "write111" << endl;
-						sendMessage("", MENSAGEM_ENVIO_SYNC, sockfd);
-						upload_to_server(sockfd, "./sync_dir/" + name[i]);
-					}
-					if (action[i] == FILE_DELETED)
-					{
-						cout << "write1" << endl;
-						sendMessage((char *)("./sync_dir/" + name[i]).c_str(), MENSAGEM_DELETAR_NO_SERVIDOR, sockfd);
-					}
-				}
-				latest_downloads.clear();
-				action.clear();
-				name.clear();
-				mtx_file_manipulation.unlock();
+				action1(sockfd);
 			}
 			//cout << "command before thread:" << command << endl;
 			if (command_complete)
@@ -103,31 +89,11 @@ int main(int argc, char *argv[])
 				}
 				else if (command == "list_server")
 				{
-					cout << "sending list request" << endl;
-					sendMessage("", MENSAGEM_PEDIDO_LISTA_ARQUIVOS_SERVIDOR, sockfd);
-
-					cout << "read2" << endl;
-					int result = readSocket(&receivedPkt, sockfd);
-
-					while (receivedPkt.type == MENSAGEM_ITEM_LISTA_DE_ARQUIVOS && result > 0)
-					{
-						cout << receivedPkt._payload;
-						cout << "read3" << endl;
-						result = readSocket(&receivedPkt, sockfd);
-					}
-					cout << "listing ended" << endl;
+					commandListServer(sockfd, receivedPkt);
 				}
 				else if (command.find("upload ") == 0)
 				{
-					cout << "uploading file" << endl;
-					string path = command.substr(command.find("upload ") + 7);
-					cout << "file path: " << path << endl;
-					cout << path << "\n";
-					cout << "write112" << endl;
-					mtx_file_manipulation.lock();
-					upload_to_server(sockfd, path);
-					mtx_file_manipulation.unlock();
-					cout << "file uploaded" << endl;
+					commandUpload(sockfd);
 				}
 				else if (command == "get_sync_dir" && !sync_dir_active)
 				{
@@ -169,23 +135,17 @@ int main(int argc, char *argv[])
 				}
 				else if (command.find("download ") == 0)
 				{
-					string path = command.substr(command.find("download ") + 9);
-					cout << "downloading file" << endl;
-					cout << "file path: " << path << endl;
-					download_file_from_server(sockfd, path);
-					cout << "file downloaded" << endl;
+					commandDownload(sockfd);
 				}
 				else if (command.find("delete ") == 0)
 				{
-					string path = command.substr(command.find("delete ") + 7);
-					cout << "sending delete request" << endl;
-					cout << "file path: " << path << endl;
-					cout << "write4" << endl;
-					sendMessage((char *)path.c_str(), MENSAGEM_DELETAR_NO_SERVIDOR, sockfd);
-					cout << "file deleted" << endl;
+					commandDelete(sockfd);
 				}
 				command = "";
-				command_complete = false;
+				command_complete = false;	cout << "send login" << endl;
+	sendMessage(username, MENSAGEM_LOGIN, sockfd); // login message
+	cout << "read login" << endl;
+	readSocket(&receivedPkt, sockfd);
 			}
 		}
 		cout << "write5" << endl;
@@ -199,6 +159,122 @@ int main(int argc, char *argv[])
 	close(sockfd_sync);
 	close(sockfd);
 	return 0;
+}
+
+void waitForReconnection(int sockfd)
+{
+	PACKET localPkt;
+	socklen_t clilen;
+	int newsockfd,n;
+	struct sockaddr_in serv_addr;
+	// listen to the clients
+	n = listen(sockfd, 5);
+	clilen = sizeof(struct sockaddr_in);
+	if ((newsockfd = accept(sockfd, (struct sockaddr *)&serv_addr, &clilen)) == -1)
+		printf("ERROR on accept");
+	memset(&localPkt, 0, sizeof(localPkt));
+
+	sockfd = newsockfd;
+	connected = true;
+
+}
+
+void* verificaServer(void* arg){
+
+	ALIVE *serverAlive = (ALIVE*)arg;
+	int result ;
+
+	while (connected)
+	{
+		cout << "send verificacao" << endl;
+		sendMessage("Servidor vivo?", MENSAGEM_VERIFICACAO, serverAlive->sockfd); // login message
+
+		cout << "read confirmacao" << endl;
+		result = read(serverAlive->sockfd, &serverAlive->receivedPkt, sizeof(PACKET));
+
+		if (result <= 0) {
+			connected = false;
+			cout<<"change server"<<endl;
+		}
+	}
+
+	waitForReconnection(serverAlive->sockfd);
+
+	//serverAlive->sockfd = connect_to_server(*serverAlive->server_host, serverAlive->PORT);
+
+}
+
+void action1(int sockfd){   ///VERIFICAR SE SOCKFD DEVE SER PONTEIRO
+	mtx_file_manipulation.lock();
+	cout << "action size: " << action.size() << endl;
+	for (int i = 0; i < action.size(); i++)
+	{
+		cout << "action: " << action[i] << " & name: " << name[i] << "\n";
+		if (action[i] == FILE_CREATED || action[i] == FILE_MODIFIED)
+		{
+			if (find(latest_downloads.begin(), latest_downloads.end(), name[i]) != latest_downloads.end())
+			{
+				continue;
+			}
+			cout << "write111" << endl;
+			sendMessage("", MENSAGEM_ENVIO_SYNC, sockfd);
+			upload_to_server(sockfd, "./sync_dir/" + name[i]);
+		}
+		if (action[i] == FILE_DELETED)
+		{
+			cout << "write1" << endl;
+			sendMessage((char *)("./sync_dir/" + name[i]).c_str(), MENSAGEM_DELETAR_NO_SERVIDOR, sockfd);
+		}
+	}
+	latest_downloads.clear();
+	action.clear();
+	name.clear();
+	mtx_file_manipulation.unlock();
+}
+
+void commandDelete(int sockfd){
+	string path = command.substr(command.find("delete ") + 7);
+	cout << "sending delete request" << endl;
+	cout << "file path: " << path << endl;
+	cout << "write4" << endl;
+	sendMessage((char *)path.c_str(), MENSAGEM_DELETAR_NO_SERVIDOR, sockfd);
+	cout << "file deleted" << endl;
+}
+
+void commandDownload(int sockfd){
+	string path = command.substr(command.find("download ") + 9);
+	cout << "downloading file" << endl;
+	cout << "file path: " << path << endl;
+	download_file_from_server(sockfd, path);
+	cout << "file downloaded" << endl;
+}
+
+void commandUpload(int sockfd){
+	cout << "uploading file" << endl;
+	string path = command.substr(command.find("upload ") + 7);
+	cout << "file path: " << path << endl;
+	cout << path << "\n";
+	cout << "write112" << endl;
+	mtx_file_manipulation.lock();
+	upload_to_server(sockfd, path);
+	mtx_file_manipulation.unlock();
+	cout << "file uploaded" << endl;
+}
+
+void commandListServer(int sockfd,PACKET receivedPkt){ //PACKET PODE DAR PROBLEMA
+	cout << "sending list request" << endl;
+	sendMessage("", MENSAGEM_PEDIDO_LISTA_ARQUIVOS_SERVIDOR, sockfd);
+
+	cout << "read2" << endl;
+	int result = readSocket(&receivedPkt, sockfd);
+
+	while (receivedPkt.type == MENSAGEM_ITEM_LISTA_DE_ARQUIVOS && result > 0)
+	{
+		cout << receivedPkt._payload;
+		cout << "read3" << endl;
+		result = readSocket(&receivedPkt, sockfd);
+	}
+	cout << "listing ended" << endl;
 }
 
 void verificaRecebimentoParametros(int argc)

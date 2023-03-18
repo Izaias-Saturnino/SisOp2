@@ -19,6 +19,7 @@
 #include <vector>
 #include <sys/ioctl.h>
 #include <fcntl.h>
+#include <ctime>
 
 using namespace std;
 
@@ -29,6 +30,7 @@ using namespace std;
 #define MENSAGEM_USUARIO_VALIDO 4
 #define MENSAGEM_RESPOSTA_LOGOUT 5
 #define MENSAGEM_IP 6
+#define MENSAGEM_VERIFICACAO 7
 #define MENSAGEM_ENVIO_NOME_ARQUIVO 10
 #define MENSAGEM_ENVIO_PARTE_ARQUIVO 11
 #define MENSAGEM_ENVIO_SYNC 12

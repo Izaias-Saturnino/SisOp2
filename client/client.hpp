@@ -30,3 +30,11 @@ int download_file_from_server(int sock, string file_path);
 void* handle_updates(void *arg);
 
 void handle_ctrlc(int s);
+
+
+typedef struct {
+    hostent* server_host;
+    int PORT ;
+    int sockfd;
+    PACKET receivedPkt;
+}ALIVE;
