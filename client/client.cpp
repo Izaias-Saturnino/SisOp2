@@ -2,6 +2,7 @@
 bool Logout = false;
 int socketCtrl = -1;
 int socketCtrl2 = -1;
+ALIVE* servAlive;
 
 vector<string> latest_downloads = {};
 
@@ -55,7 +56,7 @@ int main(int argc, char *argv[])
 		cout << "type exit to end your session \n"
 			 << endl;
 
-		ALIVE* servAlive;
+
 		servAlive->PORT = PORT;
 		servAlive->receivedPkt = receivedPkt;
 		servAlive->server_host = server_host;
@@ -161,20 +162,20 @@ int main(int argc, char *argv[])
 	return 0;
 }
 
-void waitForReconnection(int sockfd)
+void waitForReconnection()
 {
 	PACKET localPkt;
 	socklen_t clilen;
 	int newsockfd,n;
 	struct sockaddr_in serv_addr;
 	// listen to the clients
-	n = listen(sockfd, 5);
+	n = listen(servAlive->sockfd, 5);
 	clilen = sizeof(struct sockaddr_in);
-	if ((newsockfd = accept(sockfd, (struct sockaddr *)&serv_addr, &clilen)) == -1)
+	if ((newsockfd = accept(servAlive->sockfd, (struct sockaddr *)&serv_addr, &clilen)) == -1)
 		printf("ERROR on accept");
 	memset(&localPkt, 0, sizeof(localPkt));
 
-	sockfd = newsockfd;
+	servAlive->sockfd = newsockfd;
 	connected = true;
 
 }
@@ -192,13 +193,13 @@ void* verificaServer(void* arg){
 		cout << "read confirmacao" << endl;
 		result = read(serverAlive->sockfd, &serverAlive->receivedPkt, sizeof(PACKET));
 
-		if (result <= 0) {
+		if (result == 0) { //<=
 			connected = false;
 			cout<<"change server"<<endl;
 		}
 	}
 
-	waitForReconnection(serverAlive->sockfd);
+	waitForReconnection();
 
 	//serverAlive->sockfd = connect_to_server(*serverAlive->server_host, serverAlive->PORT);
 
