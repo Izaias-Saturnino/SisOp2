@@ -44,8 +44,3 @@ void commandDownload(int sockfd);
 void commandUpload(int sockfd);
 
 void commandListServer(int sockfd,PACKET receivedPkt);
-
-typedef struct {
-    int PORT ;
-    int sockfd;
-}ALIVE;

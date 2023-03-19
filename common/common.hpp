@@ -85,6 +85,7 @@ typedef struct server_copy{
     string ip;
 }SERVER_COPY;
 
+
 void serialize(PACKET *pkt, char data[sizeof(PACKET)]);
 void deserialize(PACKET *pkt, char data[sizeof(PACKET)]);
 int readSocket(PACKET *pkt, int sock);
@@ -106,3 +107,4 @@ void create_thread(
 	void *__restrict sockfd_sync);
 SERVER_COPY receive_server_copy(int socket);
 void send_server_copy(int socket, SERVER_COPY server_copy, int msg_type);
+void reconnectToClients(vector<USUARIO> listaDeUsuarios);

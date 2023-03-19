@@ -2,7 +2,7 @@
 bool Logout = false;
 int socketCtrl = -1;
 int socketCtrl2 = -1;
-ALIVE* servAlive;
+int sockfd;
 
 vector<string> latest_downloads = {};
 
@@ -18,8 +18,6 @@ int main(int argc, char *argv[])
 	struct sigaction sigIntHandler;
 	PACKET receivedPkt;
 
-	servAlive= (ALIVE *)malloc(sizeof(ALIVE));
-
 	sigIntHandler.sa_handler = handle_ctrlc;
 	sigemptyset(&sigIntHandler.sa_mask);
 	sigIntHandler.sa_flags = 0;
@@ -29,7 +27,7 @@ int main(int argc, char *argv[])
 	char* server_ip = argv[2];
 	hostent *server_host = gethostbyname(server_ip);
 	int PORT = atoi(argv[3]);
-	int sockfd = connect_to_server(*server_host, PORT);
+	sockfd = connect_to_server(*server_host, PORT);
 	
 	if (sockfd == -1)
 	{
@@ -55,12 +53,7 @@ int main(int argc, char *argv[])
 		cout << "creating input thread" << endl;
 		create_thread(&thr2, NULL, input, (void *)&n2);
 
-		cout << "type exit to end your session \n"
-			 << endl;
-
-
-		servAlive->PORT = PORT;
-		servAlive->sockfd = sockfd;
+		cout << "type exit to end your session \n" << endl;
            
 		create_thread(&thr, NULL, verificaServer,&receivedPkt);
 
@@ -167,15 +160,25 @@ void waitForReconnection()
 	PACKET localPkt;
 	socklen_t clilen;
 	int newsockfd,n;
-	struct sockaddr_in serv_addr;
+	struct sockaddr_in serv_addr,cli_addr;
+
+	if (bind(sockfd, (struct sockaddr *)&cli_addr, sizeof(cli_addr)) < 0)
+	{
+		printf("1- ERROR on binding - %d\n", errno);
+		exit(0);
+	}
+
 	// listen to the clients
-	n = listen(servAlive->sockfd, 5);
+	n = listen(sockfd, 5);
 	clilen = sizeof(struct sockaddr_in);
-	if ((newsockfd = accept(servAlive->sockfd, (struct sockaddr *)&serv_addr, &clilen)) == -1) // INCLUIR PASSOS ANTERIORES AO ACCEPT
-		printf("ERROR on accept");
+
+	cout<< "sockfd: " << sockfd <<endl;
+
+	if ((newsockfd = accept(sockfd, (struct sockaddr *)&serv_addr, &clilen)) == -1) 
+		cout<<"error on accept" << endl;
 	memset(&localPkt, 0, sizeof(localPkt));
 
-	servAlive->sockfd = newsockfd;
+	sockfd = newsockfd;
 	connected = true;
 
 }
@@ -185,22 +188,24 @@ void* verificaServer(void* arg){
 	PACKET* pack = (PACKET*)arg;
 	int result ;
 
-	while (connected)
-	{
-		cout << "send verificacao" << endl;
-		sendMessage("Servidor vivo?", MENSAGEM_VERIFICACAO, servAlive->sockfd); // login message
+	while(true){
+		while (connected)
+		{
+			sleep(1);
+			cout << "send verificacao" << endl;
+			sendMessage("Servidor vivo?", MENSAGEM_VERIFICACAO, sockfd); // login message
 
-		cout << "read confirmacao" << endl;
-		result = read(servAlive->sockfd, &pack, sizeof(PACKET));
+			cout << "read confirmacao" << endl;
+			result = read(sockfd, &pack, sizeof(PACKET));
 
-		if (result == 0) { //<=
-			connected = false;
-			cout<<"change server"<<endl;
+			if (result <= 0) { //<=
+				connected = false;
+				cout<<"change server"<<endl;
+			}
 		}
+
+		waitForReconnection();
 	}
-
-	waitForReconnection();
-
 }
 
 void action1(int sockfd){   ///VERIFICAR SE SOCKFD DEVE SER PONTEIRO
