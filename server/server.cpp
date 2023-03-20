@@ -117,7 +117,7 @@ int main(int argc, char *argv[])
          << endl;
 
     parametros *parametro;
-
+    
     while (true)
     {
         parametro = (parametros *)malloc(sizeof(parametros));
@@ -155,7 +155,7 @@ int main(int argc, char *argv[])
     }
 
     cout << endl
-         << "closing client_connections" << endl;
+        << "closing client_connections" << endl;
     close_client_connections();
 
     return 0;
@@ -972,45 +972,3 @@ int get_new_id(vector<SERVER_COPY> servers)
     } while (!unique_id);
     return id;
 }
-
-// int Reconnection()
-// {
-//     int n, sockfd, newsockfd;
-//     struct sockaddr_in serv_addr;
-// 	pthread_t clientThread;
-//     socklen_t clilen;
-// 	PACKET localPkt;
-
-//     SERVER_COPY main_server_copy = get_main_server_copy();
-
-//     hostent *server_host = gethostbyname((char*) main_server_copy.ip.c_str());
-
-//     if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1)  ///Verifica IP valido
-//         printf("ERROR opening socket\n");
-
-//     serv_addr.sin_family = AF_INET;     
-//     serv_addr.sin_port = htons(main_server_copy.PORT);    
-// 	inet_aton(server_host->h_name, &serv_addr.sin_addr);
-// 	bzero(&(serv_addr.sin_zero), 8);
-
-//     if (bind(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
-//     {
-//         printf("ERROR on binding\n");
-//         exit(0);
-//     }
-//     else{
-//         while(true)
-//         {     
-//             // listen to the clients
-//             n = listen(sockfd, 5);
-//             clilen = sizeof(struct sockaddr_in);
-//             if ((newsockfd = accept(sockfd, (struct sockaddr *)&serv_addr, &clilen)) == -1) 
-//                 printf("ERROR on accept");
-//             memset(&localPkt, 0, sizeof(localPkt));
-
-//             cout<< "doing something" << endl;
-//         }
-//     }
-
-// 	return newsockfd;
-// }

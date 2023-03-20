@@ -85,6 +85,13 @@ typedef struct server_copy{
     string ip;
 }SERVER_COPY;
 
+typedef struct {
+    int PORT ;
+    int sockfd;
+    string server_ip; 
+	hostent* server_host ;
+}ALIVE;
+
 
 void serialize(PACKET *pkt, char data[sizeof(PACKET)]);
 void deserialize(PACKET *pkt, char data[sizeof(PACKET)]);

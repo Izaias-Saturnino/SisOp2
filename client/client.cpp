@@ -2,8 +2,7 @@
 bool Logout = false;
 int socketCtrl = -1;
 int socketCtrl2 = -1;
-int sockfd;
-
+ALIVE* servAlive;
 vector<string> latest_downloads = {};
 
 bool wait_for_first_sync = true;
@@ -18,31 +17,33 @@ int main(int argc, char *argv[])
 	struct sigaction sigIntHandler;
 	PACKET receivedPkt;
 
+	servAlive= (ALIVE *)malloc(sizeof(ALIVE));
+
 	sigIntHandler.sa_handler = handle_ctrlc;
 	sigemptyset(&sigIntHandler.sa_mask);
 	sigIntHandler.sa_flags = 0;
 
 	verificaRecebimentoParametros(argc);
 
-	char* server_ip = argv[2];
-	hostent *server_host = gethostbyname(server_ip);
-	int PORT = atoi(argv[3]);
-	sockfd = connect_to_server(*server_host, PORT);
+	servAlive->server_ip = argv[2];
+	servAlive->server_host = gethostbyname((servAlive->server_ip).c_str());
+	servAlive->PORT = atoi(argv[3]);
+	servAlive->sockfd = connect_to_server(*servAlive->server_host, servAlive->PORT);
 	
-	if (sockfd == -1)
+	if (servAlive->sockfd == -1)
 	{
 		exit(0);
 	}
 
-	socketCtrl = sockfd;
+	socketCtrl = servAlive->sockfd;
 
 	char username[BUFFER_SIZE];
 	strcpy(username, argv[1]);
 
 	cout << "send login" << endl;
-	sendMessage(username, MENSAGEM_LOGIN, sockfd); // login message
+	sendMessage(username, MENSAGEM_LOGIN, servAlive->sockfd); // login message
 	cout << "read login" << endl;
-	readSocket(&receivedPkt, sockfd);
+	readSocket(&receivedPkt, servAlive->sockfd);
 
 	if (receivedPkt.type == MENSAGEM_USUARIO_VALIDO)
 	{
@@ -64,7 +65,7 @@ int main(int argc, char *argv[])
 
 			if (action.size() > 0 && sync_dir_active)
 			{
-				action1(sockfd);
+				action1(servAlive->sockfd);
 			}
 			//cout << "command before thread:" << command << endl;
 			if (command_complete)
@@ -83,11 +84,11 @@ int main(int argc, char *argv[])
 				}
 				else if (command == "list_server")
 				{
-					commandListServer(sockfd, receivedPkt);
+					commandListServer(servAlive->sockfd, receivedPkt);
 				}
 				else if (command.find("upload ") == 0)
 				{
-					commandUpload(sockfd);
+					commandUpload(servAlive->sockfd);
 				}
 				else if (command == "get_sync_dir" && !sync_dir_active)
 				{
@@ -101,7 +102,7 @@ int main(int argc, char *argv[])
 					mtx_file_manipulation.unlock();
 
 					// cria novo socket para lidar com as atualizações recebidas do servidor pelo cliente
-					sockfd_sync = connect_to_server(*server_host);
+					sockfd_sync = connect_to_server(*servAlive->server_host);
 					if(sockfd_sync == -1){
 						cout << "ERROR creating sync socket" << endl;
 						command = "";
@@ -129,21 +130,21 @@ int main(int argc, char *argv[])
 				}
 				else if (command.find("download ") == 0)
 				{
-					commandDownload(sockfd);
+					commandDownload(servAlive->sockfd);
 				}
 				else if (command.find("delete ") == 0)
 				{
-					commandDelete(sockfd);
+					commandDelete(servAlive->sockfd);
 				}
 				command = "";
 				command_complete = false;	cout << "send login" << endl;
-	sendMessage(username, MENSAGEM_LOGIN, sockfd); // login message
+	sendMessage(username, MENSAGEM_LOGIN, servAlive->sockfd); // login message
 	cout << "read login" << endl;
-	readSocket(&receivedPkt, sockfd);
+	readSocket(&receivedPkt, servAlive->sockfd);
 			}
 		}
 		cout << "write5" << endl;
-		sendMessage("", MENSAGEM_LOGOUT, sockfd); // logout message
+		sendMessage("", MENSAGEM_LOGOUT, servAlive->sockfd); // logout message
 	}
 	else
 	{
@@ -151,7 +152,7 @@ int main(int argc, char *argv[])
 	}
 
 	close(sockfd_sync);
-	close(sockfd);
+	close(servAlive->sockfd);
 	return 0;
 }
 
@@ -159,26 +160,45 @@ void waitForReconnection()
 {
 	PACKET localPkt;
 	socklen_t clilen;
-	int newsockfd,n;
-	struct sockaddr_in serv_addr,cli_addr;
+	int sock, newsockfd, n, yes=1;
+	struct sockaddr_in serv_addr,cli_addr,cli_addr2;
 
-	if (bind(sockfd, (struct sockaddr *)&cli_addr, sizeof(cli_addr)) < 0)
+	if ((sock = socket(AF_INET, SOCK_STREAM, 0)) == -1)
 	{
-		printf("1- ERROR on binding - %d\n", errno);
+		printf("ERROR opening socket");
+		exit(0);
+	}
+
+	// if(setsockopt(sock,SOL_SOCKET,SO_REUSEADDR,(void*)&yes, sizeof(yes)) < 0){
+	// 	cout<<"setsockopt() failed: " << errno << endl; 
+	// }
+
+	// if( setsockopt(sock, SOL_SOCKET, SO_REUSEPORT, &yes, sizeof(yes))< 0){
+	// 	cout<<"setsockopt() failed: " << errno << endl; 
+	// }
+	
+	cli_addr.sin_family = AF_INET;
+	cli_addr.sin_port = htons(2000);
+	inet_aton(servAlive->server_host->h_name, &cli_addr.sin_addr);
+	bzero(&(cli_addr.sin_zero), 8);
+
+	if (bind(sock,(struct sockaddr *)&cli_addr, sizeof(cli_addr)) < 0)
+	{
+		printf(" ERROR on binding - %d\n", errno);
 		exit(0);
 	}
 
 	// listen to the clients
-	n = listen(sockfd, 5);
+	n = listen(sock, 5);
 	clilen = sizeof(struct sockaddr_in);
+	cout<< "Esperando conexão"<< endl;
 
-	cout<< "sockfd: " << sockfd <<endl;
-
-	if ((newsockfd = accept(sockfd, (struct sockaddr *)&serv_addr, &clilen)) == -1) 
-		cout<<"error on accept" << endl;
+	if ((newsockfd = accept(sock, (struct sockaddr *)&serv_addr, &clilen)) == -1) 
+		printf("ERROR on accept");
 	memset(&localPkt, 0, sizeof(localPkt));
+	cout<< "Reconectado"<< endl;
 
-	sockfd = newsockfd;
+	servAlive->sockfd = newsockfd;
 	connected = true;
 
 }
@@ -193,10 +213,10 @@ void* verificaServer(void* arg){
 		{
 			sleep(1);
 			cout << "send verificacao" << endl;
-			sendMessage("Servidor vivo?", MENSAGEM_VERIFICACAO, sockfd); // login message
+			sendMessage("Servidor vivo?", MENSAGEM_VERIFICACAO, servAlive->sockfd); // login message
 
 			cout << "read confirmacao" << endl;
-			result = read(sockfd, &pack, sizeof(PACKET));
+			result = read(servAlive->sockfd, &pack, sizeof(PACKET));
 
 			if (result <= 0) { //<=
 				connected = false;
