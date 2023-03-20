@@ -332,3 +332,50 @@ void create_thread(
 		cout << "ERROR number: " << i << endl;
 	}
 }
+
+void reconnectToClients(vector<USUARIO> listaDeUsuarios)
+{
+    struct hostent *client;
+    struct sockaddr_in cli_addr, cli_addr2;
+    int sockfd;
+    string aux_porta, aux_ip, aux_session, aux_string, lim = "#";
+    pthread_t clientThread;
+    //LoginManager lista = LoginManager();
+
+    client = gethostbyname("localhost");
+    if (client == NULL)
+    {
+        fprintf(stderr, "ERROR, no such host\n");
+    }
+    for (auto it : listaDeUsuarios)
+    {
+        if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1)
+            printf("ERROR opening socket\n");
+
+        // UM CLI_ADDR PARA CADA SESSÃO
+        if (it.sessaoAtiva1)
+        {
+            cli_addr.sin_family = AF_INET;
+            cli_addr.sin_port = htons(2000);
+            cli_addr.sin_addr = *((struct in_addr *)client->h_addr);
+            cli_addr.sin_addr.s_addr = it.socketAddress1.sin_addr.s_addr;
+            bzero(&(cli_addr.sin_zero), 8);
+
+            // inicia conexão com o
+            if (connect(it.socketClient1, (struct sockaddr *)&cli_addr, sizeof(cli_addr)) < 0)
+                printf("ERROR connecting\n");
+        }
+        if (it.sessaoAtiva2)
+        {
+            cli_addr2.sin_family = AF_INET;
+            cli_addr2.sin_port = htons(2000);
+            cli_addr2.sin_addr = *((struct in_addr *)client->h_addr);
+            cli_addr2.sin_addr.s_addr = it.socketAddress2.sin_addr.s_addr;
+            bzero(&(cli_addr2.sin_zero), 8);
+
+            // inicia conexão
+            if (connect(it.socketClient2, (struct sockaddr *)&cli_addr2, sizeof(cli_addr)) < 0)
+                printf("ERROR connecting\n");
+        }
+    }
+}

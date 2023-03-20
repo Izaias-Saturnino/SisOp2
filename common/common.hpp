@@ -29,6 +29,7 @@ using namespace std;
 #define MENSAGEM_USUARIO_VALIDO 4
 #define MENSAGEM_RESPOSTA_LOGOUT 5
 #define MENSAGEM_IP 6
+#define MENSAGEM_VERIFICACAO 7
 #define MENSAGEM_ENVIO_NOME_ARQUIVO 10
 #define MENSAGEM_ENVIO_PARTE_ARQUIVO 11
 #define MENSAGEM_ENVIO_SYNC 12
@@ -83,6 +84,13 @@ typedef struct server_copy{
     string ip;
 }SERVER_COPY;
 
+ typedef struct {
+    int PORT ;
+    int sockfd;
+    string server_ip; 
+	hostent* server_host ;
+}ALIVE;
+
 void serialize(PACKET *pkt, char data[sizeof(PACKET)]);
 void deserialize(PACKET *pkt, char data[sizeof(PACKET)]);
 int readSocket(PACKET *pkt, int sock);
@@ -104,3 +112,4 @@ void create_thread(
 	void *__restrict sockfd_sync);
 SERVER_COPY receive_server_copy(int socket);
 void send_server_copy(int socket, SERVER_COPY server_copy, int msg_type);
+void reconnectToClients(vector<USUARIO> listaDeUsuarios);

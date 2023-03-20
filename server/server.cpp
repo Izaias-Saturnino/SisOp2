@@ -237,7 +237,8 @@ int main(int argc, char *argv[])
             }
             if(main_server){
                 cout << "this is the main server" << endl;   
-                reconnectToClients();
+                reconnectToClients(loginManager->listaDeUsuarios);
+                cout<<"reconectou" <<endl;
             }
             else{
                 cout << "this is not the main server" << endl;
@@ -814,60 +815,4 @@ int get_new_id(vector<SERVER_COPY> servers){
         }
     }while(!unique_id);
     return id;
-}
-
-void reconnectToClients()
-{
-    struct hostent *client;
-	struct sockaddr_in cli_addr, cli_addr2;
-	int sockfd;
-	string aux_porta,aux_ip,aux_session,aux_string,lim = "#";
-	pthread_t clientThread;
-    LoginManager lista = LoginManager();
-
-	client = gethostbyname("localhost");
-	if (client == NULL)
-	{
-		fprintf(stderr, "ERROR, no such host\n");
-	}
-    for(auto it:lista.listaDeUsuarios){
-        if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1)
-			printf("ERROR opening socket\n");
-
-        //UM CLI_ADDR PARA CADA SESSÃO
-        if(it.sessaoAtiva1){
-            cli_addr.sin_family = AF_INET;
-            cli_addr.sin_port = htons(2000);
-            cli_addr.sin_addr = *((struct in_addr *)client->h_addr);
-            cli_addr.sin_addr.s_addr = it.socketAddress1.sin_addr.s_addr;
-            bzero(&(cli_addr.sin_zero), 8);
-
-            //inicia conexão com o servidor
-            if (connect(sockfd, (struct sockaddr *)&cli_addr, sizeof(cli_addr)) < 0)
-                printf("ERROR connecting\n");
-        }
-        if(it.sessaoAtiva2){
-            cli_addr2.sin_family = AF_INET;
-            cli_addr2.sin_port = htons(2000);
-            cli_addr2.sin_addr = *((struct in_addr *)client->h_addr);
-            cli_addr2.sin_addr.s_addr = it.socketAddress2.sin_addr.s_addr;
-            bzero(&(cli_addr2.sin_zero), 8);
-
-            //inicia conexão com o servidor
-		    if (connect(sockfd, (struct sockaddr *)&cli_addr2, sizeof(cli_addr)) < 0)
-			    printf("ERROR connecting\n");
-        }
-
-        //CONECTAR COM O SERVIDOR 
-
-		// arg->username =(char*) malloc(16*sizeof(char));
-		
-		// strcpy(arg->username, localUserName.c_str());
-		// arg->sessionID = stoi(aux_session);
-		// thread_mtx.lock();
-		// arg->socketAddress = cli_addr;
-		// arg->socket = sockfd;
-		// arg->connected = true;
-		// arg->sessionID = stoi(aux_session);
-    }
 }
