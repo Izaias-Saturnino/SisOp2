@@ -18,7 +18,7 @@ pthread_t thr_send_election;
 SERVER_COPY this_server;
 int PORT = DEFAULT_PORT;
 vector<SERVER_COPY> servers;
-//vector<int> server_connections;//TO DO
+vector<int> non_main_server_connections;
 
 int upnumber = 0;
 bool server_possibly_down = true;
@@ -134,6 +134,11 @@ int main(int argc, char *argv[])
         PACKET pkt;
         peekSocket(&pkt, newSockfd);
         if(pkt.type == MENSAGEM_LOGIN){
+            if(main_server){
+                for(int i = 0; i < non_main_server_connections.size(); i++){
+                    sendMessage(pkt._payload, pkt.type, non_main_server_connections[i]);
+                }
+            }
             pthread_t clientThread;
             cout << "creating client thread" << endl;
             create_thread(&clientThread, NULL, ThreadClient, &newSockfd);
@@ -190,6 +195,10 @@ int main(int argc, char *argv[])
             if(aux != this_server.id && has_bigger_id(this_server) && !main_server){
                 send_election();
             }
+            else if(server_copy.id != this_server.id){
+                int non_main_server_socket = connect_to_server(server_copy.ip, server_copy.PORT);
+                non_main_server_connections.push_back(non_main_server_socket);
+            }
         }
         else if(pkt.type == ELECTION){
             cout << "reading ELECTION" << endl;
@@ -223,6 +232,16 @@ int main(int argc, char *argv[])
             }
             if(this_server.id == server_copy.id){
                 main_server = true;
+                for(int i = 0; i < non_main_server_connections.size(); i++){
+                    close(non_main_server_connections[i]);
+                }
+                non_main_server_connections.clear();
+                for(int i = 0; i < servers.size(); i++){
+                    if(servers[i].id != this_server.id){
+                        int non_main_server_socket = connect_to_server(servers[i].ip, servers[i].PORT);
+                        non_main_server_connections.push_back(non_main_server_socket);
+                    }
+                }
             }
             else{
                 main_server = false;
@@ -683,6 +702,12 @@ void *ThreadClient(void *arg)
         cout << "reading client msg" << endl;
         readSocket(&pkt, sockfd);
         cout << "pkt.type: " << pkt.type << ". ";
+
+        if(main_server){
+            for(int i = 0; i < non_main_server_connections.size(); i++){
+                sendMessage(pkt._payload, pkt.type, non_main_server_connections[i]);
+            }
+        }
  
         if (pkt.type == MENSAGEM_LOGOUT)
         {
@@ -691,6 +716,9 @@ void *ThreadClient(void *arg)
             break;
         }
         if (pkt.type == MENSAGEM_ENVIO_SYNC){
+            if(!main_server){
+                continue;
+            }
             file_received_from_sync = true;
         }
         if (pkt.type == MENSAGEM_ENVIO_NOME_ARQUIVO)
@@ -713,6 +741,9 @@ void *ThreadClient(void *arg)
             cout << "sync_dir_sockets.size(): " << sync_dir_sockets.size() << endl;
 
             cout << "propagating file" << endl;
+            if(!main_server){
+                continue;
+            }
             for(int i = 0; i < sync_dir_sockets.size(); i++){
                 if(file_received_from_sync){
                     if(sync_dir_sockets[i] == loginManager->get_sender_sync_sock(sockfd)){
@@ -728,6 +759,9 @@ void *ThreadClient(void *arg)
         }
         if (pkt.type == MENSAGEM_PEDIDO_LISTA_ARQUIVOS_SERVIDOR)
         {
+            if(!main_server){
+                continue;
+            }
             cout << "sending " << string(user) << " file list" << endl;
             vector<string> infos = print_file_list("./" + string(user));
             for (int i = 0; i < infos.size(); i++)
@@ -757,6 +791,9 @@ void *ThreadClient(void *arg)
 
             cout << "file_name: " << file_name << endl;
 
+            if(!main_server){
+                continue;
+            }
             for(int i = 0; i < sync_dir_sockets.size(); i++){
                 cout << "sync_dir_sockets[" << i << "]: " << sync_dir_sockets[i] << endl;
                 cout << "sending MENSAGEM_DELETAR_NOS_CLIENTES" << endl;
@@ -764,6 +801,9 @@ void *ThreadClient(void *arg)
             }
         }
         if (pkt.type == MENSAGEM_DOWNLOAD_FROM_SERVER){
+            if(!main_server){
+                continue;
+            }
             string directory = "./";
             directory = directory + user + "/" + string(pkt._payload);
             send_file_to_client(sockfd, directory);
