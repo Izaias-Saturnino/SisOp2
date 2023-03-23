@@ -15,6 +15,11 @@
 #include "../login/login.hpp"
 #include "../dir_manager.cpp"
 
+typedef struct {
+    char user[BUFFER_SIZE];
+    int socket;
+}SESSION;
+
 void verificaRecebimentoIP(int argc,char *argv[]);
 
 void imprimeServerError(void);
@@ -49,3 +54,5 @@ int host_cmp(char* ip, char* other_ip);
 void* between_server_sync(void *arg);
 void* timer(void *arg);
 void* connection_timer(void *arg);
+vector<int> clear_connections(vector<int> connections);
+bool compare_id(SERVER_COPY copy1, SERVER_COPY copy2);

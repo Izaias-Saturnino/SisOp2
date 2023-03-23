@@ -7,23 +7,21 @@ bool END = false;
 
 vector<int> client_connections;
 
-int main_server_socket;
 bool main_server = true;
-//talvez remover esse boleano de eleição
 bool election;
+//global variable used as thread argument
 vector<SERVER_COPY> election_servers;
+//used to check for correct thread cancelation
 bool thr_send_election_init = false;
 pthread_t thr_send_election;
 
 SERVER_COPY this_server;
-int PORT = DEFAULT_PORT;
 vector<SERVER_COPY> servers;
-
-int upnumber = 0;
-bool server_possibly_down = true;
 
 atomic_int timer_countdown = MAX_TIMER;
 atomic_int connection_timer_countdown = MAX_TIMER;
+
+atomic_bool has_received_new_server = false;
 
 //args this_ip other_server_ip this_port other_server_port
 
@@ -43,6 +41,8 @@ int main(int argc, char *argv[])
     }
 
     srand(time(NULL));
+
+    int PORT = DEFAULT_PORT;
 
     if(argc > 3){
         PORT = atoi(argv[3]);
@@ -100,7 +100,7 @@ int main(int argc, char *argv[])
     }
     if(main_server){
         this_server.id = get_new_id(servers);
-        cout << "server id: " << this_server.id << endl;
+        cout << "this server id: " << this_server.id << endl;
     }
     servers.push_back(this_server);
 
@@ -189,6 +189,7 @@ int main(int argc, char *argv[])
             if(aux != this_server.id && has_bigger_id(this_server) && !main_server){
                 send_election();
             }
+            has_received_new_server = true;
         }
         else if(pkt.type == ELECTION){
             cout << "reading ELECTION" << endl;
@@ -209,16 +210,10 @@ int main(int argc, char *argv[])
                 continue;
             }
             if(this_server.id < server_copy.id){
-                close(main_server_socket);
                 main_server = false;
-                main_server_socket = connect_to_server(server_copy.ip, server_copy.PORT);
-                if(main_server_socket == -1){
-                    cout << "ERROR: could not connect to main server" << endl;
-                    continue;
-                }
                 
                 pthread_t check_main_server_up_thr;
-                create_thread(&check_main_server_up_thr, NULL, check_main_server_up, &main_server_socket);
+                create_thread(&check_main_server_up_thr, NULL, check_main_server_up, &server_copy);
             }
             if(this_server.id == server_copy.id){
                 main_server = true;
@@ -290,20 +285,17 @@ void *between_server_sync(void *arg){
         cout << "ERROR opening other server socket\n";
         return 0;
     }
+
     send_list_of_servers(other_server_socket);
-    PACKET pkt;
+
     cout << "reading LIST_SERVER msg again" << endl;
     receive_list_of_servers(other_server_socket);
 
+    int main_server_socket = connect_to_main_server();
+
     while(main_server_socket == -1){
         cout << "ERROR: could not connect to main server" << endl;
-        return 0;
-    }
-
-    main_server_socket = connect_to_main_server();
-
-    if(main_server_socket == -1){
-        cout << "ERROR: could not connect to main server" << endl;
+        send_election();
         return 0;
     }
 
@@ -313,7 +305,9 @@ void *between_server_sync(void *arg){
     insert_in_server_list(receive_server_copy(main_server_socket));
     sendMessage("", ACK, main_server_socket);
     cout << "new server id: " << this_server.id << endl;
-    send_election();
+    if(has_bigger_id(this_server) && !main_server){
+        send_election();
+    }
     
     return 0;
 }
@@ -431,10 +425,19 @@ bool has_bigger_id(SERVER_COPY server_copy){
 int connect_to_main_server(){
     int socket = -1;
 
-    SERVER_COPY main_server_copy = get_main_server_copy();
-    
-    if(main_server_copy.id > this_server.id){
-        socket = connect_to_server(main_server_copy.ip, main_server_copy.PORT);
+    sort(servers.begin(), servers.end(), compare_id);
+
+    for (int i = servers.size() - 1; i >= 0; i--)
+    {
+        if(servers[i].id > this_server.id){
+            socket = connect_to_server(servers[i].ip, servers[i].PORT);
+            if(socket != -1){
+                break;
+            }
+        }
+        else{
+            break;
+        }
     }
 
     return socket;
@@ -465,7 +468,6 @@ void *send_election(void *arg){
         pthread_t timer_thr;
         create_thread(&timer_thr, NULL, connection_timer, &election_servers[i]);
 
-        bool server_possibly_down = true;
         int socket = connect_to_server(election_servers[i].ip, election_servers[i].PORT);
         if(socket == -1){
             continue;
@@ -483,6 +485,10 @@ void *send_election(void *arg){
         close(socket);
     }
     if(possible_main_server){
+        if(this_server.id == -1){
+            this_server.id = get_new_id(servers);
+            cout << "this server id: " << this_server.id << endl;
+        }
         broadcast_new_server(this_server, ELECTED);
     }
     return 0;
@@ -541,19 +547,6 @@ void* connection_timer(void *arg){
     return 0;
 }
 
-SERVER_COPY get_main_server_copy(){
-    SERVER_COPY main_server_copy = this_server;
-
-    for (int i = 0; i < servers.size(); i++)
-    {
-        if(main_server_copy.id < servers[i].id){
-            main_server_copy = servers[i];
-        }
-    }
-
-    return main_server_copy;
-}
-
 void* timer(void *arg){
     cout << "timer started" << endl;
     timer_countdown = MAX_TIMER;
@@ -577,7 +570,15 @@ void* check_main_server_up(void *arg){
         cout << "ERROR main_server should not check for liveness" << endl;
         return 0;
     }
-    int server_socket = *(int *)arg;
+
+    SERVER_COPY server_copy = *(SERVER_COPY *)arg;
+
+    int server_socket = connect_to_server(server_copy.ip, server_copy.PORT);
+    
+    if(server_socket == -1){
+        cout << "ERROR: could not connect to main server" << endl;
+        return 0;
+    }
 
     pthread_t timer_thr;
     create_thread(&timer_thr, NULL, timer, NULL);
@@ -653,28 +654,56 @@ bool client_login(int newSockfd){
     return login_successful;
 }
 
+vector<int> get_other_servers_sockets(vector<SERVER_COPY> servers){
+    vector<int> other_servers_sockets = {};
+    for(int i = 0; i < servers.size(); i++){
+        if(servers[i].id == this_server.id){
+            continue;
+        }
+        int non_main_server_socket = connect_to_server(servers[i].ip, servers[i].PORT);
+        if(non_main_server_socket == -1){
+            continue;
+        }
+        other_servers_sockets.push_back(non_main_server_socket);
+    }
+    return other_servers_sockets;
+}
+
+vector<int> connect_to_non_main_servers(SESSION session){
+    vector<int> other_servers_sockets = {};
+    other_servers_sockets = clear_connections(other_servers_sockets);
+    other_servers_sockets = get_other_servers_sockets(servers);
+    for(int i = 0; i < other_servers_sockets.size(); i++){
+        sendMessage(session.user, MENSAGEM_LOGIN, other_servers_sockets[i]);
+    }
+    return other_servers_sockets;
+}
+
 void *ThreadClient(void *arg)
 {
-    int sockfd = *(int *)arg;
+    SESSION session = *(SESSION *)arg;
+    int sockfd = session.socket;
 
-    bool login_successful = client_login(sockfd);
+    if(main_server){
+        bool login_successful = client_login(sockfd);
 
-    void* end_function;
+        if(!login_successful){
+            return 0;
+        }
+    }
 
-    if(!login_successful){
-        return 0;
+    vector<int> other_servers_sockets = {};
+    if(main_server){
+        other_servers_sockets = connect_to_non_main_servers(session);
     }
 
     PACKET pkt;
     char resposta[40];
     ofstream file_server;
-    int received_fragments=0;
     vector<vector<char>> fragments = {};
     string directory;
 
     bool file_received_from_sync = false;
-
-    uint32_t remainder_file_size = 0;
 
     while (true)
     {
@@ -682,14 +711,24 @@ void *ThreadClient(void *arg)
         cout << "reading client msg" << endl;
         readSocket(&pkt, sockfd);
         cout << "pkt.type: " << pkt.type << ". ";
+
+        if(has_received_new_server && main_server){
+            other_servers_sockets = connect_to_non_main_servers(session);
+        }
  
         if (pkt.type == MENSAGEM_LOGOUT)
         {
+            if(!main_server){
+                continue;
+            }
             cout << string(user) << " logout" << endl;
             loginManager->Logout(user, sockfd, resposta);
             break;
         }
         if (pkt.type == MENSAGEM_ENVIO_SYNC){
+            if(!main_server){
+                continue;
+            }
             file_received_from_sync = true;
         }
         if (pkt.type == MENSAGEM_ENVIO_NOME_ARQUIVO)
@@ -711,6 +750,10 @@ void *ThreadClient(void *arg)
 
             cout << "sync_dir_sockets.size(): " << sync_dir_sockets.size() << endl;
 
+            if(!main_server){
+                continue;
+            }
+
             cout << "propagating file" << endl;
             for(int i = 0; i < sync_dir_sockets.size(); i++){
                 if(file_received_from_sync){
@@ -727,6 +770,9 @@ void *ThreadClient(void *arg)
         }
         if (pkt.type == MENSAGEM_PEDIDO_LISTA_ARQUIVOS_SERVIDOR)
         {
+            if(!main_server){
+                continue;
+            }
             cout << "sending " << string(user) << " file list" << endl;
             vector<string> infos = print_file_list("./" + string(user));
             for (int i = 0; i < infos.size(); i++)
@@ -752,6 +798,10 @@ void *ThreadClient(void *arg)
 			    cout << file_path << endl;
 			}
 
+            if(!main_server){
+                continue;
+            }
+
             vector<int> sync_dir_sockets = loginManager->get_active_sync_dir(user);
 
             cout << "file_name: " << file_name << endl;
@@ -763,6 +813,9 @@ void *ThreadClient(void *arg)
             }
         }
         if (pkt.type == MENSAGEM_DOWNLOAD_FROM_SERVER){
+            if(!main_server){
+                continue;
+            }
             string directory = "./";
             directory = directory + user + "/" + string(pkt._payload);
             send_file_to_client(sockfd, directory);
@@ -776,12 +829,16 @@ void handle_ctrlc(int s){
     END = true;
 }
 
-void close_client_connections(){
-    PACKET pkt;
-    for(int i = 0; i < client_connections.size(); i++){
-        close(client_connections[i]);
+vector<int> clear_connections(vector<int> connections){
+    for(int i = 0; i < connections.size(); i++){
+        close(connections[i]);
     }
-    client_connections = {};
+    connections.clear();
+    return connections;
+}
+
+void close_client_connections(){
+    client_connections = clear_connections(client_connections);
 }
 
 void send_file_to_client(int sock, string file_path)
