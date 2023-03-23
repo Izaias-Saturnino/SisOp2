@@ -16,6 +16,7 @@ bool thr_send_election_init = false;
 pthread_t thr_send_election;
 
 SERVER_COPY this_server;
+SERVER_COPY main_server_copy;
 vector<SERVER_COPY> servers;
 
 atomic_int timer_countdown = MAX_TIMER;
@@ -102,6 +103,7 @@ int main(int argc, char *argv[])
     if(main_server){
         this_server.id = get_new_id(servers);
         cout << "this server id: " << this_server.id << endl;
+        main_server_copy = this_server;
     }
     servers.push_back(this_server);
 
@@ -224,6 +226,7 @@ int main(int argc, char *argv[])
             }
             if(this_server.id < server_copy.id){
                 main_server = false;
+                main_server_copy = server_copy;
                 
                 pthread_t check_main_server_up_thr;
                 create_thread(&check_main_server_up_thr, NULL, check_main_server_up, &server_copy);
@@ -421,19 +424,14 @@ int host_cmp(char* ip, char* other_ip){
 }
 
 bool has_biggest_id(SERVER_COPY server_copy){
-    SERVER_COPY main_server_copy = server_copy;
-    for(int i = 0; i < servers.size(); i++){
-        if(main_server_copy.id < servers[i].id){
-            main_server_copy = servers[i];
-        }
-    }
     return server_copy.id == main_server_copy.id;
 }
 
 int connect_to_main_server(){
     int socket = -1;
 
-    sort(servers.begin(), servers.end(), compare_id);
+    vector<SERVER_COPY> servers_copy = servers;
+    sort(servers_copy.begin(), servers_copy.end(), compare_id);
 
     for (int i = servers.size() - 1; i >= 0; i--)
     {
@@ -520,11 +518,8 @@ void send_election(vector<SERVER_COPY> servers){
 
 vector<SERVER_COPY> remove_from_server_list(SERVER_COPY server_copy, vector<SERVER_COPY> servers){
     for(int i = 0; i < servers.size(); i++){
-        bool ip_equals = str_equals((char*) (server_copy.ip).c_str(), server_copy.ip.size(), (char*) (servers[i].ip).c_str(), servers[i].ip.size());
-        bool port_equals = server_copy.PORT == servers[i].PORT;
-        if(ip_equals && port_equals){
-            //cout << "servers[i].id" << servers[i].id << endl;
-            servers.erase(servers.begin()+i-1);
+        if(server_copy.id == servers[i].id){
+            servers.erase(servers.begin()+i);
             break;
         }
     }
@@ -545,7 +540,6 @@ void* connection_timer(void *arg){
         if(connection_timer_countdown <= 0){
             cout << "connection timeout" << endl;
             election = false;
-            cout << "server_copy.id: " << server_copy.id << ". server_copy.port: " << server_copy.PORT << endl;
             election_servers = remove_from_server_list(server_copy, election_servers);
             send_election(election_servers);
             break;
