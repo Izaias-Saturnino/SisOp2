@@ -7,10 +7,9 @@ bool END = false;
 
 vector<int> client_connections;
 
-int main_server_socket;
 bool main_server = true;
 //talvez remover esse boleano de eleição
-bool election;
+bool election  = false;
 vector<SERVER_COPY> election_servers;
 bool thr_send_election_init = false;
 pthread_t thr_send_election;
@@ -127,14 +126,17 @@ int main(int argc, char *argv[])
             cout << "ERROR on accept" << endl;
             continue;
         }
-        
-        client_connections.push_back(newSockfd);
 
         cout << "read0" << endl;
         PACKET pkt;
         peekSocket(&pkt, newSockfd);
         if(pkt.type == MENSAGEM_LOGIN){
+            client_connections.push_back(newSockfd);
             if(main_server){
+                bool login_successful = client_login(newSockfd);
+                if(!login_successful){
+                    continue;
+                }
                 for(int i = 0; i < non_main_server_connections.size(); i++){
                     sendMessage(pkt._payload, pkt.type, non_main_server_connections[i]);
                 }
@@ -144,6 +146,7 @@ int main(int argc, char *argv[])
             create_thread(&clientThread, NULL, ThreadClient, &newSockfd);
         }
         else if(pkt.type == GET_SYNC_DIR){
+            client_connections.push_back(newSockfd);
             cout << "reading GET_SYNC_DIR" << endl;
             readSocket(&pkt, newSockfd);
             char user[BUFFER_SIZE];
@@ -195,7 +198,7 @@ int main(int argc, char *argv[])
             if(aux != this_server.id && has_bigger_id(this_server) && !main_server){
                 send_election();
             }
-            else if(server_copy.id != this_server.id){
+            else if(server_copy.id != this_server.id && main_server){
                 int non_main_server_socket = connect_to_server(server_copy.ip, server_copy.PORT);
                 non_main_server_connections.push_back(non_main_server_socket);
             }
@@ -212,23 +215,17 @@ int main(int argc, char *argv[])
             election = false;
             SERVER_COPY server_copy = receive_server_copy(newSockfd);
             if(this_server.id > server_copy.id){
-                cout << "ERROR: this_server.id > server_copy.id should not happen on elected" << endl;
                 cout << "this_server.id: " << this_server.id << endl;
                 cout << "server_copy.id: " << server_copy.id << endl;
                 send_election();
                 continue;
             }
             if(this_server.id < server_copy.id){
-                close(main_server_socket);
+                //close(main_server_socket);
                 main_server = false;
-                main_server_socket = connect_to_server(server_copy.ip, server_copy.PORT);
-                if(main_server_socket == -1){
-                    cout << "ERROR: could not connect to main server" << endl;
-                    continue;
-                }
                 
                 pthread_t check_main_server_up_thr;
-                create_thread(&check_main_server_up_thr, NULL, check_main_server_up, &main_server_socket);
+                create_thread(&check_main_server_up_thr, NULL, check_main_server_up, &server_copy);
             }
             if(this_server.id == server_copy.id){
                 main_server = true;
@@ -315,12 +312,7 @@ void *between_server_sync(void *arg){
     cout << "reading LIST_SERVER msg again" << endl;
     receive_list_of_servers(other_server_socket);
 
-    while(main_server_socket == -1){
-        cout << "ERROR: could not connect to main server" << endl;
-        return 0;
-    }
-
-    main_server_socket = connect_to_main_server();
+    int main_server_socket = connect_to_main_server();
 
     if(main_server_socket == -1){
         cout << "ERROR: could not connect to main server" << endl;
@@ -477,7 +469,7 @@ void *send_election(void *arg){
         //cout << "send_election election_servers[i].id: " << election_servers[i].id << endl;
 
         if(election_servers[i].id <= this_server.id){
-            break;
+            continue;
         }
 
         //cout << "send_election election_servers[i].id 2: " << election_servers[i].id << endl;
@@ -496,6 +488,7 @@ void *send_election(void *arg){
         bool message_received = has_received_message(socket);
         
         if(message_received){
+            election = false;
             cout << "message received" << endl;
             pthread_cancel(timer_thr);
             break;
@@ -597,7 +590,12 @@ void* check_main_server_up(void *arg){
         cout << "ERROR main_server should not check for liveness" << endl;
         return 0;
     }
-    int server_socket = *(int *)arg;
+    SERVER_COPY server_copy = *(SERVER_COPY *)arg;
+    int server_socket = connect_to_server(server_copy.ip, server_copy.PORT);
+    if(server_socket == -1){
+        cout << "ERROR: could not connect to main server" << endl;
+        return 0;
+    }
 
     pthread_t timer_thr;
     create_thread(&timer_thr, NULL, timer, NULL);
@@ -607,6 +605,7 @@ void* check_main_server_up(void *arg){
     while(true){
         //cout << "sending LIVENESS_CHECK" << endl;
         sendMessage("", LIVENESS_CHECK, server_socket);
+        usleep(WAIT_TIME_BETWEEN_RETRIES);
         //cout << "reading LIVENESS_CHECK ack" << endl;
         readSocket(&pkt, server_socket);
         //cout << "timer_countdown == MAX_TIMER" << endl;
@@ -677,14 +676,6 @@ void *ThreadClient(void *arg)
 {
     int sockfd = *(int *)arg;
 
-    bool login_successful = client_login(sockfd);
-
-    void* end_function;
-
-    if(!login_successful){
-        return 0;
-    }
-
     PACKET pkt;
     char resposta[40];
     ofstream file_server;
@@ -711,8 +702,10 @@ void *ThreadClient(void *arg)
  
         if (pkt.type == MENSAGEM_LOGOUT)
         {
-            cout << string(user) << " logout" << endl;
-            loginManager->Logout(user, sockfd, resposta);
+            if(main_server){
+                cout << string(user) << " logout" << endl;
+                loginManager->Logout(user, sockfd, resposta);
+            }
             break;
         }
         if (pkt.type == MENSAGEM_ENVIO_SYNC){
