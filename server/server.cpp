@@ -18,7 +18,6 @@ pthread_t thr_send_election;
 SERVER_COPY this_server;
 int PORT = DEFAULT_PORT;
 vector<SERVER_COPY> servers;
-//vector<int> server_connections;//TO DO
 
 int upnumber = 0;
 bool server_possibly_down = true;
