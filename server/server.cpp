@@ -134,9 +134,12 @@ int main(int argc, char *argv[])
         PACKET pkt;
         peekSocket(&pkt, newSockfd);
         if(pkt.type == MENSAGEM_LOGIN){
+            SESSION session;
+            session.socket = newSockfd;
+            memcpy(session.user, pkt._payload, BUFFER_SIZE);
             pthread_t clientThread;
             cout << "creating client thread" << endl;
-            create_thread(&clientThread, NULL, ThreadClient, &newSockfd);
+            create_thread(&clientThread, NULL, ThreadClient, &session);
         }
         else if(pkt.type == GET_SYNC_DIR){
             cout << "reading GET_SYNC_DIR" << endl;
