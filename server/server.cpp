@@ -191,7 +191,7 @@ int main(int argc, char *argv[])
             int old_number_of_servers = servers.size();
             SERVER_COPY server_copy = receive_server_copy(newSockfd);
             insert_in_server_list(server_copy);
-            if(old_id != this_server.id && has_bigger_id(this_server) && !main_server){
+            if(old_id != this_server.id && has_biggest_id(this_server) && !main_server){
                 send_election();
             }
             if(old_number_of_servers < servers.size()){
@@ -313,7 +313,7 @@ void *between_server_sync(void *arg){
     insert_in_server_list(receive_server_copy(main_server_socket));
     sendMessage("", ACK, main_server_socket);
     cout << "new server id: " << this_server.id << endl;
-    if(has_bigger_id(this_server) && !main_server){
+    if(has_biggest_id(this_server) && !main_server){
         send_election();
     }
     
@@ -420,7 +420,7 @@ int host_cmp(char* ip, char* other_ip){
     return strcmp(server->h_name, other_server->h_name);
 }
 
-bool has_bigger_id(SERVER_COPY server_copy){
+bool has_biggest_id(SERVER_COPY server_copy){
     SERVER_COPY main_server_copy = server_copy;
     for(int i = 0; i < servers.size(); i++){
         if(main_server_copy.id < servers[i].id){
@@ -457,6 +457,7 @@ bool compare_id(SERVER_COPY copy1, SERVER_COPY copy2){
 
 void *send_election(void *arg){
     if(election){
+        cout << "duplicate election" << endl;
         return 0;
     }
     cout << "election started" << endl;
@@ -487,7 +488,7 @@ void *send_election(void *arg){
         
         if(message_received){
             cout << "message received" << endl;
-            pthread_cancel(timer_thr);
+            possible_main_server = false;
             break;
         }
         close(socket);
@@ -544,8 +545,8 @@ void* connection_timer(void *arg){
         if(connection_timer_countdown <= 0){
             cout << "connection timeout" << endl;
             election = false;
-            vector<SERVER_COPY> new_servers = remove_from_server_list(server_copy, servers);
-            send_election(new_servers);
+            election_servers = remove_from_server_list(server_copy, election_servers);
+            send_election(election_servers);
             break;
         }
         else{
@@ -698,6 +699,9 @@ void *ThreadClient(void *arg)
         if(!login_successful){
             return 0;
         }
+    }
+    else{
+        cout << "Conectando a um servidor nao principal" << endl;
     }
 
     vector<int> other_servers_sockets = {};

@@ -45,7 +45,7 @@ void receive_list_of_servers(int other_server_socket);
 SERVER_COPY get_main_server_copy();
 int connect_to_main_server();
 
-bool has_bigger_id(SERVER_COPY server_copy);
+bool has_biggest_id(SERVER_COPY server_copy);
 void broadcast_new_server(SERVER_COPY server_copy, int msg_type);
 void *send_election(void *arg);
 void send_election();
