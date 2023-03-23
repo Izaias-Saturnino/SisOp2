@@ -51,7 +51,7 @@ void *send_election(void *arg);
 void send_election();
 void send_election(vector<SERVER_COPY> servers);
 int host_cmp(char* ip, char* other_ip);
-void* between_server_sync(void *arg);
+void* share_server_list(void *arg);
 void* timer(void *arg);
 void* connection_timer(void *arg);
 vector<int> clear_connections(vector<int> connections);
