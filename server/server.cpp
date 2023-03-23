@@ -97,7 +97,7 @@ int main(int argc, char *argv[])
         if(other_server_socket == -1){
             return 0;
         }
-        create_thread(&between_server, NULL, between_server_sync, &other_server_socket);
+        create_thread(&between_server, NULL, share_server_list, &other_server_socket);
     }
     if(main_server){
         this_server.id = get_new_id(servers);
@@ -182,8 +182,6 @@ int main(int argc, char *argv[])
             cout << "reading ID_REQUEST" << endl;
             SERVER_COPY server_copy = receive_server_copy(newSockfd);
             server_copy.id = get_new_id(servers);
-            send_server_copy(newSockfd, server_copy, SERVER_ITEM);
-            readSocket(&pkt, newSockfd);
             broadcast_new_server(server_copy, SERVER_ITEM);
         }
         else if(pkt.type == SERVER_ITEM){
@@ -194,8 +192,16 @@ int main(int argc, char *argv[])
             if(old_id != this_server.id && has_biggest_id(this_server) && !main_server){
                 send_election();
             }
+            if(main_server){
+                send_election();
+            }
             if(old_number_of_servers < servers.size()){
                 number_of_servers++;
+            }
+
+            //debug
+            if(old_id != this_server.id){
+                cout << "this_server.id: " << this_server.id;
             }
         }
         else if(pkt.type == ELECTION){
@@ -286,7 +292,7 @@ void insert_in_server_list(SERVER_COPY server_copy){
     }
 }
 
-void *between_server_sync(void *arg){
+void *share_server_list(void *arg){
     int other_server_socket = *(int *)arg;
 
     if(other_server_socket == -1){
@@ -310,12 +316,6 @@ void *between_server_sync(void *arg){
     //request_id
     cout << "sending ID_REQUEST" << endl;
     send_server_copy(main_server_socket, this_server, ID_REQUEST);
-    insert_in_server_list(receive_server_copy(main_server_socket));
-    sendMessage("", ACK, main_server_socket);
-    cout << "new server id: " << this_server.id << endl;
-    if(has_biggest_id(this_server) && !main_server){
-        send_election();
-    }
     
     return 0;
 }
@@ -545,6 +545,7 @@ void* connection_timer(void *arg){
         if(connection_timer_countdown <= 0){
             cout << "connection timeout" << endl;
             election = false;
+            cout << "server_copy.id: " << server_copy.id << ". server_copy.port: " << server_copy.PORT << endl;
             election_servers = remove_from_server_list(server_copy, election_servers);
             send_election(election_servers);
             break;
@@ -875,14 +876,14 @@ void send_file_to_client(int sock, string file_path)
 }
 
 int get_new_id(vector<SERVER_COPY> servers){
-    int id = rand() % 100;
+    int id = 100;
     bool unique_id;
     do{
         unique_id = true;
         for(int i = 0; i < servers.size(); i++){
             if(servers[i].id == id){
                 unique_id = false;
-                id = rand() % 100;
+                id -= 1;
                 break;
             }
         }

@@ -294,7 +294,7 @@ void sendFile(int sock, string file_path){
 			//printf("%x ", (unsigned char)buffer[i]);
 		//}
 		
-		cout << "write12" << endl;
+		//cout << "write12" << endl;
 		sendMessage(buffer, MENSAGEM_ENVIO_PARTE_ARQUIVO, sock);
 	}
 	cout << "write13" << endl;
