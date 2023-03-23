@@ -21,7 +21,8 @@ vector<SERVER_COPY> servers;
 atomic_int timer_countdown = MAX_TIMER;
 atomic_int connection_timer_countdown = MAX_TIMER;
 
-atomic_bool has_received_new_server = false;
+atomic_bool last_number_of_servers = 0;
+atomic_int number_of_servers = 0;
 
 //args this_ip other_server_ip this_port other_server_port
 
@@ -183,13 +184,16 @@ int main(int argc, char *argv[])
             broadcast_new_server(server_copy, SERVER_ITEM);
         }
         else if(pkt.type == SERVER_ITEM){
-            int aux = this_server.id;
+            int old_id = this_server.id;
+            int old_number_of_servers = servers.size();
             SERVER_COPY server_copy = receive_server_copy(newSockfd);
             insert_in_server_list(server_copy);
-            if(aux != this_server.id && has_bigger_id(this_server) && !main_server){
+            if(old_id != this_server.id && has_bigger_id(this_server) && !main_server){
                 send_election();
             }
-            has_received_new_server = true;
+            if(old_number_of_servers < servers.size()){
+                number_of_servers++;
+            }
         }
         else if(pkt.type == ELECTION){
             cout << "reading ELECTION" << endl;
@@ -217,6 +221,7 @@ int main(int argc, char *argv[])
             }
             if(this_server.id == server_copy.id){
                 main_server = true;
+                last_number_of_servers = 0;
             }
             else{
                 main_server = false;
@@ -712,8 +717,19 @@ void *ThreadClient(void *arg)
         readSocket(&pkt, sockfd);
         cout << "pkt.type: " << pkt.type << ". ";
 
-        if(has_received_new_server && main_server){
+        if(last_number_of_servers < number_of_servers && main_server){
             other_servers_sockets = connect_to_non_main_servers(session);
+            if(number_of_servers > other_servers_sockets.size()){
+                number_of_servers = other_servers_sockets.size();
+            }
+            last_number_of_servers = number_of_servers;
+        }
+
+        if(main_server && pkt.type != MENSAGEM_ENVIO_NOME_ARQUIVO){
+            for (int i = 0; i < other_servers_sockets.size(); i++)
+            {
+                //sendMessage(pkt._payload, pkt.type, other_servers_sockets[i]);
+            }
         }
  
         if (pkt.type == MENSAGEM_LOGOUT)
@@ -752,6 +768,11 @@ void *ThreadClient(void *arg)
 
             if(!main_server){
                 continue;
+            }
+
+            for (int i = 0; i < other_servers_sockets.size(); i++)
+            {
+                //sendFile(other_servers_sockets[i], directory);
             }
 
             cout << "propagating file" << endl;
