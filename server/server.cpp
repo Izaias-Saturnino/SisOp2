@@ -162,6 +162,9 @@ int main(int argc, char *argv[])
             loginManager->activate_sync_dir(user, newSockfd);
 
             cout << string(user) << " actived sync dir" << endl;
+
+            cout << "sending list of servers" << endl;
+            send_list_of_servers(newSockfd);
         }
         else if(pkt.type == LIVENESS_CHECK){
             if(!main_server){
@@ -227,8 +230,10 @@ int main(int argc, char *argv[])
                 main_server = false;
                 main_server_copy = server_copy;
                 
-                pthread_t check_main_server_up_thr;
-                create_thread(&check_main_server_up_thr, NULL, check_main_server_up, &server_copy);
+                if(!main_server){
+                    pthread_t check_main_server_up_thr;
+                    create_thread(&check_main_server_up_thr, NULL, check_main_server_up, &server_copy);
+                }
             }
             if(this_server.id == server_copy.id){
                 main_server = true;
@@ -307,7 +312,7 @@ void *share_server_list(void *arg){
     cout << "reading LIST_SERVER msg again" << endl;
     receive_list_of_servers(other_server_socket);
 
-    int main_server_socket = connect_to_main_server();
+    int main_server_socket = connect_to_main_server(servers, this_server);
 
     while(main_server_socket == -1){
         cout << "ERROR: could not connect to main server" << endl;
@@ -424,32 +429,6 @@ int host_cmp(char* ip, char* other_ip){
 
 bool has_biggest_id(SERVER_COPY server_copy){
     return server_copy.id == main_server_copy.id;
-}
-
-int connect_to_main_server(){
-    int socket = -1;
-
-    vector<SERVER_COPY> servers_copy = servers;
-    sort(servers_copy.begin(), servers_copy.end(), compare_id);
-
-    for (int i = servers.size() - 1; i >= 0; i--)
-    {
-        if(servers[i].id > this_server.id){
-            socket = connect_to_server(servers[i].ip, servers[i].PORT);
-            if(socket != -1){
-                break;
-            }
-        }
-        else{
-            break;
-        }
-    }
-
-    return socket;
-}
-
-bool compare_id(SERVER_COPY copy1, SERVER_COPY copy2){
-    return copy1.id < copy2.id;
 }
 
 void *send_election(void *arg){
@@ -569,11 +548,6 @@ void* timer(void *arg){
 }
 
 void* check_main_server_up(void *arg){
-    if(main_server){
-        cout << "ERROR main_server should not check for liveness" << endl;
-        return 0;
-    }
-
     SERVER_COPY server_copy = *(SERVER_COPY *)arg;
 
     int server_socket = connect_to_server(server_copy.ip, server_copy.PORT);

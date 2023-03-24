@@ -332,3 +332,66 @@ void create_thread(
 		cout << "ERROR number: " << i << endl;
 	}
 }
+
+vector<SERVER_COPY> get_list_of_servers(int server_socket, vector<SERVER_COPY> servers){
+    cout << "receive_list_of_servers" << endl;
+    PACKET pkt;
+    peekSocket(&pkt, server_socket);
+    if(pkt.type == LIST_SERVERS){
+        readSocket(&pkt, server_socket);
+    }
+    while(pkt.type == SERVER_ITEM);{
+        cout << "reading SERVER_ITEM" << endl;
+        SERVER_COPY server_copy = receive_server_copy(server_socket);
+        servers.push_back(server_copy);
+        cout << "peeking SERVER_ITEM" << endl;
+        peekSocket(&pkt, server_socket);
+    }
+    cout << "LIST_SERVER_ITEM end" << endl;
+    readSocket(&pkt, server_socket);
+
+	return servers;
+}
+
+//client function
+int connect_to_main_server(vector<SERVER_COPY> servers){
+    int socket = -1;
+
+    sort(servers.begin(), servers.end(), compare_id);
+
+    for (int i = servers.size() - 1; i >= 0; i--)
+    {
+		socket = connect_to_server(servers[i].ip, servers[i].PORT);
+		if(socket != -1){
+			break;
+		}
+    }
+
+    return socket;
+}
+
+//server function
+int connect_to_main_server(vector<SERVER_COPY> servers, SERVER_COPY this_server){
+    int socket = -1;
+
+    sort(servers.begin(), servers.end(), compare_id);
+
+    for (int i = servers.size() - 1; i >= 0; i--)
+    {
+        if(servers[i].id > this_server.id){
+            socket = connect_to_server(servers[i].ip, servers[i].PORT);
+            if(socket != -1){
+                break;
+            }
+        }
+        else{
+            break;
+        }
+    }
+
+    return socket;
+}
+
+bool compare_id(SERVER_COPY copy1, SERVER_COPY copy2){
+    return copy1.id < copy2.id;
+}

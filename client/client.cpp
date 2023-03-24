@@ -4,8 +4,12 @@ int socketCtrl = -1;
 int socketCtrl2 = -1;
 
 vector<string> latest_downloads = {};
+vector<SERVER_COPY> servers;
+atomic_int timer_countdown = MAX_TIMER;
 
 bool wait_for_first_sync = true;
+
+atomic_int sockfd;
 
 int main(int argc, char *argv[])
 {
@@ -25,7 +29,7 @@ int main(int argc, char *argv[])
 	char* server_ip = argv[2];
 	hostent *server_host = gethostbyname(server_ip);
 	int PORT = atoi(argv[3]);
-	int sockfd = connect_to_server(*server_host, PORT);
+	sockfd = connect_to_server(*server_host, PORT);
 	
 	if (sockfd == -1)
 	{
@@ -166,6 +170,8 @@ int main(int argc, char *argv[])
 					cout << "creating folderchecker thread" << endl;
 					create_thread(&thr3, NULL, folderchecker, (void *)&n1);
 					cout << "sync_dir active" << endl;
+
+					servers = get_list_of_servers(sockfd_sync, servers);
 				}
 				else if (command.find("download ") == 0)
 				{
@@ -301,4 +307,58 @@ void *handle_updates(void *arg)
 			wait_for_first_sync = false;
 		}
 	}
+}
+
+void choose_new_main_server(){
+	int main_server_socket = connect_to_main_server(servers);
+	
+	sockfd = main_server_socket;
+
+	//TO DO
+	//update sync_sock
+	//check for main_server liveness
+}
+
+void* timer(void *arg){
+    cout << "timer started" << endl;
+    timer_countdown = MAX_TIMER;
+    while(true){
+        usleep(WAIT_TIME_BETWEEN_RETRIES);
+        //cout << "timer_countdown: " << timer_countdown << endl;
+        if(timer_countdown <= 0){
+            cout << "main server timeout" << endl;
+            choose_new_main_server();
+            break;
+        }
+        else{
+            timer_countdown--;
+        }
+    }
+    return 0;
+}
+
+void* check_main_server_up(void *arg){
+    SERVER_COPY server_copy = *(SERVER_COPY *)arg;
+
+    int server_socket = connect_to_server(server_copy.ip, server_copy.PORT);
+    
+    if(server_socket == -1){
+        cout << "ERROR: could not connect to main server" << endl;
+        return 0;
+    }
+
+    pthread_t timer_thr;
+    create_thread(&timer_thr, NULL, timer, NULL);
+
+    PACKET pkt;
+    cout << "check_main_server_up running" << endl;
+    while(true){
+        //cout << "sending LIVENESS_CHECK" << endl;
+        sendMessage("", LIVENESS_CHECK, server_socket);
+        //cout << "reading LIVENESS_CHECK ack" << endl;
+        readSocket(&pkt, server_socket);
+        //cout << "timer_countdown == MAX_TIMER" << endl;
+        timer_countdown = MAX_TIMER;
+    }
+    return 0;
 }

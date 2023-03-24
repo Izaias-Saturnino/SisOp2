@@ -11,7 +11,6 @@
 #include <iostream>
 #include <fstream>
 #include <cmath>
-#include <atomic>
 #include "../login/login.hpp"
 #include "../dir_manager.cpp"
 
@@ -42,8 +41,6 @@ void *answer_server_up(void *arg);
 
 void send_list_of_servers(int other_server_socket);
 void receive_list_of_servers(int other_server_socket);
-SERVER_COPY get_main_server_copy();
-int connect_to_main_server();
 
 bool has_biggest_id(SERVER_COPY server_copy);
 void broadcast_new_server(SERVER_COPY server_copy, int msg_type);
@@ -55,4 +52,3 @@ void* share_server_list(void *arg);
 void* timer(void *arg);
 void* connection_timer(void *arg);
 vector<int> clear_connections(vector<int> connections);
-bool compare_id(SERVER_COPY copy1, SERVER_COPY copy2);

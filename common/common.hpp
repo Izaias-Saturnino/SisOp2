@@ -19,6 +19,8 @@
 #include <vector>
 #include <sys/ioctl.h>
 #include <fcntl.h>
+#include <atomic>
+#include <algorithm>
 
 using namespace std;
 
@@ -99,3 +101,7 @@ void create_thread(
 	void *__restrict sockfd_sync);
 SERVER_COPY receive_server_copy(int socket);
 void send_server_copy(int socket, SERVER_COPY server_copy, int msg_type);
+vector<SERVER_COPY> get_list_of_servers(int server_socket, vector<SERVER_COPY> servers);
+int connect_to_main_server(vector<SERVER_COPY> servers_copy);
+int connect_to_main_server(vector<SERVER_COPY> servers, SERVER_COPY this_server);
+bool compare_id(SERVER_COPY copy1, SERVER_COPY copy2);
