@@ -747,6 +747,11 @@ void *ThreadClient(void *arg)
                 sendMessage(pkt._payload, pkt.type, other_servers_sockets[i]);
             }
         }
+        if (pkt.type == MENSAGEM_VERIFICACAO)
+        {
+            sendMessage("ESTOU VIVO", pkt.type, sockfd);
+            break;
+        }
  
         if (pkt.type == MENSAGEM_LOGOUT)
         {

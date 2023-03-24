@@ -32,6 +32,7 @@ int main(int argc, char *argv[])
 	// int PORT = atoi(argv[3]);
 	// int sockfd = connect_to_server(*server_host, PORT);
 	servAlive->server_ip = argv[2];
+	servAlive->client_ip = argv[4];
 	servAlive->server_host = gethostbyname((servAlive->server_ip).c_str());
 	servAlive->PORT = atoi(argv[3]);
 	servAlive->sockfd = connect_to_server(*servAlive->server_host, servAlive->PORT);
@@ -224,18 +225,11 @@ void waitForReconnection()
 		printf("ERROR opening socket");
 		exit(0);
 	}
-
-	// if(setsockopt(sock,SOL_SOCKET,SO_REUSEADDR,(void*)&yes, sizeof(yes)) < 0){
-	// 	cout<<"setsockopt() failed: " << errno << endl; 
-	// }
-
-	// if( setsockopt(sock, SOL_SOCKET, SO_REUSEPORT, &yes, sizeof(yes))< 0){
-	// 	cout<<"setsockopt() failed: " << errno << endl; 
-	// }
+	cout<<"client ip: "<< servAlive->client_ip;
 	
 	cli_addr.sin_family = AF_INET;
 	cli_addr.sin_port = htons(2000);
-	inet_aton(servAlive->server_host->h_name, &cli_addr.sin_addr);
+	inet_aton(servAlive->client_ip.c_str(), &cli_addr.sin_addr);
 	bzero(&(cli_addr.sin_zero), 8);
 
 	if (bind(sock,(struct sockaddr *)&cli_addr, sizeof(cli_addr)) < 0)
@@ -273,6 +267,7 @@ void* verificaServer(void* arg){
 
 			cout << "read confirmacao" << endl;
 			result = read(servAlive->sockfd, &pack, sizeof(PACKET));
+			cout<<"passou read " << endl;
 
 			if (result <= 0) { //<=
 				connected = false;

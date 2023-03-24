@@ -338,17 +338,20 @@ void reconnectToClients(vector<USUARIO> listaDeUsuarios)
     struct hostent *client;
     struct sockaddr_in cli_addr, cli_addr2;
     int sockfd;
-    string aux_porta, aux_ip, aux_session, aux_string, lim = "#";
-    pthread_t clientThread;
-    //LoginManager lista = LoginManager();
+	PACKET* pack;
+	int result;
 
-    client = gethostbyname("localhost");
+	cout<<" entrou reconnect \n";
+
+    client = gethostbyname("localhost"); //só para gerar uma estrutura valida -> é sobreescrita posteriormente
     if (client == NULL)
     {
-        fprintf(stderr, "ERROR, no such host\n");
+        cout<< stderr << "ERROR, no such host\n";
     }
+	cout<<"listaDeUsuarios:" << listaDeUsuarios.size();
     for (auto it : listaDeUsuarios)
     {
+		cout<<"for lista de usuarios";
         if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1)
             printf("ERROR opening socket\n");
 

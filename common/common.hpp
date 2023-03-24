@@ -88,6 +88,7 @@ typedef struct server_copy{
     int PORT ;
     int sockfd;
     string server_ip; 
+    string client_ip; 
 	hostent* server_host ;
 }ALIVE;
 
