@@ -18,6 +18,7 @@
 typedef struct {
     char user[BUFFER_SIZE];
     int socket;
+    Sockaddr_in socketAddrClient;
 }SESSION;
 
 void verificaRecebimentoIP(int argc,char *argv[]);

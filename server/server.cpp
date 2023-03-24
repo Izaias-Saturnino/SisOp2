@@ -2,6 +2,7 @@
 
 LoginManager *loginManager = new LoginManager();
 
+
 bool END = false;
 
 vector<int> client_connections;
@@ -108,6 +109,8 @@ int main(int argc, char *argv[])
 
     cout << "server sync ended" << endl << endl;
 
+    SESSION session;
+
     while (true)
     {
         /*listen to clients*/
@@ -119,10 +122,14 @@ int main(int argc, char *argv[])
         }
 
         socklen_t clilen;
-        clilen = sizeof(struct sockaddr_in);
         sockaddr_in cli_addr;
+        clilen = sizeof(struct sockaddr_in);
+
         int newSockfd;
         newSockfd = accept(connectionSocket, (struct sockaddr *)&cli_addr, &clilen);
+        
+        session.socketAddrClient = cli_addr;
+        session.socket = newSockfd;
 
         if (newSockfd == -1){
             cout << "ERROR on accept" << endl;
@@ -135,7 +142,6 @@ int main(int argc, char *argv[])
         PACKET pkt;
         peekSocket(&pkt, newSockfd);
         if(pkt.type == MENSAGEM_LOGIN){
-            SESSION session;
             session.socket = newSockfd;
             memcpy(session.user, pkt._payload, BUFFER_SIZE);
             pthread_t clientThread;
@@ -239,6 +245,8 @@ int main(int argc, char *argv[])
             }
             if(main_server){
                 cout << "this is the main server" << endl;   
+                reconnectToClients(loginManager->listaDeUsuarios);
+                cout<<"reconectou" <<endl;
             }
             else{
                 cout << "this is not the main server" << endl;
@@ -636,7 +644,7 @@ bool client_login(SESSION session){
     PACKET pkt;
     readSocket(&pkt, newSockfd);
 
-    bool login_successful = loginManager->login(newSockfd, user);
+    bool login_successful = loginManager->login(newSockfd, user, session.socketAddrClient);
 
     if (login_successful)
     {
@@ -691,9 +699,11 @@ void *ThreadClient(void *arg)
     int sockfd = session.socket;
     char user[BUFFER_SIZE];
     memcpy(user, session.user, BUFFER_SIZE);
+    Sockaddr_in sock_addr =  session.socketAddrClient;
 
     if(main_server){
-        bool login_successful = client_login(session);
+
+    bool login_successful = client_login(session);
 
         if(!login_successful){
             return 0;

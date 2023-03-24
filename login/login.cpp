@@ -69,7 +69,7 @@ void LoginManager::Logout(char user[],int socket, char resposta[]){
     
 }
 
-bool LoginManager::login(int socketCli, char nome[]){
+bool LoginManager::login(int socketCli, char nome[], sockaddr_in socketAdr){
     vector<USUARIO>::iterator it;
     bool achou = false, usuarioValido = true;
 
@@ -81,11 +81,13 @@ bool LoginManager::login(int socketCli, char nome[]){
             {
                 (*it).sessaoAtiva1 = true;
                 (*it).socketClient1 = socketCli;
+                (*it).socketAddress1 = socketAdr;
                 cout << "Conta da pos 1 ativada. socket: " << socketCli << endl;
             }
             else if((*it).sessaoAtiva2 == false){
                 (*it).sessaoAtiva2 = true;
                 (*it).socketClient2 = socketCli;
+                (*it).socketAddress2 = socketAdr;
                 cout << "Conta da pos 2 ativada. socket: " << socketCli << endl;
             }
             else{
