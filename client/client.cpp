@@ -336,9 +336,9 @@ void* check_main_server_up(void *arg){
         //cout << "sending LIVENESS_CHECK" << endl;
         sendMessage("", LIVENESS_CHECK, server_socket);
 		usleep(WAIT_TIME_BETWEEN_RETRIES);
-        cout << "reading LIVENESS_CHECK ack" << endl;
+        //cout << "reading LIVENESS_CHECK ack" << endl;
         readSocket(&pkt, server_socket);
-        cout << "timer_countdown == MAX_TIMER" << endl;
+        //cout << "timer_countdown == MAX_TIMER" << endl;
         timer_countdown = MAX_TIMER;
     }
     return 0;

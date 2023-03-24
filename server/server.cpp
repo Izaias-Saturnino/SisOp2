@@ -134,7 +134,7 @@ int main(int argc, char *argv[])
         cout << "peek pkt" << endl;
         PACKET pkt;
         peekSocket(&pkt, newSockfd);
-        if(pkt.type == MENSAGEM_LOGIN || MENSAGEM_LOGIN_REPLICADA){
+        if(pkt.type == MENSAGEM_LOGIN || pkt.type == MENSAGEM_LOGIN_REPLICADA){
             SESSION session;
             session.code = pkt.type;
             session.socket = newSockfd;
@@ -561,9 +561,9 @@ void *answer_server_up(void *arg){
     PACKET pkt;
     cout << "answer_server_up running" << endl;
     while(true){
-        cout << "sending LIVENESS_CHECK ack" << endl;
+        //cout << "sending LIVENESS_CHECK ack" << endl;
         sendMessage("", ACK, server_socket);
-        cout << "reading LIVENESS_CHECK" << endl;
+        //cout << "reading LIVENESS_CHECK" << endl;
         readSocket(&pkt, server_socket);
     }
     return 0;
