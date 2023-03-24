@@ -204,7 +204,7 @@ vector<vector<char>> receiveFileData(int sock){
 		file_data.push_back(buffer);
 
 		
-		cout << "read77" << endl;
+		//cout << "read77" << endl;
 		readSocket(&pkt, sock);
 	}
 

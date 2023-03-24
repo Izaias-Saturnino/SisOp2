@@ -1,7 +1,6 @@
 #include "./server.hpp"
 
 LoginManager *loginManager = new LoginManager();
-char user[BUFFER_SIZE];
 
 bool END = false;
 
@@ -628,11 +627,14 @@ void imprimeServerError(void)
     exit(0);
 }
 
-bool client_login(int newSockfd){
-    PACKET pkt;
+bool client_login(SESSION session){
+    int newSockfd = session.socket;
+    char user[BUFFER_SIZE];
+    memcpy(user, session.user, BUFFER_SIZE);
+
     cout << "reading client login" << endl;
+    PACKET pkt;
     readSocket(&pkt, newSockfd);
-    strcpy(user, pkt._payload);
 
     bool login_successful = loginManager->login(newSockfd, user);
 
@@ -687,9 +689,11 @@ void *ThreadClient(void *arg)
 {
     SESSION session = *(SESSION *)arg;
     int sockfd = session.socket;
+    char user[BUFFER_SIZE];
+    memcpy(user, session.user, BUFFER_SIZE);
 
     if(main_server){
-        bool login_successful = client_login(sockfd);
+        bool login_successful = client_login(session);
 
         if(!login_successful){
             return 0;
@@ -730,7 +734,7 @@ void *ThreadClient(void *arg)
         if(main_server && pkt.type != MENSAGEM_ENVIO_NOME_ARQUIVO){
             for (int i = 0; i < other_servers_sockets.size(); i++)
             {
-                //sendMessage(pkt._payload, pkt.type, other_servers_sockets[i]);
+                sendMessage(pkt._payload, pkt.type, other_servers_sockets[i]);
             }
         }
  
@@ -772,9 +776,10 @@ void *ThreadClient(void *arg)
                 continue;
             }
 
+            cout << "sending file to passive servers" << endl;
             for (int i = 0; i < other_servers_sockets.size(); i++)
             {
-                //sendFile(other_servers_sockets[i], directory);
+                sendFile(other_servers_sockets[i], directory);
             }
 
             cout << "propagating file" << endl;
