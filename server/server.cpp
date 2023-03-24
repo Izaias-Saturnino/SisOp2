@@ -97,7 +97,7 @@ int main(int argc, char *argv[])
         if(other_server_socket == -1){
             return 0;
         }
-        create_thread(&between_server, NULL, share_server_list, &other_server_socket);
+        create_thread(&between_server, NULL, between_server_sync, &other_server_socket);
     }
     if(main_server){
         this_server.id = get_new_id(servers);
@@ -131,11 +131,12 @@ int main(int argc, char *argv[])
         
         client_connections.push_back(newSockfd);
 
-        cout << "read0" << endl;
+        cout << "peek pkt" << endl;
         PACKET pkt;
         peekSocket(&pkt, newSockfd);
-        if(pkt.type == MENSAGEM_LOGIN){
+        if(pkt.type == MENSAGEM_LOGIN || MENSAGEM_LOGIN_REPLICADA){
             SESSION session;
+            session.code = pkt.type;
             session.socket = newSockfd;
             memcpy(session.user, pkt._payload, BUFFER_SIZE);
             pthread_t clientThread;
@@ -299,7 +300,7 @@ void insert_in_server_list(SERVER_COPY server_copy){
     }
 }
 
-void *share_server_list(void *arg){
+void *between_server_sync(void *arg){
     int other_server_socket = *(int *)arg;
 
     if(other_server_socket == -1){
@@ -325,25 +326,6 @@ void *share_server_list(void *arg){
     send_server_copy(main_server_socket, this_server, ID_REQUEST);
     
     return 0;
-}
-
-SERVER_COPY receive_server_copy(int socket){
-    SERVER_COPY server_copy;
-
-    PACKET pkt;
-
-    readSocket(&pkt, socket);
-    memcpy((char*) &(server_copy.id), pkt._payload, sizeof(server_copy.id));
-    readSocket(&pkt, socket);
-    memcpy((char*) &(server_copy.PORT), pkt._payload, sizeof(server_copy.PORT));
-    int str_size;
-    readSocket(&pkt, socket);
-    memcpy((char*) &(str_size), pkt._payload, sizeof(str_size));
-    readSocket(&pkt, socket);
-    server_copy.ip = (string) (pkt._payload);
-    cout << "received server_copy.id: " << server_copy.id << endl;
-
-    return server_copy;
 }
 
 void send_server_copy(int socket, SERVER_COPY server_copy, int msg_type){
@@ -565,6 +547,7 @@ void* check_main_server_up(void *arg){
     while(true){
         //cout << "sending LIVENESS_CHECK" << endl;
         sendMessage("", LIVENESS_CHECK, server_socket);
+        usleep(WAIT_TIME_BETWEEN_RETRIES);
         //cout << "reading LIVENESS_CHECK ack" << endl;
         readSocket(&pkt, server_socket);
         //cout << "timer_countdown == MAX_TIMER" << endl;
@@ -578,9 +561,9 @@ void *answer_server_up(void *arg){
     PACKET pkt;
     cout << "answer_server_up running" << endl;
     while(true){
-        //cout << "sending LIVENESS_CHECK ack" << endl;
+        cout << "sending LIVENESS_CHECK ack" << endl;
         sendMessage("", ACK, server_socket);
-        //cout << "reading LIVENESS_CHECK" << endl;
+        cout << "reading LIVENESS_CHECK" << endl;
         readSocket(&pkt, server_socket);
     }
     return 0;
@@ -666,15 +649,15 @@ void *ThreadClient(void *arg)
     char user[BUFFER_SIZE];
     memcpy(user, session.user, BUFFER_SIZE);
 
-    if(main_server){
+    if(session.code == MENSAGEM_LOGIN){
         bool login_successful = client_login(session);
 
         if(!login_successful){
             return 0;
         }
     }
-    else{
-        cout << "Conectando a um servidor nao principal" << endl;
+    if(session.code == MENSAGEM_LOGIN_REPLICADA){
+        cout << "received MENSAGEM_LOGIN_REPLICADA" << endl;
     }
 
     vector<int> other_servers_sockets = {};
@@ -714,7 +697,7 @@ void *ThreadClient(void *arg)
  
         if (pkt.type == MENSAGEM_LOGOUT)
         {
-            if(!main_server){
+            if(session.code != MENSAGEM_LOGIN){
                 continue;
             }
             cout << string(user) << " logout" << endl;

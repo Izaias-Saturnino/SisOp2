@@ -10,12 +10,15 @@ atomic_int timer_countdown = MAX_TIMER;
 bool wait_for_first_sync = true;
 
 atomic_int sockfd;
+atomic_int sockfd_sync;
+atomic_int sockfd_liveness;
+
+char username[BUFFER_SIZE];
 
 int main(int argc, char *argv[])
 {
 	bool sync_dir_active = false;
 
-	int sockfd_sync;
 	socklen_t clilen;
 	struct sigaction sigIntHandler;
 	PACKET receivedPkt;
@@ -30,6 +33,11 @@ int main(int argc, char *argv[])
 	hostent *server_host = gethostbyname(server_ip);
 	int PORT = atoi(argv[3]);
 	sockfd = connect_to_server(*server_host, PORT);
+
+	SERVER_COPY main_server;
+	main_server.ip = server_ip;
+	main_server.PORT = PORT;
+	servers.push_back(main_server);
 	
 	if (sockfd == -1)
 	{
@@ -38,7 +46,6 @@ int main(int argc, char *argv[])
 
 	socketCtrl = sockfd;
 
-	char username[BUFFER_SIZE];
 	strcpy(username, argv[1]);
 
 	cout << "send login" << endl;
@@ -48,9 +55,18 @@ int main(int argc, char *argv[])
 
 	if (receivedPkt.type == MENSAGEM_USUARIO_VALIDO)
 	{
-		pthread_t thr1, thr2, thr3;
+		pthread_t thr1, thr2, thr3, liveness_thr;
 		int n1 = 1;
 		int n2 = 2;
+
+		sockfd_liveness = connect_to_main_server(servers);
+
+		if(sockfd_liveness == -1){
+			cout << "could not connect to main server on first try" << endl;
+			return 0;
+		}
+
+		create_thread(&liveness_thr, NULL, check_main_server_up, &sockfd_liveness);
 
 		cout << "creating input thread" << endl;
 		create_thread(&thr2, NULL, input, (void *)&n2);
@@ -75,13 +91,13 @@ int main(int argc, char *argv[])
 						{
 							continue;
 						}
-						cout << "write111" << endl;
+						cout << "sending MENSAGEM_ENVIO_SYNC" << endl;
 						sendMessage("", MENSAGEM_ENVIO_SYNC, sockfd);
 						upload_to_server(sockfd, "./sync_dir/" + name[i]);
 					}
 					if (action[i] == FILE_DELETED)
 					{
-						cout << "write1" << endl;
+						cout << "sending MENSAGEM_DELETAR_NO_SERVIDOR via folder checker" << endl;
 						sendMessage((char *)("./sync_dir/" + name[i]).c_str(), MENSAGEM_DELETAR_NO_SERVIDOR, sockfd);
 					}
 				}
@@ -110,13 +126,13 @@ int main(int argc, char *argv[])
 					cout << "sending list request" << endl;
 					sendMessage("", MENSAGEM_PEDIDO_LISTA_ARQUIVOS_SERVIDOR, sockfd);
 
-					cout << "read2" << endl;
+					cout << "reading file quantity" << endl;
 					int result = readSocket(&receivedPkt, sockfd);
 
 					while (receivedPkt.type == MENSAGEM_ITEM_LISTA_DE_ARQUIVOS && result > 0)
 					{
 						cout << receivedPkt._payload;
-						cout << "read3" << endl;
+						cout << "reading file list item" << endl;
 						result = readSocket(&receivedPkt, sockfd);
 					}
 					cout << "listing ended" << endl;
@@ -127,7 +143,6 @@ int main(int argc, char *argv[])
 					string path = command.substr(command.find("upload ") + 7);
 					cout << "file path: " << path << endl;
 					cout << path << "\n";
-					cout << "write112" << endl;
 					mtx_file_manipulation.lock();
 					upload_to_server(sockfd, path);
 					mtx_file_manipulation.unlock();
@@ -154,7 +169,7 @@ int main(int argc, char *argv[])
 					cout << "sockfd_sync: " << sockfd_sync << endl;
 
 					// informa o servidor que se está recebendo atualizações
-					cout << "write3" << endl;
+					cout << "sending GET_SYNC_DIR msg" << endl;
 					sendMessage(username, GET_SYNC_DIR, sockfd_sync);
 
 					// cria nova thread para lidar com atualizações
@@ -186,7 +201,7 @@ int main(int argc, char *argv[])
 					string path = command.substr(command.find("delete ") + 7);
 					cout << "sending delete request" << endl;
 					cout << "file path: " << path << endl;
-					cout << "write4" << endl;
+					cout << "sending MENSAGEM_DELETAR_NO_SERVIDOR" << endl;
 					sendMessage((char *)path.c_str(), MENSAGEM_DELETAR_NO_SERVIDOR, sockfd);
 					cout << "file deleted" << endl;
 				}
@@ -194,7 +209,7 @@ int main(int argc, char *argv[])
 				command_complete = false;
 			}
 		}
-		cout << "write5" << endl;
+		cout << "sending MENSAGEM_LOGOUT" << endl;
 		sendMessage("", MENSAGEM_LOGOUT, sockfd); // logout message
 	}
 	else
@@ -272,9 +287,9 @@ void *handle_updates(void *arg)
 
 	while (true)
 	{
-		cout << "handleUpdates function" << endl;
+		//cout << "handleUpdates function" << endl;
 		readSocket(&pkt, sockfd);
-		cout << "pkt.type: " << pkt.type << ". ";
+		//cout << "pkt.type: " << pkt.type << ". ";
 		if (pkt.type == MENSAGEM_DELETAR_NOS_CLIENTES)
 		{
 			string file_name = getFileName(string(pkt._payload));
@@ -309,14 +324,69 @@ void *handle_updates(void *arg)
 	}
 }
 
-void choose_new_main_server(){
-	int main_server_socket = connect_to_main_server(servers);
-	
-	sockfd = main_server_socket;
+void* check_main_server_up(void *arg){
+    int server_socket = *(int *)arg;
 
-	//TO DO
-	//update sync_sock
-	//check for main_server liveness
+    pthread_t timer_thr;
+    create_thread(&timer_thr, NULL, timer, NULL);
+
+    PACKET pkt;
+    cout << "check_main_server_up running" << endl;
+    while(true){
+        //cout << "sending LIVENESS_CHECK" << endl;
+        sendMessage("", LIVENESS_CHECK, server_socket);
+		usleep(WAIT_TIME_BETWEEN_RETRIES);
+        cout << "reading LIVENESS_CHECK ack" << endl;
+        readSocket(&pkt, server_socket);
+        cout << "timer_countdown == MAX_TIMER" << endl;
+        timer_countdown = MAX_TIMER;
+    }
+    return 0;
+}
+
+void choose_new_main_server(){
+	cout << "choosing new main server" << endl;
+
+	int main_server_socket = connect_to_main_server(servers);
+	if(main_server_socket == -1){
+		cout << "could not connect main server socket" << endl;
+		return;
+	}
+	sockfd = main_server_socket;
+	sendMessage(username, MENSAGEM_LOGIN, main_server_socket);
+
+	PACKET pkt;
+	readSocket(&pkt, main_server_socket);
+	cout << "read login answer" << endl;
+
+	if (pkt.type != MENSAGEM_USUARIO_VALIDO){
+		cout << "usuario invalido" << endl;
+		cout << pkt._payload << endl;
+		return;
+	}
+
+	int main_server_sync_socket = connect_to_main_server(servers);
+	if(main_server_sync_socket == -1){
+		cout << "could not connect main server sync socket" << endl;
+		return;
+	}
+	sockfd_sync = main_server_sync_socket;
+	sendMessage(username, GET_SYNC_DIR, main_server_sync_socket);
+
+	pthread_t handle_updates_thr;
+	create_thread(&handle_updates_thr, NULL, handle_updates, &main_server_sync_socket);
+
+	int main_server_liveness_socket = connect_to_main_server(servers);
+	if(main_server_liveness_socket == -1){
+		cout << "could not connect main server liveness socket" << endl;
+		return;
+	}
+	sockfd_liveness = main_server_liveness_socket;
+
+	pthread_t liveness_check_thr;
+	create_thread(&liveness_check_thr, NULL, check_main_server_up, &main_server_liveness_socket);
+
+	cout << "choose_new_main_server end" << endl;
 }
 
 void* timer(void *arg){
@@ -333,32 +403,6 @@ void* timer(void *arg){
         else{
             timer_countdown--;
         }
-    }
-    return 0;
-}
-
-void* check_main_server_up(void *arg){
-    SERVER_COPY server_copy = *(SERVER_COPY *)arg;
-
-    int server_socket = connect_to_server(server_copy.ip, server_copy.PORT);
-    
-    if(server_socket == -1){
-        cout << "ERROR: could not connect to main server" << endl;
-        return 0;
-    }
-
-    pthread_t timer_thr;
-    create_thread(&timer_thr, NULL, timer, NULL);
-
-    PACKET pkt;
-    cout << "check_main_server_up running" << endl;
-    while(true){
-        //cout << "sending LIVENESS_CHECK" << endl;
-        sendMessage("", LIVENESS_CHECK, server_socket);
-        //cout << "reading LIVENESS_CHECK ack" << endl;
-        readSocket(&pkt, server_socket);
-        //cout << "timer_countdown == MAX_TIMER" << endl;
-        timer_countdown = MAX_TIMER;
     }
     return 0;
 }

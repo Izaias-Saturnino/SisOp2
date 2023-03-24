@@ -17,6 +17,7 @@
 typedef struct {
     char user[BUFFER_SIZE];
     int socket;
+    int code;
 }SESSION;
 
 void verificaRecebimentoIP(int argc,char *argv[]);
@@ -48,7 +49,7 @@ void *send_election(void *arg);
 void send_election();
 void send_election(vector<SERVER_COPY> servers);
 int host_cmp(char* ip, char* other_ip);
-void* share_server_list(void *arg);
+void* between_server_sync(void *arg);
 void* timer(void *arg);
 void* connection_timer(void *arg);
 vector<int> clear_connections(vector<int> connections);

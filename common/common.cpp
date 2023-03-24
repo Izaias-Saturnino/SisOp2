@@ -48,7 +48,7 @@ int readSocket(PACKET *pkt, int sock){
 
 	char data[sizeof(PACKET)];
 
-	//cout << "reading" << endl;
+	//cout << "reading pkt" << endl;
 
     while(n < sizeof(PACKET))
     {
@@ -191,7 +191,7 @@ bool has_received_message(int sock){
 vector<vector<char>> receiveFileData(int sock){
 	PACKET pkt;
 	vector<vector<char>> file_data = {};
-	cout << "read7" << endl;
+	cout << "reading file data" << endl;
 	readSocket(&pkt, sock);
 	while (pkt.type == MENSAGEM_ENVIO_PARTE_ARQUIVO)
 	{
@@ -204,7 +204,7 @@ vector<vector<char>> receiveFileData(int sock){
 		file_data.push_back(buffer);
 
 		
-		//cout << "read77" << endl;
+		//cout << "reading MENSAGEM_ENVIO_PARTE_ARQUIVO" << endl;
 		readSocket(&pkt, sock);
 	}
 
@@ -240,12 +240,12 @@ void receiveFile(int sock, string file_path, PACKET *pkt_addr){
 
 	string file_name = string(pkt._payload);
 
-	cout << "read77" << endl;
+	//cout << "reading file name" << endl;
 	readSocket(&pkt, sock);
 	uint32_t* file_size_addr = (uint32_t *) &(pkt._payload);
 	uint32_t file_size = *file_size_addr;
 
-	cout << "file_size: " << file_size << endl;
+	//cout << "file_size: " << file_size << endl;
 
 	vector<vector<char>> file_data = receiveFileData(sock);
 
@@ -264,12 +264,11 @@ void sendFile(int sock, string file_path){
 	if (!file.is_open())
 	{
 		cout << "error opening file" << "\n" << endl;
-        cout << "write10" << endl;
         sendMessage(nullptr, MENSAGEM_FALHA_ENVIO, sock);
 		return;
 	}
 
-	cout << "write11" << endl;
+	cout << "sending MENSAGEM_ENVIO_NOME_ARQUIVO" << endl;
 	sendMessage((char*) file_path.c_str(), MENSAGEM_ENVIO_NOME_ARQUIVO, sock);
 
 	//get file size
@@ -279,7 +278,7 @@ void sendFile(int sock, string file_path){
 	file.clear();
 	file.seekg(0);
 
-	cout << "write122" << endl;
+	cout << "sending MENSAGEM_ENVIO_TAMANHO_ARQUIVO" << endl;
 	sendMessage((char*)&file_size, MENSAGEM_ENVIO_TAMANHO_ARQUIVO, sock);
 	cout << "file_size: " << file_size << endl;
 
@@ -294,10 +293,10 @@ void sendFile(int sock, string file_path){
 			//printf("%x ", (unsigned char)buffer[i]);
 		//}
 		
-		//cout << "write12" << endl;
+		//cout << "sending MENSAGEM_ENVIO_PARTE_ARQUIVO" << endl;
 		sendMessage(buffer, MENSAGEM_ENVIO_PARTE_ARQUIVO, sock);
 	}
-	cout << "write13" << endl;
+	cout << "sending ACK after file send" << endl;
 	sendMessage(buffer, ACK, sock);
 	file.close();
 	cout << "file received"
@@ -394,4 +393,23 @@ int connect_to_main_server(vector<SERVER_COPY> servers, SERVER_COPY this_server)
 
 bool compare_id(SERVER_COPY copy1, SERVER_COPY copy2){
     return copy1.id < copy2.id;
+}
+
+SERVER_COPY receive_server_copy(int socket){
+    SERVER_COPY server_copy;
+
+    PACKET pkt;
+
+    readSocket(&pkt, socket);
+    memcpy((char*) &(server_copy.id), pkt._payload, sizeof(server_copy.id));
+    readSocket(&pkt, socket);
+    memcpy((char*) &(server_copy.PORT), pkt._payload, sizeof(server_copy.PORT));
+    int str_size;
+    readSocket(&pkt, socket);
+    memcpy((char*) &(str_size), pkt._payload, sizeof(str_size));
+    readSocket(&pkt, socket);
+    server_copy.ip = (string) (pkt._payload);
+    cout << "received server_copy.id: " << server_copy.id << endl;
+
+    return server_copy;
 }
