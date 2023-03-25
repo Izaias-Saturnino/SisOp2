@@ -163,9 +163,6 @@ int main(int argc, char *argv[])
             loginManager->activate_sync_dir(user, newSockfd);
 
             cout << string(user) << " actived sync dir" << endl;
-
-            cout << "sending list of servers" << endl;
-            send_list_of_servers(newSockfd);
         }
         else if(pkt.type == LIVENESS_CHECK){
             if(!main_server){
@@ -193,35 +190,37 @@ int main(int argc, char *argv[])
             int old_id = this_server.id;
             int old_number_of_servers = servers.size();
             SERVER_COPY server_copy = receive_server_copy(newSockfd);
-            insert_in_server_list(server_copy);
-            if(old_id != this_server.id && has_biggest_id(this_server) && !main_server){
+
+            update_this_server_info(server_copy);
+            servers = insert_in_server_list(server_copy, servers);
+            if(has_bigger_id(this_server) && !main_server){
                 send_election();
             }
-            if(main_server){
-                send_election();
-            }
-            if(old_number_of_servers < servers.size()){
-                number_of_servers++;
-            }
+            number_of_servers = servers.size();
 
             //debug
             if(old_id != this_server.id){
-                cout << "this_server.id: " << this_server.id;
+                cout << "new this_server.id: " << this_server.id << endl;
             }
         }
         else if(pkt.type == ELECTION){
             cout << "reading ELECTION" << endl;
             readSocket(&pkt, newSockfd);
             cout << "sending ELECTION ACK" << endl;
-            sendMessage("", ACK, newSockfd);
-            send_election();
+            int other_server_id = 0;
+            memcpy(&other_server_id, pkt._payload, sizeof(int));
+            if(other_server_id < this_server.id){
+                cout << "pkt._payload: " << pkt._payload << ". this_server.id: " << this_server.id << endl;
+                sendMessage("", ACK, newSockfd);
+                send_election();
+            }
         }
         else if(pkt.type == ELECTED){
             cout << "reading ELECTED" << endl;
             election = false;
             SERVER_COPY server_copy = receive_server_copy(newSockfd);
             if(this_server.id > server_copy.id){
-                cout << "ERROR: this_server.id > server_copy.id should not happen on elected" << endl;
+                cout << "Warning: this_server.id > server_copy.id should not happen on elected. This maybe due to incorrect syncronization or connection issues" << endl;
                 cout << "this_server.id: " << this_server.id << endl;
                 cout << "server_copy.id: " << server_copy.id << endl;
                 send_election();
@@ -263,40 +262,11 @@ int main(int argc, char *argv[])
     return 0;
 }
 
-bool str_equals(char* str1, int str1_size, char* str2, int str2_size){
-    if(str1_size != str2_size){
-        return false;
-    }
-    bool equals = true;
-    for(int i = 0; i < str1_size; i++){
-        if(str1[i] != str2[i]){
-            equals = false;
-            break;
-        }
-    }
-    return equals;
-}
-
-void insert_in_server_list(SERVER_COPY server_copy){
-    bool found_server = false;
-    for(int i = 0; i < servers.size(); i++){
-        bool ip_equals = str_equals((char*) (server_copy.ip).c_str(), server_copy.ip.size(), (char*) (servers[i].ip).c_str(), servers[i].ip.size());
-        bool port_equals = server_copy.PORT == servers[i].PORT;
-        if(ip_equals && port_equals){
-            found_server = true;
-            servers[i].id = server_copy.id;
-            break;
-        }
-    }
-
+void update_this_server_info(SERVER_COPY server_copy){
     bool ip_equals = str_equals((char*) (server_copy.ip).c_str(), server_copy.ip.size(), (char*) (this_server.ip).c_str(), this_server.ip.size());
     bool port_equals = server_copy.PORT == this_server.PORT;
     if(ip_equals && port_equals){
         this_server.id = server_copy.id;
-    }
-    
-    if(!found_server){
-        servers.push_back(server_copy);
     }
 }
 
@@ -385,6 +355,12 @@ void send_list_of_servers(int server_socket){
     sendMessage("", ACK, server_socket);
 }
 
+void update_this_server_info(vector<SERVER_COPY> new_servers){
+    for(int i = 0; i < new_servers.size(); i++){
+        update_this_server_info(new_servers);
+    }
+}
+
 void receive_list_of_servers(int server_socket){
     cout << "receive_list_of_servers" << endl;
     PACKET pkt;
@@ -395,7 +371,8 @@ void receive_list_of_servers(int server_socket){
     while(pkt.type == SERVER_ITEM);{
         cout << "reading SERVER_ITEM" << endl;
         SERVER_COPY server_copy = receive_server_copy(server_socket);
-        insert_in_server_list(server_copy);
+        update_this_server_info(server_copy);
+        servers = insert_in_server_list(server_copy, servers);
         cout << "peeking SERVER_ITEM" << endl;
         peekSocket(&pkt, server_socket);
     }
@@ -409,8 +386,10 @@ int host_cmp(char* ip, char* other_ip){
     return strcmp(server->h_name, other_server->h_name);
 }
 
-bool has_biggest_id(SERVER_COPY server_copy){
-    return server_copy.id == main_server_copy.id;
+bool has_bigger_id(SERVER_COPY server_copy){
+    cout << "server_copy.id: " << server_copy.id << endl;
+    cout << "main_server_copy.id: " << main_server_copy.id << endl;
+    return server_copy.id > main_server_copy.id;
 }
 
 void *send_election(void *arg){
@@ -441,7 +420,9 @@ void *send_election(void *arg){
         }
 
         cout << "sending ELECTION msg" << endl;
-        sendMessage("", ELECTION, socket);
+        char buffer[BUFFER_SIZE];
+        memcpy(buffer, &(this_server.id), sizeof(int));
+        sendMessage(buffer, ELECTION, socket);
         bool message_received = has_received_message(socket);
         
         if(message_received){
@@ -456,6 +437,7 @@ void *send_election(void *arg){
             this_server.id = get_new_id(servers);
             cout << "this server id: " << this_server.id << endl;
         }
+        cout << "broadcasting ELECTED. id: " << this_server.id << endl;
         broadcast_new_server(this_server, ELECTED);
     }
     return 0;
@@ -474,16 +456,6 @@ void send_election(vector<SERVER_COPY> servers){
     }
     thr_send_election_init = true;
     thr_send_election = new_thr_send_election;
-}
-
-vector<SERVER_COPY> remove_from_server_list(SERVER_COPY server_copy, vector<SERVER_COPY> servers){
-    for(int i = 0; i < servers.size(); i++){
-        if(server_copy.id == servers[i].id){
-            servers.erase(servers.begin()+i);
-            break;
-        }
-    }
-    return servers;
 }
 
 void remove_from_server_list(SERVER_COPY server_copy){
@@ -637,7 +609,7 @@ vector<int> connect_to_non_main_servers(SESSION session){
     other_servers_sockets = clear_connections(other_servers_sockets);
     other_servers_sockets = get_other_servers_sockets(servers);
     for(int i = 0; i < other_servers_sockets.size(); i++){
-        sendMessage(session.user, MENSAGEM_LOGIN, other_servers_sockets[i]);
+        sendMessage(session.user, MENSAGEM_LOGIN_REPLICADA, other_servers_sockets[i]);
     }
     return other_servers_sockets;
 }
@@ -655,6 +627,9 @@ void *ThreadClient(void *arg)
         if(!login_successful){
             return 0;
         }
+
+        cout << "sending list of servers" << endl;
+        send_list_of_servers(sockfd);
     }
     if(session.code == MENSAGEM_LOGIN_REPLICADA){
         cout << "received MENSAGEM_LOGIN_REPLICADA" << endl;

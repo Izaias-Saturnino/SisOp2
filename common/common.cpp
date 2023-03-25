@@ -332,7 +332,27 @@ void create_thread(
 	}
 }
 
-vector<SERVER_COPY> get_list_of_servers(int server_socket, vector<SERVER_COPY> servers){
+vector<SERVER_COPY> insert_in_server_list(SERVER_COPY server_copy, vector<SERVER_COPY> servers){
+    bool found_server = false;
+    for(int i = 0; i < servers.size(); i++){
+        bool ip_equals = str_equals((char*) (server_copy.ip).c_str(), server_copy.ip.size(), (char*) (servers[i].ip).c_str(), servers[i].ip.size());
+        bool port_equals = server_copy.PORT == servers[i].PORT;
+        if(ip_equals && port_equals){
+            found_server = true;
+            servers[i].id = server_copy.id;
+            break;
+        }
+    }
+    
+    if(!found_server){
+        servers.push_back(server_copy);
+    }
+
+	return servers;
+}
+
+vector<SERVER_COPY> receive_list_of_servers(int server_socket, vector<SERVER_COPY> servers){
+	vector<SERVER_COPY> new_servers = {};
     cout << "receive_list_of_servers" << endl;
     PACKET pkt;
     peekSocket(&pkt, server_socket);
@@ -342,31 +362,18 @@ vector<SERVER_COPY> get_list_of_servers(int server_socket, vector<SERVER_COPY> s
     while(pkt.type == SERVER_ITEM);{
         cout << "reading SERVER_ITEM" << endl;
         SERVER_COPY server_copy = receive_server_copy(server_socket);
-        servers.push_back(server_copy);
+        cout << "t3" << endl;
+		new_servers.push_back(server_copy);
+		cout << "t4" << endl;
+        servers = insert_in_server_list(server_copy, servers);
+		cout << "t5" << endl;
         cout << "peeking SERVER_ITEM" << endl;
         peekSocket(&pkt, server_socket);
+		cout << "t6" << endl;
     }
     cout << "LIST_SERVER_ITEM end" << endl;
     readSocket(&pkt, server_socket);
-
-	return servers;
-}
-
-//client function
-int connect_to_main_server(vector<SERVER_COPY> servers){
-    int socket = -1;
-
-    sort(servers.begin(), servers.end(), compare_id);
-
-    for (int i = servers.size() - 1; i >= 0; i--)
-    {
-		socket = connect_to_server(servers[i].ip, servers[i].PORT);
-		if(socket != -1){
-			break;
-		}
-    }
-
-    return socket;
+	return new_servers;
 }
 
 //server function
@@ -401,15 +408,45 @@ SERVER_COPY receive_server_copy(int socket){
     PACKET pkt;
 
     readSocket(&pkt, socket);
+	cout << "t0" << endl;
     memcpy((char*) &(server_copy.id), pkt._payload, sizeof(server_copy.id));
     readSocket(&pkt, socket);
+	cout << "t1" << endl;
     memcpy((char*) &(server_copy.PORT), pkt._payload, sizeof(server_copy.PORT));
     int str_size;
     readSocket(&pkt, socket);
+	cout << "t2" << endl;
     memcpy((char*) &(str_size), pkt._payload, sizeof(str_size));
     readSocket(&pkt, socket);
     server_copy.ip = (string) (pkt._payload);
     cout << "received server_copy.id: " << server_copy.id << endl;
 
     return server_copy;
+}
+
+bool str_equals(char* str1, int str1_size, char* str2, int str2_size){
+    if(str1_size != str2_size){
+        return false;
+    }
+    bool equals = true;
+    for(int i = 0; i < str1_size; i++){
+        if(str1[i] != str2[i]){
+            equals = false;
+            break;
+        }
+    }
+    return equals;
+}
+
+vector<SERVER_COPY> remove_from_server_list(SERVER_COPY server_copy, vector<SERVER_COPY> servers){
+    for(int i = 0; i < servers.size(); i++){
+        bool ip_equals = str_equals((char*) (server_copy.ip).c_str(), server_copy.ip.size(), (char*) (servers[i].ip).c_str(), servers[i].ip.size());
+        bool port_equals = server_copy.PORT == servers[i].PORT;
+        if(ip_equals && port_equals){
+            //cout << "servers[i].PORT: " << servers[i].PORT << endl;
+            servers.erase(servers.begin()+i);
+            break;
+        }
+    }
+    return servers;
 }

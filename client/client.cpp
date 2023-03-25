@@ -15,6 +15,8 @@ atomic_int sockfd_liveness;
 
 char username[BUFFER_SIZE];
 
+SERVER_COPY main_server;
+
 int main(int argc, char *argv[])
 {
 	bool sync_dir_active = false;
@@ -34,7 +36,6 @@ int main(int argc, char *argv[])
 	int PORT = atoi(argv[3]);
 	sockfd = connect_to_server(*server_host, PORT);
 
-	SERVER_COPY main_server;
 	main_server.ip = server_ip;
 	main_server.PORT = PORT;
 	servers.push_back(main_server);
@@ -59,7 +60,12 @@ int main(int argc, char *argv[])
 		int n1 = 1;
 		int n2 = 2;
 
-		sockfd_liveness = connect_to_main_server(servers);
+		//recebe a lista de servidores
+		cout << "receiving list of servers" << endl;
+		servers = receive_list_of_servers(sockfd_sync, servers);
+		update_this_server_info(servers);
+
+		sockfd_liveness = connect_to_main_server();
 
 		if(sockfd_liveness == -1){
 			cout << "could not connect to main server on first try" << endl;
@@ -185,8 +191,6 @@ int main(int argc, char *argv[])
 					cout << "creating folderchecker thread" << endl;
 					create_thread(&thr3, NULL, folderchecker, (void *)&n1);
 					cout << "sync_dir active" << endl;
-
-					servers = get_list_of_servers(sockfd_sync, servers);
 				}
 				else if (command.find("download ") == 0)
 				{
@@ -220,6 +224,12 @@ int main(int argc, char *argv[])
 	close(sockfd_sync);
 	close(sockfd);
 	return 0;
+}
+
+void update_this_server_info(vector<SERVER_COPY> new_servers){
+    for(int i = 0; i < new_servers.size(); i++){
+        update_this_server_info(servers);
+    }
 }
 
 void verificaRecebimentoParametros(int argc)
@@ -344,10 +354,32 @@ void* check_main_server_up(void *arg){
     return 0;
 }
 
+int connect_to_main_server(){
+    int socket = -1;
+
+    sort(servers.begin(), servers.end(), compare_id);
+
+    for (int i = servers.size() - 1; i >= 0; i--)
+    {
+		cout << "servers[i].ip: " << servers[i].ip << ". servers[i].PORT: " << servers[i].PORT << endl;
+		socket = connect_to_server(servers[i].ip, servers[i].PORT);
+		if(socket != -1){
+			main_server = servers[i];
+			break;
+		}
+    }
+
+    return socket;
+}
+
 void choose_new_main_server(){
 	cout << "choosing new main server" << endl;
 
-	int main_server_socket = connect_to_main_server(servers);
+	int main_server_socket = connect_to_main_server();
+	for(int i = 0; i < MAX_RETRIES && main_server_socket != -1; i++){
+		usleep(WAIT_TIME_BETWEEN_RETRIES);
+		main_server_socket = connect_to_main_server();
+	}
 	if(main_server_socket == -1){
 		cout << "could not connect main server socket" << endl;
 		return;
@@ -355,17 +387,24 @@ void choose_new_main_server(){
 	sockfd = main_server_socket;
 	sendMessage(username, MENSAGEM_LOGIN, main_server_socket);
 
+	cout << "after send message" << endl;
+
 	PACKET pkt;
 	readSocket(&pkt, main_server_socket);
 	cout << "read login answer" << endl;
 
 	if (pkt.type != MENSAGEM_USUARIO_VALIDO){
+		receive_list_of_servers(sockfd_sync, servers);
 		cout << "usuario invalido" << endl;
 		cout << pkt._payload << endl;
 		return;
 	}
 
-	int main_server_sync_socket = connect_to_main_server(servers);
+	int main_server_sync_socket = connect_to_main_server();
+	for(int i = 0; i < MAX_RETRIES && main_server_socket != -1; i++){
+		usleep(WAIT_TIME_BETWEEN_RETRIES);
+		main_server_sync_socket = connect_to_main_server();
+	}
 	if(main_server_sync_socket == -1){
 		cout << "could not connect main server sync socket" << endl;
 		return;
@@ -376,7 +415,11 @@ void choose_new_main_server(){
 	pthread_t handle_updates_thr;
 	create_thread(&handle_updates_thr, NULL, handle_updates, &main_server_sync_socket);
 
-	int main_server_liveness_socket = connect_to_main_server(servers);
+	int main_server_liveness_socket = connect_to_main_server();
+	for(int i = 0; i < MAX_RETRIES && main_server_socket != -1; i++){
+		usleep(WAIT_TIME_BETWEEN_RETRIES);
+		main_server_liveness_socket = connect_to_main_server();
+	}
 	if(main_server_liveness_socket == -1){
 		cout << "could not connect main server liveness socket" << endl;
 		return;
@@ -397,6 +440,7 @@ void* timer(void *arg){
         //cout << "timer_countdown: " << timer_countdown << endl;
         if(timer_countdown <= 0){
             cout << "main server timeout" << endl;
+			servers = remove_from_server_list(main_server, servers);
             choose_new_main_server();
             break;
         }

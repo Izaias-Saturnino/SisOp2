@@ -34,3 +34,5 @@ void handle_ctrlc(int s);
 void* check_main_server_up(void *arg);
 
 void* timer(void *arg);
+
+int connect_to_main_server();
