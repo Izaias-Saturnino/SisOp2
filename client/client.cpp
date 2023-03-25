@@ -62,8 +62,10 @@ int main(int argc, char *argv[])
 
 		//recebe a lista de servidores
 		cout << "receiving list of servers" << endl;
-		servers = receive_list_of_servers(sockfd_sync, servers);
-		update_this_server_info(servers);
+		servers = receive_list_of_servers(sockfd, servers);
+		cout << "t0" << endl;
+		main_server = update_this_server_info(main_server, servers);
+		cout << "t1" << endl;
 
 		sockfd_liveness = connect_to_main_server();
 
@@ -226,12 +228,6 @@ int main(int argc, char *argv[])
 	return 0;
 }
 
-void update_this_server_info(vector<SERVER_COPY> new_servers){
-    for(int i = 0; i < new_servers.size(); i++){
-        update_this_server_info(servers);
-    }
-}
-
 void verificaRecebimentoParametros(int argc)
 {
 	if (argc < 3)
@@ -361,8 +357,15 @@ int connect_to_main_server(){
 
     for (int i = servers.size() - 1; i >= 0; i--)
     {
-		cout << "servers[i].ip: " << servers[i].ip << ". servers[i].PORT: " << servers[i].PORT << endl;
-		socket = connect_to_server(servers[i].ip, servers[i].PORT);
+		for(int j = 0; j < MAX_RETRIES; j++){
+			cout << "servers[i].ip: " << servers[i].ip << ". servers[i].PORT: " << servers[i].PORT << endl;
+			socket = connect_to_server(servers[i].ip, servers[i].PORT);
+			if(socket != -1){
+				main_server = servers[i];
+				break;
+			}
+			usleep(WAIT_TIME_BETWEEN_RETRIES);
+		}
 		if(socket != -1){
 			main_server = servers[i];
 			break;
@@ -376,10 +379,6 @@ void choose_new_main_server(){
 	cout << "choosing new main server" << endl;
 
 	int main_server_socket = connect_to_main_server();
-	for(int i = 0; i < MAX_RETRIES && main_server_socket != -1; i++){
-		usleep(WAIT_TIME_BETWEEN_RETRIES);
-		main_server_socket = connect_to_main_server();
-	}
 	if(main_server_socket == -1){
 		cout << "could not connect main server socket" << endl;
 		return;
@@ -394,11 +393,12 @@ void choose_new_main_server(){
 	cout << "read login answer" << endl;
 
 	if (pkt.type != MENSAGEM_USUARIO_VALIDO){
-		receive_list_of_servers(sockfd_sync, servers);
 		cout << "usuario invalido" << endl;
 		cout << pkt._payload << endl;
 		return;
 	}
+
+	receive_list_of_servers(main_server_socket, servers);
 
 	int main_server_sync_socket = connect_to_main_server();
 	for(int i = 0; i < MAX_RETRIES && main_server_socket != -1; i++){

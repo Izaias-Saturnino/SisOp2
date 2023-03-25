@@ -108,5 +108,5 @@ bool compare_id(SERVER_COPY copy1, SERVER_COPY copy2);
 vector<SERVER_COPY> insert_in_server_list(SERVER_COPY server_copy, vector<SERVER_COPY> servers);
 vector<SERVER_COPY> remove_from_server_list(SERVER_COPY server_copy, vector<SERVER_COPY> servers);
 bool str_equals(char* str1, int str1_size, char* str2, int str2_size);
-void update_this_server_info(SERVER_COPY server_copy);
-void update_this_server_info(vector<SERVER_COPY> server_copy);
+SERVER_COPY update_this_server_info(SERVER_COPY this_server, SERVER_COPY server_copy);
+SERVER_COPY update_this_server_info(SERVER_COPY this_server, vector<SERVER_COPY> new_servers);

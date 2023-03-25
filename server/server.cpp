@@ -191,7 +191,7 @@ int main(int argc, char *argv[])
             int old_number_of_servers = servers.size();
             SERVER_COPY server_copy = receive_server_copy(newSockfd);
 
-            update_this_server_info(server_copy);
+            this_server = update_this_server_info(this_server, server_copy);
             servers = insert_in_server_list(server_copy, servers);
             if(has_bigger_id(this_server) && !main_server){
                 send_election();
@@ -260,14 +260,6 @@ int main(int argc, char *argv[])
     close_client_connections();
 
     return 0;
-}
-
-void update_this_server_info(SERVER_COPY server_copy){
-    bool ip_equals = str_equals((char*) (server_copy.ip).c_str(), server_copy.ip.size(), (char*) (this_server.ip).c_str(), this_server.ip.size());
-    bool port_equals = server_copy.PORT == this_server.PORT;
-    if(ip_equals && port_equals){
-        this_server.id = server_copy.id;
-    }
 }
 
 void *between_server_sync(void *arg){
@@ -355,23 +347,18 @@ void send_list_of_servers(int server_socket){
     sendMessage("", ACK, server_socket);
 }
 
-void update_this_server_info(vector<SERVER_COPY> new_servers){
-    for(int i = 0; i < new_servers.size(); i++){
-        update_this_server_info(new_servers);
-    }
-}
-
 void receive_list_of_servers(int server_socket){
     cout << "receive_list_of_servers" << endl;
     PACKET pkt;
     peekSocket(&pkt, server_socket);
-    if(pkt.type == LIST_SERVERS){
+    while(pkt.type != SERVER_ITEM){
         readSocket(&pkt, server_socket);
+        peekSocket(&pkt, server_socket);
     }
-    while(pkt.type == SERVER_ITEM);{
+    while(pkt.type == SERVER_ITEM){
         cout << "reading SERVER_ITEM" << endl;
         SERVER_COPY server_copy = receive_server_copy(server_socket);
-        update_this_server_info(server_copy);
+        this_server = update_this_server_info(this_server, server_copy);
         servers = insert_in_server_list(server_copy, servers);
         cout << "peeking SERVER_ITEM" << endl;
         peekSocket(&pkt, server_socket);

@@ -352,28 +352,25 @@ vector<SERVER_COPY> insert_in_server_list(SERVER_COPY server_copy, vector<SERVER
 }
 
 vector<SERVER_COPY> receive_list_of_servers(int server_socket, vector<SERVER_COPY> servers){
-	vector<SERVER_COPY> new_servers = {};
     cout << "receive_list_of_servers" << endl;
     PACKET pkt;
     peekSocket(&pkt, server_socket);
-    if(pkt.type == LIST_SERVERS){
+    while(pkt.type != SERVER_ITEM){
         readSocket(&pkt, server_socket);
+        peekSocket(&pkt, server_socket);
     }
-    while(pkt.type == SERVER_ITEM);{
+    while(pkt.type == SERVER_ITEM){
         cout << "reading SERVER_ITEM" << endl;
         SERVER_COPY server_copy = receive_server_copy(server_socket);
-        cout << "t3" << endl;
-		new_servers.push_back(server_copy);
-		cout << "t4" << endl;
+        //update_this_server_info(server_copy);
         servers = insert_in_server_list(server_copy, servers);
-		cout << "t5" << endl;
         cout << "peeking SERVER_ITEM" << endl;
         peekSocket(&pkt, server_socket);
-		cout << "t6" << endl;
     }
     cout << "LIST_SERVER_ITEM end" << endl;
     readSocket(&pkt, server_socket);
-	return new_servers;
+	
+	return servers;
 }
 
 //server function
@@ -408,14 +405,11 @@ SERVER_COPY receive_server_copy(int socket){
     PACKET pkt;
 
     readSocket(&pkt, socket);
-	cout << "t0" << endl;
     memcpy((char*) &(server_copy.id), pkt._payload, sizeof(server_copy.id));
     readSocket(&pkt, socket);
-	cout << "t1" << endl;
     memcpy((char*) &(server_copy.PORT), pkt._payload, sizeof(server_copy.PORT));
     int str_size;
     readSocket(&pkt, socket);
-	cout << "t2" << endl;
     memcpy((char*) &(str_size), pkt._payload, sizeof(str_size));
     readSocket(&pkt, socket);
     server_copy.ip = (string) (pkt._payload);
@@ -449,4 +443,20 @@ vector<SERVER_COPY> remove_from_server_list(SERVER_COPY server_copy, vector<SERV
         }
     }
     return servers;
+}
+
+SERVER_COPY update_this_server_info(SERVER_COPY this_server, SERVER_COPY server_copy){
+    bool ip_equals = str_equals((char*) (server_copy.ip).c_str(), server_copy.ip.size(), (char*) (this_server.ip).c_str(), this_server.ip.size());
+    bool port_equals = server_copy.PORT == this_server.PORT;
+    if(ip_equals && port_equals){
+        this_server.id = server_copy.id;
+    }
+    return this_server;
+}
+
+SERVER_COPY update_this_server_info(SERVER_COPY this_server, vector<SERVER_COPY> new_servers){
+    for(int i = 0; i < new_servers.size(); i++){
+        this_server = update_this_server_info(this_server, new_servers[i]);
+    }
+	return this_server;
 }
