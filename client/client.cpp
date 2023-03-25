@@ -5,7 +5,7 @@ int socketCtrl2 = -1;
 
 vector<string> latest_downloads = {};
 vector<SERVER_COPY> servers;
-atomic_int timer_countdown = MAX_TIMER;
+atomic_int timer_countdown = MAX_TIMER*4;
 
 bool wait_for_first_sync = true;
 
@@ -357,7 +357,7 @@ int connect_to_main_server(){
 
     for (int i = servers.size() - 1; i >= 0; i--)
     {
-		for(int j = 0; j < MAX_RETRIES; j++){
+		for(int j = 0; j < MAX_RETRIES*4; j++){
 			cout << "servers[i].ip: " << servers[i].ip << ". servers[i].PORT: " << servers[i].PORT << endl;
 			socket = connect_to_server(servers[i].ip, servers[i].PORT);
 			if(socket != -1){
@@ -401,10 +401,6 @@ void choose_new_main_server(){
 	receive_list_of_servers(main_server_socket, servers);
 
 	int main_server_sync_socket = connect_to_main_server();
-	for(int i = 0; i < MAX_RETRIES && main_server_socket != -1; i++){
-		usleep(WAIT_TIME_BETWEEN_RETRIES);
-		main_server_sync_socket = connect_to_main_server();
-	}
 	if(main_server_sync_socket == -1){
 		cout << "could not connect main server sync socket" << endl;
 		return;
@@ -416,10 +412,6 @@ void choose_new_main_server(){
 	create_thread(&handle_updates_thr, NULL, handle_updates, &main_server_sync_socket);
 
 	int main_server_liveness_socket = connect_to_main_server();
-	for(int i = 0; i < MAX_RETRIES && main_server_socket != -1; i++){
-		usleep(WAIT_TIME_BETWEEN_RETRIES);
-		main_server_liveness_socket = connect_to_main_server();
-	}
 	if(main_server_liveness_socket == -1){
 		cout << "could not connect main server liveness socket" << endl;
 		return;
@@ -434,7 +426,7 @@ void choose_new_main_server(){
 
 void* timer(void *arg){
     cout << "timer started" << endl;
-    timer_countdown = MAX_TIMER;
+    timer_countdown = MAX_TIMER*4;
     while(true){
         usleep(WAIT_TIME_BETWEEN_RETRIES);
         //cout << "timer_countdown: " << timer_countdown << endl;

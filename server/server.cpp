@@ -166,7 +166,7 @@ int main(int argc, char *argv[])
         }
         else if(pkt.type == LIVENESS_CHECK){
             if(!main_server){
-                cout << "ERROR: non main server answering for liveness" << endl;
+                cout << "Warning: non main server answering for liveness" << endl;
             }
             pthread_t server_up;
             readSocket(&pkt, newSockfd);
@@ -426,6 +426,7 @@ void *send_election(void *arg){
         }
         cout << "broadcasting ELECTED. id: " << this_server.id << endl;
         broadcast_new_server(this_server, ELECTED);
+        cout << "broadcast ELECTED end" << endl;
     }
     return 0;
 }
