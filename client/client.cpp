@@ -17,6 +17,8 @@ char username[BUFFER_SIZE];
 
 SERVER_COPY main_server;
 
+pthread_t check_main_server_liveness_thr, handle_updates_thr;
+
 int main(int argc, char *argv[])
 {
 	bool sync_dir_active = false;
@@ -56,7 +58,7 @@ int main(int argc, char *argv[])
 
 	if (receivedPkt.type == MENSAGEM_USUARIO_VALIDO)
 	{
-		pthread_t thr1, thr2, thr3, liveness_thr;
+		pthread_t thr2, thr3;
 		int n1 = 1;
 		int n2 = 2;
 
@@ -74,7 +76,7 @@ int main(int argc, char *argv[])
 			return 0;
 		}
 
-		create_thread(&liveness_thr, NULL, check_main_server_up, &sockfd_liveness);
+		create_thread(&check_main_server_liveness_thr, NULL, check_main_server_up, &sockfd_liveness);
 
 		cout << "creating input thread" << endl;
 		create_thread(&thr2, NULL, input, (void *)&n2);
@@ -182,7 +184,7 @@ int main(int argc, char *argv[])
 
 					// cria nova thread para lidar com atualizações
 					cout << "creating thread to handle_updates" << endl;
-					create_thread(&thr1, NULL, handle_updates, &sockfd_sync);
+					create_thread(&handle_updates_thr, NULL, handle_updates, &sockfd_sync);
 
 					while (wait_for_first_sync)
 					{
@@ -386,10 +388,6 @@ void choose_new_main_server(){
 
 	wait_for_first_sync = true;
 
-	//cancel non_main threads
-	//create new non_main threads
-	//update global non_main threads descriptor to new non_main threads
-
 	sockfd = main_server_socket;
 	sendMessage(username, MENSAGEM_LOGIN, main_server_socket);
 
@@ -415,7 +413,7 @@ void choose_new_main_server(){
 	sockfd_sync = main_server_sync_socket;
 	sendMessage(username, GET_SYNC_DIR, main_server_sync_socket);
 
-	pthread_t handle_updates_thr;
+	pthread_cancel(handle_updates_thr);
 	create_thread(&handle_updates_thr, NULL, handle_updates, &main_server_sync_socket);
 
 	int main_server_liveness_socket = connect_to_main_server();
@@ -425,8 +423,8 @@ void choose_new_main_server(){
 	}
 	sockfd_liveness = main_server_liveness_socket;
 
-	pthread_t liveness_check_thr;
-	create_thread(&liveness_check_thr, NULL, check_main_server_up, &main_server_liveness_socket);
+	pthread_cancel(check_main_server_liveness_thr);
+	create_thread(&check_main_server_liveness_thr, NULL, check_main_server_up, &main_server_liveness_socket);
 
 	cout << "choose_new_main_server end" << endl;
 }
