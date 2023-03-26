@@ -89,10 +89,10 @@ int main(int argc, char *argv[])
 			if (action.size() > 0 && sync_dir_active)
 			{
 				mtx_file_manipulation.lock();
-				cout << "action size: " << action.size() << endl;
+				//cout << "action size: " << action.size() << endl;
 				for (int i = 0; i < action.size(); i++)
 				{
-					cout << "action: " << action[i] << " & name: " << name[i] << "\n";
+					//cout << "action: " << action[i] << " & name: " << name[i] << "\n";
 					if (action[i] == FILE_CREATED || action[i] == FILE_MODIFIED)
 					{
 						if (find(latest_downloads.begin(), latest_downloads.end(), name[i]) != latest_downloads.end())
@@ -149,8 +149,8 @@ int main(int argc, char *argv[])
 				{
 					cout << "uploading file" << endl;
 					string path = command.substr(command.find("upload ") + 7);
-					cout << "file path: " << path << endl;
-					cout << path << "\n";
+					//cout << "file path: " << path << endl;
+					//cout << path << "\n";
 					mtx_file_manipulation.lock();
 					upload_to_server(sockfd, path);
 					mtx_file_manipulation.unlock();
@@ -383,6 +383,13 @@ void choose_new_main_server(){
 		cout << "could not connect main server socket" << endl;
 		return;
 	}
+
+	wait_for_first_sync = true;
+
+	//cancel non_main threads
+	//create new non_main threads
+	//update global non_main threads descriptor to new non_main threads
+
 	sockfd = main_server_socket;
 	sendMessage(username, MENSAGEM_LOGIN, main_server_socket);
 

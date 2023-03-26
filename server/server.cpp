@@ -624,7 +624,7 @@ void *ThreadClient(void *arg)
     }
 
     vector<int> other_servers_sockets = {};
-    if(main_server){
+    if(session.code == MENSAGEM_LOGIN){
         other_servers_sockets = connect_to_non_main_servers(session);
     }
 
@@ -636,14 +636,13 @@ void *ThreadClient(void *arg)
 
     bool file_received_from_sync = false;
 
-    while (true)
-    {
+    while (true){
         memset(pkt._payload, 0, BUFFER_SIZE);
         cout << "reading client msg" << endl;
         readSocket(&pkt, sockfd);
         cout << "pkt.type: " << pkt.type << ". ";
 
-        if(last_number_of_servers < number_of_servers && main_server){
+        if(session.code == MENSAGEM_LOGIN && last_number_of_servers < number_of_servers){
             other_servers_sockets = connect_to_non_main_servers(session);
             if(number_of_servers > other_servers_sockets.size()){
                 number_of_servers = other_servers_sockets.size();
@@ -651,30 +650,28 @@ void *ThreadClient(void *arg)
             last_number_of_servers = number_of_servers;
         }
 
-        if(main_server && pkt.type != MENSAGEM_ENVIO_NOME_ARQUIVO){
+        if(session.code == MENSAGEM_LOGIN && pkt.type != MENSAGEM_ENVIO_NOME_ARQUIVO){
             for (int i = 0; i < other_servers_sockets.size(); i++)
             {
                 sendMessage(pkt._payload, pkt.type, other_servers_sockets[i]);
             }
         }
- 
-        if (pkt.type == MENSAGEM_LOGOUT)
-        {
+
+        if (pkt.type == MENSAGEM_LOGOUT){
             if(session.code != MENSAGEM_LOGIN){
-                continue;
+                break;
             }
             cout << string(user) << " logout" << endl;
             loginManager->Logout(user, sockfd, resposta);
             break;
         }
-        if (pkt.type == MENSAGEM_ENVIO_SYNC){
-            if(!main_server){
+        else if (pkt.type == MENSAGEM_ENVIO_SYNC){
+            if(session.code == MENSAGEM_LOGIN_REPLICADA){
                 continue;
             }
             file_received_from_sync = true;
         }
-        if (pkt.type == MENSAGEM_ENVIO_NOME_ARQUIVO)
-        {
+        else if (pkt.type == MENSAGEM_ENVIO_NOME_ARQUIVO){
             string file_name = getFileName(string(pkt._payload));
             cout << "receiving file" << endl;
             cout << "file name: " << file_name << endl;
@@ -692,7 +689,7 @@ void *ThreadClient(void *arg)
 
             cout << "sync_dir_sockets.size(): " << sync_dir_sockets.size() << endl;
 
-            if(!main_server){
+            if(session.code == MENSAGEM_LOGIN_REPLICADA){
                 continue;
             }
 
@@ -716,9 +713,8 @@ void *ThreadClient(void *arg)
             cout << "file propagated" << endl;
             file_received_from_sync = false;
         }
-        if (pkt.type == MENSAGEM_PEDIDO_LISTA_ARQUIVOS_SERVIDOR)
-        {
-            if(!main_server){
+        else if (pkt.type == MENSAGEM_PEDIDO_LISTA_ARQUIVOS_SERVIDOR){
+            if(session.code == MENSAGEM_LOGIN_REPLICADA){
                 continue;
             }
             cout << "sending " << string(user) << " file list" << endl;
@@ -731,7 +727,7 @@ void *ThreadClient(void *arg)
             cout << "ack MENSAGEM_PEDIDO_LISTA_ARQUIVOS_SERVIDOR" << endl;
             sendMessage("", ACK, sockfd);
         }
-        if (pkt.type == MENSAGEM_DELETAR_NO_SERVIDOR){
+        else if (pkt.type == MENSAGEM_DELETAR_NO_SERVIDOR){
             string file_name = getFileName(string(pkt._payload));
             cout << "removing file" << endl;
             cout << "file name: " << file_name << endl << endl;
@@ -746,7 +742,7 @@ void *ThreadClient(void *arg)
 			    cout << file_path << endl;
 			}
 
-            if(!main_server){
+            if(session.code == MENSAGEM_LOGIN_REPLICADA){
                 continue;
             }
 
@@ -760,8 +756,8 @@ void *ThreadClient(void *arg)
                 sendMessage((char *)file_name.c_str(), MENSAGEM_DELETAR_NOS_CLIENTES, sync_dir_sockets[i]); // pedido de delete enviado para o cliente
             }
         }
-        if (pkt.type == MENSAGEM_DOWNLOAD_FROM_SERVER){
-            if(!main_server){
+        else if (pkt.type == MENSAGEM_DOWNLOAD_FROM_SERVER){
+            if(session.code == MENSAGEM_LOGIN_REPLICADA){
                 continue;
             }
             string directory = "./";

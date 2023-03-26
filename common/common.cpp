@@ -222,8 +222,8 @@ void writeFileData(vector<vector<char>> file_data, string directory, int remaind
 			{
 				if (j == remainder_file_size && remainder_file_size != 0)
 				{
-					cout << "remainder break" << endl;
-					cout << "remainder_file_size: " << remainder_file_size << endl;
+					//cout << "remainder break" << endl;
+					//cout << "remainder_file_size: " << remainder_file_size << endl;
 					break;
 				}
 			}
@@ -268,19 +268,19 @@ void sendFile(int sock, string file_path){
 		return;
 	}
 
-	cout << "sending MENSAGEM_ENVIO_NOME_ARQUIVO" << endl;
+	//cout << "sending MENSAGEM_ENVIO_NOME_ARQUIVO" << endl;
 	sendMessage((char*) file_path.c_str(), MENSAGEM_ENVIO_NOME_ARQUIVO, sock);
 
 	//get file size
 	file.seekg(0, file.end);
 	uint32_t file_size = file.tellg();
-	cout << "file_size: " << file_size << "\n";
+	//cout << "file_size: " << file_size << "\n";
 	file.clear();
 	file.seekg(0);
 
-	cout << "sending MENSAGEM_ENVIO_TAMANHO_ARQUIVO" << endl;
+	//cout << "sending MENSAGEM_ENVIO_TAMANHO_ARQUIVO" << endl;
 	sendMessage((char*)&file_size, MENSAGEM_ENVIO_TAMANHO_ARQUIVO, sock);
-	cout << "file_size: " << file_size << endl;
+	//cout << "file_size: " << file_size << endl;
 
 	//send file pkts
 	char buffer[BUFFER_SIZE];
